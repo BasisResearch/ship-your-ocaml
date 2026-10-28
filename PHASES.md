@@ -27,7 +27,7 @@ ELF pin).
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
 | `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
-| Counted loop placement coherence, shared stack/allocation/raise/field frames, 132 supplied rows, actual channel/console/fresh-id success and unary native exit | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedCcall4,CountedChannelRows,CountedConsole,CountedConsoleRows,CountedPrimRows,CcallExitF1}.lean` | A1 (a1-prims) | **proved helpers and 132/134 supplied rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 18 control/raise/halt/wrong-arity, one console C_CALL4, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. C_CALL3/5 are complete from the checked F1 arity classification (1, 2 or 4) and exact operand/depth rejection; C_CALL4 is complete from both real output returns and all operand/primitive/outcome cases; counted fresh-OO-ID original-entry success and the actual unary native sys_exit halt are checked without an extra runtime supplier; two whole-row obligations remain **open**: C_CALL1/2. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
+| Counted loop placement coherence, shared stack/allocation/raise/field frames and 133 supplied rows, including complete unary native execution | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedCcall4,CountedChannelRows,CountedConsole,CountedConsoleRows,CountedPrimRows,CountedCcallOutcome,CountedUnary,CcallExitF1}.lean` | A1 (a1-prims) | **proved helpers and 133/134 supplied rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 18 control/raise/halt/wrong-arity, complete unary C_CALL1, console C_CALL4, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives selected custom separation; fast insertion and actual unallocated growth retain native counts. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; its producer remains **open (G2)**. C_CALL1 classifies every actual F1 unary success (16 ordinary names, fresh OO ID, flush and three allocating channel names), operand/lookup/primitive rejection, and actual native exit. Concrete selected-credit opening/listing runtime suppliers require only named `CustomMemCall`; every success retains actual counts and returned placement. GoodF1/Fits/reachability remain unchanged. C_CALL3/5 and C_CALL4 remain complete. The only whole-row obligation is **C_CALL2**, including general format-int and named registration. Full F1 assembly and independent runtime/startup obligations remain **open**; C4 round 2 waits for F1 |
 | Actual custom-table zero occupancy and interpreter-entry transport | `OCaml/Vm/Gc/ChannelCustomCount.lean`, `OCaml/Vm/Sim/{EntryLoop,CountedEntry}.lean`; layout/runtime-read generators | A1 (a1-prims) | **proved count component**, selected custom-ledger startup ownership and actual prologue frame; `table_count_resources_unconstrained` checks that occupancy leaves resource words arbitrary. Full physical custom runtime/startup zero remains **open**; occupancy is not used as a quietness supplier |
 | Conditional global custom-frame obstruction; local selected spatial API and actual opening/listing frames | `OCaml/Vm/Gc/{CustomFrameObstruction,CustomLedger,CustomMem,F1Heap}.lean`, channel/listing consumers | A1 (a1-prims/a6-gc) | **proved helpers**: pinned-domain write-log obstruction, selected spatial startup/frame/fresh/growth producers and same-returned-ledger opening/listing evidence; physical accounting/context and opening/listing F1 runtime suppliers are concrete relative to named native `CustomMemCall`; its machine execution remains **open** |
 | F1 loop-head rows for the integer, comparison, constant, branch and push-constant families (`top_read_row`, `input_row`, `push_set_row`; `*_next` for 51 opcodes) | `OCaml/Vm/Sim/{IntRows,ImmediateRows,OperandRows,PushConstRows}.lean` | A1 (a2-sem) | **proved** from `LoopAt` + `DispatchCode` + operand fetches, concluding `LoopAt`; named premises: `MemoryStable`; EQ/NEQ in-range operands, BRANCHIF/NOT non-raw accumulator and BEQ/BNEQ immediates read off BcSem's use-site guards (BEQ/BNEQ on an in-range pointer or atom proved "not equal" natively, `imm_test_pointer`) |
@@ -410,6 +410,31 @@ for that snapshot; it does not assert kernel startup reachability.
   state, kernel-checked; `#print axioms` standard.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
+
+**Complete counted C_CALL1, 2026-10-28 (checked for lead review).**
+CountedUnary classifies every actual unary F1 success: 16 ordinary names,
+fresh OO ID, flush and three allocating channel names. It checks actual
+operands/lookup/InF1 and all primitive outcomes, including malformed/negative
+operands, missing slots (`.wrong`), wrong arguments, unsupported results and
+raise/callback exclusion. Existing counted executors retain actual native
+counts and returned placement with unchanged GoodF1/Fits/reachability.
+Concrete selected-credit opening/listing runtime suppliers require only named
+CustomMemCall; no returned-capacity/whole-runtime supplier remains. The shared
+native halt/outcome proofs move unchanged below the census into
+CountedCcallOutcome; counted_c_call1_row uses the existing actual native exit.
+The owning census generator now supplies **133/134** rows with only
+**C_CALL2** remaining. General formatting/registration, ordinary F1CcallOpen
+and full F1 assembly retain their existing boundaries. CustomMemCall still
+owns native execution, physical/quiet-table transitions, context and exact
+selected-ledger credit/spending; the six barrier rows retain exactly
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`
+with G2. C4 round 2 waits for F1. The affected counted/F1/entry/whileMin build
+passes **3733 jobs**; all **22 exact focused reports** use only allowed
+axioms (one uses none), and all four new theorems are registered exactly once.
+Generator, hole, discipline, abstraction and whitespace checks pass. Commands,
+logs and the classifier tactic correction are recorded at the top of
+docs/lanes/a1-prims.md and in DEAD-ENDS. Checked edits remain for lead review;
+full OCaml.Audit and integration stay with the lead.
 
 **Actual native opening runtime, 2026-10-28 (checked for lead review).**
 OpenOutRuntimeAt.after now retains the existing actual OutInput/OutNursery

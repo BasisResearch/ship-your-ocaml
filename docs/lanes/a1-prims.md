@@ -1,5 +1,91 @@
 # A1 F1 primitive summaries
 
+## Complete counted C_CALL1 (2026-10-28; checked for lead review)
+
+`CountedUnary.lean` closes the complete unary opcode on the existing
+`GoodF1`/`Fits` domain. The prerequisite selected-credit listing supplier
+(`66343b8a`) and actual opening reconstruction (`9f4e4fa1`) are present;
+`f1_outList_runtime` and `f1_openOut_runtime` each take only named
+`CustomMemCall`. Neither retains a returned-capacity or whole-runtime premise.
+
+`counted_unary_success_cases` classifies all 30 actual `primsF1` names against
+successful `primF1Impl name [arg]`: 16 unary names from the existing 19-name
+ordinary adapter, fresh OO ID, flush and three allocating channel names.
+The eight binary/four-argument names reject unary arguments; sys_exit cannot
+return successfully. `counted_c_call1_next` uses `InF1.prim` and the real
+decoded operand, covering missing/extra operands, negative indices, absent
+primitive slots, unsupported arguments and every primitive outcome. Missing
+slots retain the actual `.wrong` branch. Existing primitive outcome lemmas
+exclude raise/callback, and the existing OpArm outcome interface handles
+rejected/error outcomes.
+
+`counted_unary_success` reuses `counted_supported_c_call1_next` (and its
+`counted_supported_prim_returns`), `counted_fresh_oo_id_next`,
+`counted_flush_next` and `counted_channel_c_call1_next`. The existing counted
+setup/callee/suffix proofs retain actual physical counts, natural refcounts,
+opened-list links and the native return's selected placement. Reachability
+and the real successor's Fits remain at each native success. No ordinary
+weak setup is used to infer a count.
+
+The generator moves `counted_c_call1_halt` and
+`counted_c_call1_row_of_next`, with unchanged proofs, into the lower
+`CountedCcallOutcome.lean`. This avoids a census/assembly import cycle.
+The final `counted_c_call1_row` uses that shared outcome interface: the halt
+projects the counted relation to the existing loop relation and executes
+`ccall1Exit_pinned`/the actual native exit. Exit has no successful return or
+successor placement obligation. Native setup, callees, suffixes and exit
+were reused throughout.
+
+Retained premises are explicit:
+
+- The unary row requires `CustomMemCall Ready state Customs`, `GoodF1 P`
+  and `Fits g1Budget P`; its row inputs retain Reach, CountedLoopAt, decoding
+  and InF1. Actual selected physical/context/credit facts come from that
+  counted runtime. CustomMemCall still owns native custom allocation/table
+  execution, exact soft-double/threshold linkage, quiet-table and physical
+  count transitions, ABI/heap/ownership frames and spending on its single
+  selected returned ledger/capacity.
+- The overall counted table still requires exactly
+  `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`
+  for its six G2 barrier rows. The unary assembly adds no growth premise.
+- `countedRemainingOpcodes = [.C_CALL2]`; the checked census is **133/134**.
+  General format-int and named registration, full F1 assembly and independent
+  runtime/startup obligations remain open. Ordinary F1CcallOpen's five fields
+  retain their existing interface; counted unary closure does not infer
+  counts for arbitrary ordinary inputs. GoodF1 is unchanged; C4 round 2 waits
+  for F1.
+
+Validation:
+
+- Assembly build: **2982 jobs, passed**, `/tmp/counted-unary-assembly.log`,
+  `lake build OCaml.Vm.Sim.CountedUnary`.
+- Affected build: **3733 jobs, passed**, `/tmp/counted-unary-affected.log`:
+  `lake build OCaml.Vm.Sim.CountedUnaryAudit OCaml.Vm.Sim.CountedArityAudit
+  OCaml.Vm.Sim.CountedPrimAudit OCaml.Vm.Sim.CountedConsoleAudit
+  OCaml.Vm.Sim.CountedFieldAudit OCaml.Vm.Sim.CountedEntry
+  OCaml.Vm.Sim.F1Table OCaml.Vm.Sim.WhileMinTable`.
+  This checks the complete census and affected counted/native/runtime/F1/entry
+  consumers. Full OCaml.Audit was not run.
+- Direct focused `lake env lean OCaml/Vm/Sim/CountedUnaryAudit.lean`:
+  **22 exact reports**, `/tmp/counted-unary-focused.log`; **one** uses no
+  axioms and **21** use only `{propext, Classical.choice, Quot.sound}`.
+  `/tmp/check-counted-unary-audit.py` verifies exact membership/order, all
+  four new theorem declarations, allowed axioms and unique full-Audit
+  registrations; `/tmp/counted-unary-focused-check.json` records the result.
+- Counted control/primitive/C_CALL2+4/console/field, listing-runtime-audit and
+  F1-table generator checks pass. Hole, 27-rule discipline, abstraction and
+  whitespace checks pass; C4 remains 3. The initial classifier tactic-selection
+  failure and correction are recorded in DEAD-ENDS; no proof budget changed.
+- Every Lean launch checked `free -g` (available >=25 GB) and ran serially
+  through `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...`, under the inherited 12 GiB/two-thread
+  policy. No virtual-memory limit or generated-output hand edit was used.
+
+Initial HEAD was `789b0941` with a clean worktree. All work stayed here,
+without other workers, Git metadata/landing-queue writes or commits. Checked
+edits remain for lead review. Full Audit and landing through
+`scripts/integrate.sh` stay with the lead.
+
 ## Actual native opening runtime (2026-10-28; checked for lead review)
 
 The opening runtime is assembled relative only to named `CustomMemCall` in

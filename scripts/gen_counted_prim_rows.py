@@ -205,4 +205,4 @@ if __name__ == '__main__':
                 raise SystemExit('counted primitive row/audit drift: ' + module)
         else:
             target.write_text(content)
-    print('Counted primitive rows/audit current (20 success names, one halt; whole C_CALL1/2 open)')
+    print('Counted primitive rows/audit current (20 success names, one halt; complete unary assembly in CountedUnary)')

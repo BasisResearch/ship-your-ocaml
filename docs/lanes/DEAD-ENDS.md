@@ -1,5 +1,14 @@
 # Routes not to repeat
 
+- 2026-10-28 counted unary classification: `first` around
+  `exact Or.inr (by simp)` selected the unfinished name-disjunction proof
+  for the eight wrong-arity names and exit, leaving `False` goals before
+  trying the actual semantic rejection (`/tmp/counted-unary-first.log`).
+  Use goal-closing `solve` branches with `apply Or.inl; decide` and
+  `apply Or.inr; simp`, then the existing exit exclusion and concrete
+  `primF1Impl` reduction. This is a tactic-selection failure; no semantic
+  obstruction or additional supplier is claimed.
+
 - 2026-10-28 actual opening runtime reconstruction:
   blanket equality on the original keptFootprint is false for opening:
   caml_all_opened_channels changes to the fresh record. Adding that head to ignoredStatics and removing it

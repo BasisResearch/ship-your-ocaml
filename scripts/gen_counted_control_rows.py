@@ -30,7 +30,8 @@ CONTROL = {
 DIVISION = ['DIVINT', 'MODINT']
 WRONG_ARITY = {'C_CALL3': 2, 'C_CALL5': 4}
 CONSOLE = ['C_CALL4']
-REMAINING = ['C_CALL1', 'C_CALL2']
+UNARY = ['C_CALL1']
+REMAINING = ['C_CALL2']
 OPERATIONS = {}
 for operation, ops in {
     'enter': ['APPLY', 'APPLY1', 'APPLY2', 'APPLY3', 'APPTERM', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'RETURN'],
@@ -87,10 +88,10 @@ theorem counted_{op.lower()}_row {{L : OCaml.Layout}} {{P : Prog}}
 
 def control_output():
     out = header(['CountedMemoryRows', 'CountedStackRows', 'CountedAllocRows',
-                  'CountedFieldRows', 'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow', 'CcallShort', 'CountedConsoleRows', 'CcallExitF1'],
+                  'CountedFieldRows', 'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow', 'CcallShort', 'CountedConsoleRows', 'CountedUnary'],
                  'Counted control rows and exact remaining F1 opcode census.')
     out += '\n/-- Exactly the ordinary control rows generated here. -/\ndef countedControlOpcode : Opcode → Bool\n'
-    out += ''.join(f'  | .{op} => true\n' for op in [*CONTROL, *DIVISION, 'STOP', *WRONG_ARITY, *CONSOLE]) + '  | _ => false\n'
+    out += ''.join(f'  | .{op} => true\n' for op in [*CONTROL, *DIVISION, 'STOP', *WRONG_ARITY, *CONSOLE, *UNARY]) + '  | _ => false\n'
     for op in [*CONTROL, *DIVISION, 'STOP']:
         out += certificate(op)
     for op, row in CONTROL.items():
@@ -132,32 +133,6 @@ theorem counted_{op.lower()}_row {{P : Prog}} {{Customs : Config → Nat → Pro
     (fun _ => rfl)
 '''
     out += '''
-/-- Actual C_CALL1 halt, forgetting only the counted relation. The existing
-pinned exit executes dispatch/setup and the native callee with Fits, native
-headroom, saved registers, HTIF idleness and the entry's exit globals.
-There is no successor state or channel-placement obligation on this branch. -/
-theorem counted_c_call1_halt {P : Prog} {s : St} {c : Config} {i : Instr}
-    {Customs : Config → Nat → Prop} {e : Nat} {world : World}
-    (fits : OCaml.Fits Gc.g1Budget P) (reach : Reach P s)
-    (h : CountedLoopAt Customs Gc.f1Layout P s c)
-    (decoded : decodeAt P.code s.pc = some i) (opcode : i.op = .C_CALL1)
-    (fragment : OCaml.InF1 P i) (halt : stepI P s i = .halt e world) :
-    Halts c (bytesToString world.console) e :=
-  (ccall1Exit_pinned fits).c_call1_halt reach h.toLoopAt decoded opcode fragment halt
-
-/-- Compose the checked halt branch with a complete counted success branch
-using the existing OpArm interface. Supplying all successes remains open. -/
-theorem counted_c_call1_row_of_next {P : Prog} {Customs : Config → Nat → Prop}
-    (fits : OCaml.Fits Gc.g1Budget P)
-    (next : ∀ s c i, Reach P s → CountedLoopAt Customs Gc.f1Layout P s c →
-      decodeAt P.code s.pc = some i → i.op = .C_CALL1 → OCaml.InF1 P i →
-      ∀ s', stepI P s i = .next s' →
-        ∃ after, OCaml.Plus c after ∧ CountedLoopAt Customs Gc.f1Layout P s' after) :
-    OCaml.OpArm P (CountedLoopAt Customs Gc.f1Layout P) .C_CALL1 := by
-  intro s c i reach h decoded opcode fragment
-  exact OCaml.ArmOutcome.of_cases (next s c i reach h decoded opcode fragment)
-    (fun _ _ halt => counted_c_call1_halt fits reach h decoded opcode fragment halt)
-
 /-- STOP retains the entry's actual exit globals and HTIF idleness. A halt
 has no successor count obligation in counted_row. -/
 theorem counted_stop_row {P : Prog} {Customs : Config → Nat → Prop}
@@ -185,6 +160,7 @@ def countedOrdinaryOpcode (op : Opcode) : Bool :=
                   (' good' if 'good' in row else '') for op, row in CONTROL.items()})
     calls.update({op: f'counted_{op.lower()}_row custom fits good' for op in DIVISION})
     calls.update({op: f'counted_{op.lower()}_row' for op in WRONG_ARITY})
+    calls['C_CALL1'] = 'counted_c_call1_row custom fits good'
     calls['C_CALL4'] = 'counted_c_call4_row custom fits good'
     calls['STOP'] = 'counted_stop_row good'
     calls['OFFSETREF'] = 'counted_offsetref_row custom fits'
@@ -205,8 +181,7 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
     out += ''.join(f'  | {op} => ' + (f'exact {calls[op]}' if op in calls else 'cases supported') + '\n'
                    for op in opcodes())
     out += '''
-/-- C_CALL1/2 still need complete success/effect suppliers. The unary
-row includes caml_sys_exit; the binary row includes formatting/registration.
+/-- Only C_CALL2 remains: general formatting and named registration.
 Supported barriers retain counted G2 full growth. -/
 def countedRemainingOpcodes : List Opcode :=
 '''
@@ -218,24 +193,81 @@ theorem counted_opcode_census (op : Opcode) :
   cases op <;> decide
 
 /-- Number of supported complete counted ordinary opcode rows. -/
-theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 132 := by decide +kernel
+theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 133 := by decide +kernel
 
-/-- The remaining list has exactly two distinct opcode obligations. -/
-theorem counted_remaining_count : countedRemainingOpcodes.length = 2 ∧ countedRemainingOpcodes.Nodup := by decide
+/-- The remaining list has exactly one opcode obligation. -/
+theorem counted_remaining_count : countedRemainingOpcodes.length = 1 ∧ countedRemainingOpcodes.Nodup := by decide
 
 end OCaml.Vm.Sim
 '''
     return out
 
 
+def outcome_output():
+    return header(['CountedInvariant', 'CcallExitF1'],
+                  'Shared counted unary outcome interface, below the census.') + '''
+/-- Actual C_CALL1 halt, forgetting only the counted relation. The existing
+pinned exit executes dispatch/setup and the native callee with Fits, native
+headroom, saved registers, HTIF idleness and the entry's exit globals.
+There is no successor state or channel-placement obligation on this branch. -/
+theorem counted_c_call1_halt {P : Prog} {s : St} {c : Config} {i : Instr}
+    {Customs : Config → Nat → Prop} {e : Nat} {world : World}
+    (fits : OCaml.Fits Gc.g1Budget P) (reach : Reach P s)
+    (h : CountedLoopAt Customs Gc.f1Layout P s c)
+    (decoded : decodeAt P.code s.pc = some i) (opcode : i.op = .C_CALL1)
+    (fragment : OCaml.InF1 P i) (halt : stepI P s i = .halt e world) :
+    Halts c (bytesToString world.console) e :=
+  (ccall1Exit_pinned fits).c_call1_halt reach h.toLoopAt decoded opcode fragment halt
+
+/-- Compose the checked halt branch with a complete counted success branch
+using the existing OpArm interface. -/
+theorem counted_c_call1_row_of_next {P : Prog} {Customs : Config → Nat → Prop}
+    (fits : OCaml.Fits Gc.g1Budget P)
+    (next : ∀ s c i, Reach P s → CountedLoopAt Customs Gc.f1Layout P s c →
+      decodeAt P.code s.pc = some i → i.op = .C_CALL1 → OCaml.InF1 P i →
+      ∀ s', stepI P s i = .next s' →
+        ∃ after, OCaml.Plus c after ∧ CountedLoopAt Customs Gc.f1Layout P s' after) :
+    OCaml.OpArm P (CountedLoopAt Customs Gc.f1Layout P) .C_CALL1 := by
+  intro s c i reach h decoded opcode fragment
+  exact OCaml.ArmOutcome.of_cases (next s c i reach h decoded opcode fragment)
+    (fun _ _ halt => counted_c_call1_halt fits reach h decoded opcode fragment halt)
+
+end OCaml.Vm.Sim
+'''
+
+
 def outputs():
-    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP', 'OFFSETREF'] + BARRIERS + list(WRONG_ARITY) + CONSOLE
-    assert len(supported) == len(set(supported)) == 132
+    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP', 'OFFSETREF'] + BARRIERS + list(WRONG_ARITY) + CONSOLE + UNARY
+    assert len(supported) == len(set(supported)) == 133
     assert set(supported).isdisjoint(REMAINING)
     assert set(supported) | set(REMAINING) == set(opcodes()) - set(NON_F1)
     return {ROOT / 'OCaml/Vm/Sim/CountedMemoryRows.lean': memory_output(),
             ROOT / 'OCaml/Vm/Sim/CountedControlRows.lean': control_output(),
+            ROOT / 'OCaml/Vm/Sim/CountedCcallOutcome.lean': outcome_output(),
+            ROOT / 'OCaml/Vm/Sim/CountedUnaryAudit.lean': unary_audits(),
             ROOT / 'OCaml/Vm/Sim/CountedArityAudit.lean': arity_audits()}
+
+
+def unary_audits():
+    names = [
+        'counted_unary_success_cases', 'counted_unary_success',
+        'counted_c_call1_next', 'counted_c_call1_row',
+        'counted_c_call1_halt', 'counted_c_call1_row_of_next',
+        'counted_supported_prim_returns', 'counted_supported_c_call1_next',
+        'counted_fresh_oo_id_next', 'counted_flush_next',
+        'counted_channel_c_call1_next',
+        'counted_f1_open_descriptor_out_returns',
+        'counted_f1_open_descriptor_in_returns', 'counted_f1_out_channels_list_returns',
+        'f1_openOut_runtime', 'OutListWalk.f1_outList_runtime',
+        'CcallExit.c_call1_halt', 'ccall1Exit_pinned',
+        'counted_supported_row', 'counted_opcode_census',
+        'counted_opcode_count', 'counted_remaining_count']
+    return '''import OCaml.Vm.Sim.CountedControlRows
+
+/-! GENERATED by scripts/gen_counted_control_rows.py. Complete unary assembly,
+concrete runtime suppliers, actual native exit and exact opcode census.
+Full OCaml.Audit remains the lead gate. -/
+''' + ''.join(f'#print axioms OCaml.Vm.Sim.{name}\n' for name in names)
 
 
 def arity_audits():
@@ -263,4 +295,4 @@ if __name__ == '__main__':
                 raise SystemExit(f'counted control row drift: {target.relative_to(ROOT)}')
         else:
             target.write_text(content)
-    print('Counted ordinary rows current (132/134 F1 opcodes relative to counted G2 full growth; 2 remaining)')
+    print('Counted ordinary rows current (133/134 F1 opcodes relative to counted G2 full growth; C_CALL2 remaining)')
