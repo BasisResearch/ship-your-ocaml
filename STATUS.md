@@ -76,21 +76,32 @@ reports (293 standard, two pure). Snapshot:
 `keep/g2-bitmap-obstruction-reviewed-20261028`; `logs/a6-entry-large-*`.
 The least-large adapter remains open; its bounded bitmap repair is active.
 
+`e9b985ce` repairs listing entry to consume actual setup/stack evidence and
+reconstructs returned heap/runtime fields, leaving numeric reserve on the
+same returned ledger explicit. It adds the generated 792576-byte request,
+1 MiB credit, snapshot credit producer, framing/composition and checked old
+interface obstructions. Lead reviewed all 105 public theorems (plus generated
+segments), all 117 focused reports (100 standard, 17 pure) and the 3,594-job
+consumer build. Snapshot: `keep/outlist-runtime-reviewed-20261028`;
+`logs/outlist-*`. Rebase retained both additive audit/lane/dead-end sections.
+It does not close the native spending or full runtime supplier.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Bounded bitmap invariant and original-entry least-large continuation | `syo-wt/a6-gc-next2` |
-| Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
+| Runtime Sol | Concrete physical custom state and separate native read context | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
 G2 repair started at 16:51 UTC from `eddfc88c`; log:
 `/tmp/syo-gc-bitmap-large-repair-launch.log`. It must preserve a bounded
 bitmap refinement and derive zero filtering before composing the existing
 request<=16/sufficiently-large-source native branch.
-Listing started at 16:15 UTC from `a1be6936`; log:
-`/tmp/syo-outlist-runtime-local-launch.log`. Its actual setup/entry and
-custom-table request/credit components build; returned runtime is in progress.
+Physical custom work is next in the listing slot, reusing its checked table
+geometry, credit and runtime components. Source/destination build locks and
+cache provenance were checked before copying the idle listing cache into
+bprime for the next full gate.
 No worker cache is copied while that worktree is building.
 
 ## Remaining F1 boundaries
