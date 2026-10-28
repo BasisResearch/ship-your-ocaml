@@ -98,7 +98,7 @@ and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
 | SETGLOBAL barrier row: `f1_globalBarrier f1_barrierRuntime …` | **proved** | a1-arms / a6-gc | `8811ba3f` |
 | `c_call1_returns`: `caml_fresh_oo_id` | **proved** | a1-prims | `prim_caml_fresh_oo_id_returns` (`03604487`) |
 | `c_call1_returns`: `caml_ml_open_descriptor_out` | **counted interface proved; ordinary row open** | a1-prims / a1-arms | `counted_caml_ml_open_descriptor_out_returns` needs `CountedCcallSetupPost`; ordinary invariant/setup migration remains open |
-| `OpenOutRuntime Gc.f1Layout` (counted caller): `custom`, `after` | **open** | a6-gc | `CustomMemCall` for `f1Layout` (the quiet path of `caml_alloc_custom_mem`) |
+| `OpenOutRuntime Gc.f1Layout` (counted caller): `custom`, `after` | **concrete relative to named CustomMemCall** | a6-gc | `f1_openOut_runtime` in reviewed `9f4e4fa1` derives every after-runtime field from actual caller/return evidence |
 | `OpenOutRuntime Gc.f1Layout`: `pins` | **free** | — | `fun c ok => ok.freeListShape` (`f1Layout.runtimeOk` is `RuntimeOk F1Pins`) |
 | Successful-call readiness | **proved from counted entry + reachable successor + `Fits`** | a1-prims / a1-arms | Universal runtime budget removed; numeric `customBudget` only bounds the layout. Actual ordinary representation producers still need the physical count witness. |
 | `c_call1_returns`: `caml_ml_string_length` | **proved** | a1-prims | `prim_caml_ml_string_length_returns` (`53a7adea`) |
@@ -131,8 +131,9 @@ named `CustomMemCall`. `LibHeapAt.credit` retains ordinary plus custom reserve;
 `CustomMemCountedReturned.credited` supplies native spending on its selected
 returned ledger. The actual listing walk and epilogue preserve this evidence,
 so `outList_f1_restore` no longer needs a separate returned-reserve premise.
-Opening retains the same selected spending; its after-runtime reconstruction
-is the active task.
+Reviewed `9f4e4fa1` supplies `f1_openOut_runtime` using the same selected
+spending and actual caller/return frames. Both channel-opening adapters
+and the listing adapter now consume concrete runtime producers.
 
 ### The custom-allocation budget (2026-10-27 continuation)
 
@@ -166,8 +167,8 @@ Still open:
    accepted named `CustomMemCall` premise. Concrete `PhysicalCustoms`,
    independent read context, startup/caller frames and captured counted entry
    are reviewed in `53e93d16`; reset execution remains separate.
-2. The opening call's complete after-runtime reconstruction; listing
-   runtime and its selected credit propagation are reviewed in `66343b8a`.
+2. Integration of the reviewed concrete opening (`9f4e4fa1`) and listing
+   (`66343b8a`) runtime producers; their native custom duties stay named.
 3. Whole C_CALL1 assembly from all unary successes and native exit, and
    C_CALL2's general formatting/named-registration runtime producers.
 4. Complete counted F1 assembly, with counted `BarrierGrowthFull` supplied by
@@ -180,6 +181,6 @@ Still open:
 A blanket implication from every weak `CcallSetupPost` to counted evidence
 was removed: source reachability alone does not constrain the omitted
 machine counters. This repeats the old universal readiness gap, as recorded
-in `DEAD-ENDS.md`. Listing now has its concrete producer; opening and the
+in `DEAD-ENDS.md`. Opening and listing have concrete producers; the
 remaining C_CALL2 producers retain the boundaries above. Validation commands
 and lead-review status are in `a1-prims.md` and `STATUS.md`.

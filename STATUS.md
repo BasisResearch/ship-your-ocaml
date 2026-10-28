@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 18:13 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:20 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -162,12 +162,27 @@ evidence: `logs/code-source-*`. Only additive dead-end notes conflicted;
 both were retained. This is queued behind the active physical-state gate.
 The native reverse scan and lseek remain open.
 
+## Reviewed concrete opening runtime
+
+`9f4e4fa1` supplies `f1_openOut_runtime` relative only to named CustomMemCall.
+Its actual caller supplies OutInput/OutNursery and the selected list bound;
+its native return supplies one credited ledger, the fresh record, framed
+remembered-table words and named/custom separation. Core transfer excludes
+the changed channel-list head while retaining the ordinary footprint API.
+Both counted opening adapters and the three-channel dispatcher now consume
+the concrete producer. Lead reviewed nine unique new registrations, all
+3,683 consumer build jobs and exact 161 focused reports (141 allowed-axiom,
+20 pure). Only additive dead-end notes conflicted on rebase; both retained.
+Snapshot: `keep/opening-runtime-reviewed-20261028`;
+evidence: `logs/opening-runtime-*`. This joins the next integration batch.
+Whole unary opcode assembly remains open until its own proof checks.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Original-caller bounded least-large allocator wrapper | `syo-wt/a6-gc-next2` |
-| Runtime Sol | Concrete opening after-runtime supplier | `syo-wt/a1-prims-next` |
+| Unary Sol | Complete counted C_CALL1 opcode and census assembly | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
 The source-frame handoff is reviewed and committed. Its slot now rotates to
@@ -175,10 +190,10 @@ The source-frame handoff is reviewed and committed. Its slot now rotates to
 returned representation/color for the reviewed branch. Log:
 `/tmp/syo-g2-large-wrapper-launch.log`. The next startup packet is
 `tasks/sol-code-seek-scan.md`; G2's other branch/caller work stays in the ledger.
-Physical custom and listing credit work are reviewed. That slot now takes
-`tasks/sol-opening-runtime-local.md`, log
-`/tmp/syo-opening-runtime-launch.log`, using the selected returned spending
-already proved. No active worker cache is copied into bprime.
+Opening and listing runtime producers are reviewed. That slot now takes
+`tasks/sol-counted-unary-complete.md`, log
+`/tmp/syo-counted-unary-complete-launch.log`. No active worker cache is
+copied into bprime.
 
 ## Remaining F1 boundaries
 
@@ -186,9 +201,9 @@ The published **132/134** table is relative to named `CustomMemCall` and
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
 The base-layout G2 contract cannot supply the extra returned counts.
 
-C_CALL1 needs the concrete opening runtime producer and composition of
-all unary successes. Listing runtime is reviewed; counter and exit are checked.
-The subsequent assembly packet is tasks/sol-counted-unary-complete.md.
+C_CALL1 needs composition of all unary successes and actual exit. Opening
+and listing runtime producers are reviewed; counter and exit are checked.
+Its active assembly packet is tasks/sol-counted-unary-complete.md.
 C_CALL2 needs named registration and general formatting. Named registration
 must derive node/key reserve from immutable source provenance, including
 fully initialized partialBytes, and account separately for repeated root-cell
