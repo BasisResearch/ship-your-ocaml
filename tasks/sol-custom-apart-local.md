@@ -12,7 +12,7 @@ Read docs/lanes/DEAD-ENDS.md before choosing a route; record newly refuted route
 Build affected modules and a focused #print axioms file; register audits, but leave full OCaml.Audit to the lead gate.
 Update lane log/PHASES accurately; leave checked edits for lead review.
 The lead commits and lands via scripts/integrate.sh; this sandbox makes Git metadata and the landing queue read-only.
-Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs.
+Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs. While builds run, tail a few log lines; do not repeatedly print full git diffs.
 No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.
 
 Target: check and repair the custom contract's global record-separation/frame incompatibility, using the selected-ledger ownership work already present.

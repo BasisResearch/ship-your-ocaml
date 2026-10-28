@@ -36,7 +36,7 @@ complete saving log.
 Validation: the guarded/capped affected and focused build passes (3,481
 jobs; `/tmp/interpreter-init-final-build.log`), including `InterpreterInitReset`,
 `InterpreterInitAudit` and the expanded `BacktraceAudit`. All 117 initialization
-and 80 backtrace audit declarations have reports; every one of the 1,129
+and 80 backtrace audit declarations have reports; every one of the 1,130
 unique reports in that build uses only `propext`, `Classical.choice`,
 `Quot.sound`. The audit also checks the exact universal reset theorem type.
 `OCaml.Audit` registers the new focused audit; its full build remains the
@@ -58,6 +58,11 @@ free -g
 python3 scripts/lean-guarded.py --log /tmp/interpreter-init-final-build.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.InterpreterInitReset OCaml.Vm.Boot.Startup.InterpreterInitAudit OCaml.Vm.Boot.Startup.BacktraceAudit
 python3 scripts/gen_startup_rows.py --check
 ```
+
+Lead review: all 99 new public declarations are registered in the main audit.
+The duplicate GC-call witness registration was removed from BacktraceAudit;
+InterpreterInitAudit retains it. The original 80-report backtrace check above
+is archived; the generated backtrace suite now has 79 declarations.
 
 Next: execute the CODE seek beginning at `0x80004e94` (first call at
 `0x80004ea4`, `caml_seek_optional_section`), then CODE allocation/read and

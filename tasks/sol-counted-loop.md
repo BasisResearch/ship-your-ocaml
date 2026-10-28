@@ -12,7 +12,7 @@ Read docs/lanes/DEAD-ENDS.md before choosing a route; record newly refuted route
 Build affected modules and a focused #print axioms file; register audits, but leave full OCaml.Audit to the lead gate.
 Update lane log/PHASES accurately; leave checked edits for lead review.
 The lead commits and lands via scripts/integrate.sh; this sandbox makes Git metadata and the landing queue read-only.
-Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs.
+Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs. While builds run, tail a few log lines; do not repeatedly print full git diffs.
 No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.
 
 Target: carry the checked physical custom-count evidence through the actual F1 loop and C_CALL setup/return, so channel calls consume the successful-state Fits bound.

@@ -39,7 +39,6 @@ import OCaml.Vm.Boot.Startup.CamlInitBacktraceNormalized
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_witness_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_reset_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_returned_exists
-#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_call_witness
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_call
 #print axioms OCaml.Vm.Boot.Startup.domainFields_last_exn
 #print axioms OCaml.Vm.Boot.Startup.camlInitBacktraceSave_eq
