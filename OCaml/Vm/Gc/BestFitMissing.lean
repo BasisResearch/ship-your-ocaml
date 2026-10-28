@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.BestFitFallback
 import OCaml.Vm.Gc.BestFitAccess
+import OCaml.Vm.Boot.Startup.GprsSame
 
 namespace OCaml.Vm.Gc.BestFitFallback
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
@@ -42,6 +43,14 @@ structure Missing (R : Nat → BitVec 64) (before after : Config) : Prop where
   pc : PCAt pc after
   registers : GHolds after.σ (regs R)
   memory : after.σ.mem = before.σ.mem
+
+/-- The read-only entry probe uses only its generated scratch registers. -/
+theorem Missing.native {R before after} (post : Missing R before after) :
+    OCaml.Vm.Boot.Startup.GprsSame before after [12,13,14,15] := by
+  apply OCaml.Vm.Boot.Startup.GprsSame.of_regFrame (by decide)
+  intro r outside noise
+  exact post.machine.frame_subset probe_written r noise
+    (fun n hn => beq_eq_false_iff_ne.mpr (outside n hn))
 
 /-- Actual allocator entry classifies a small request and observes its empty
 exact-size slot, reaching the bitmap-filtering fallback. -/

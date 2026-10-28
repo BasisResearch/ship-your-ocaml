@@ -32,6 +32,68 @@
   Checked edits stay uncommitted for lead integration; no metadata writes,
   whole Audit, generated-output hand edits or proof-budget changes.
 
+## Original best-fit entry through successful next-size return (2026-10-28)
+
+- `BestFitEntryNext.lean:allocate_entry_next` composes `BestFitMissing.missing`
+  at actual `bf_allocate` entry `0x800073ac` with
+  `BestFitFallback.search_allocate` via `FnSummary.seq` at its actual returned configuration
+  `0x800073cc`. Work stays in this worktree; the initial worktree was clean.
+  The abstraction inventory and relevant binding guidance/dead ends were read
+  before proof work. No subagents or Git metadata writes are used.
+- `EntryNextInput` observes only original entry registers/memory: positive
+  request, empty exact-size list, `SmallRepresentation`, existence of a
+  nonempty larger small list, actual loaded code, native save/source windows,
+  stack separation and aligned original return. `request_small` derives the
+  small-size bound from that existence. `missing_input` derives both the
+  readable probe slot and its zero word from `SmallShape.linked` and the
+  original empty list; no intermediate fallback state is assumed.
+- `EntryNextInput.search_input` derives every `SearchInput` field at the
+  actual `Missing` post using preserved memory/registers and machine facts.
+  `EntryNextPath` retains the probe and `SearchReturned`, including the
+  latter's existing search/pick/pop/split/remnant stage witnesses.
+  `EntryNextReturned` transports result/header/remnant-size/counter, exact
+  combined log, original return PC/stack, code/output and `GprsSame` back to
+  the original entry. The probe is read-only, so the combined log is exactly
+  `searchRouteLog` evaluated at that entry. Snapshot transport uses scalar
+  equalities and `congrArg`, without normalizing nested memories.
+- The same post includes returned `SmallRepresentation` and `AllocatedApart`
+  for the actual selected `searchLists` family, using the original physical
+  component and the existing `SearchReturned` producers.
+  `Missing.native` packages the generated probe frame with `GprsSame`;
+  `EntryNextReturned.live` composes `LiveFrame.of_memory` with the existing
+  selected search log frame. No instruction proof or generated output changes.
+- Validation: guarded/capped `lake build` of `BestFitMissing`,
+  `BestFitSearchRoute`, `BestFitPreservation`, `BestFitEntryNext` and
+  `BestFitNextAudit` passes (1290 jobs). Standalone focused
+  `lake env lean -M 6000 -j 1 OCaml/Vm/Gc/BestFitNextAudit.lean` passes:
+  all 260 expected reports are present (258 with only `propext`,
+  `Classical.choice`, `Quot.sound`; two pure), including all nine new
+  theorems. Reports are registered in `BestFitNextAudit`, already imported
+  by `OCaml.Audit`; full `OCaml.Audit` stays with the lead gate.
+  Generator drift (`gen_gc_rows.py --check`), collector CFG, hole check
+  (4751 files), discipline (27 rules), abstraction gate and `git diff --check`
+  pass. Every Lean launch used `lean-guarded.py` and `lean-capped.sh`, after
+  `free -g` showed available ≥25 GB, with the inherited 12 GB cgroup and two
+  Lean threads; no budgets were raised. Logs:
+  `/tmp/a6-entry-next-checked-build.log`,
+  `/tmp/a6-entry-next-focused-axioms.log`,
+  `/tmp/a6-entry-next-generator.log`, `/tmp/a6-entry-next-cfg.log`,
+  `/tmp/a6-entry-next-holes.log`, `/tmp/a6-entry-next-discipline.log`,
+  `/tmp/a6-entry-next-abstraction.log`.
+  Initial slot/zero elaboration failures are recorded in `DEAD-ENDS.md`;
+  explicit scalar lemmas and the typed zero resolve them at unchanged limits.
+- Exact remaining scope: this summary handles only positive small requests
+  with an empty exact-size list and a nonempty larger small list. It does not
+  assemble dispatch across the separately checked exact-size cases or the
+  zero-filtered-bitmap/large-tree alternative. Native major-heap
+  initialization and caller/invariant production of the original
+  representation, request/branch/code/register/return and window observations
+  remain open, as do wrapper/color integration for this route, natural
+  free-space accounting, full allocator readiness and collection.
+  `BarrierGrowthFull` stays G2; `CustomMemCall` stays a named premise; C4
+  round 2 waits for F1. Checked edits are left for lead review and
+  `scripts/integrate.sh`; Git metadata and the landing queue are read-only.
+
 ## Local custom spatial contract repair (2026-10-28)
 
 - Read the binding guidance, selected-ledger log, task brief, A1 plan/status

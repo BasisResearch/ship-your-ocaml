@@ -142,6 +142,16 @@
   limits. Do not normalize the nested pick/pop/split write logs to equate
   the two branch-dependent counter expressions.
 
+- 2026-10-28 original-entry empty-slot composition: a bare
+  `simp only [BfShape.slot, BitVec.ofNat_toNat]` leaves the address seam at
+  `BitVec.setWidth 64 (R 10)`. A `simpa only [SmallList, slot]` bridge then
+  rejects the represented `0#64` against the inferred zero at the
+  `bytesT ... 8` boundary (`BitVec (8*8)`). These are observed elaboration
+  failures, not machine counterexamples. Use `BitVec.setWidth_eq`, expose
+  the slot observation with `change ... = 0#64`, rewrite only the slot
+  equality and consume `SmallShape.linked` directly. No new slot-read or
+  instruction proof is needed.
+
 - 2026-10-27 counted loop entry: custom-table occupancy is a physical count
   component with a checked startup zero, but it is insufficient by itself
   for `CustomMemCall.accounting.ready`. The resource accumulator words and

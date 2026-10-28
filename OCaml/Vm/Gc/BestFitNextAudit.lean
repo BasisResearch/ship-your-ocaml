@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.BestFitPreservation
+import OCaml.Vm.Gc.BestFitEntryNext
 
 /-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
@@ -260,3 +261,14 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.smallRepresentation
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.physical
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.smallRepresentation
+
+/-! Original bf_allocate entry through the successful larger-small-list path. -/
+#print axioms OCaml.Vm.Gc.BestFitFallback.Missing.native
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextInput.request_small
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextInput.missing_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextInput.search_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextReturned.path_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextReturned.of_stages
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextPost.selected_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_next
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextReturned.live
