@@ -18,7 +18,7 @@ No subagents or other Codex workers. Finish with exactly RESULT: landed <commit>
 Target: close complete counted C_CALL3 and C_CALL5 rows by the actual F1 arity classification, with no native-return premise for impossible semantic branches.
 Files: Bytecode/Semantics.lean (shared semantic lemma only), Sim/{CcallShort,CountedControlRows}.lean, counted row generators and focused audit modules.
 Inspect every current primF1Impl pattern and primsF1. Source inspection finds F1 arities 1, 2 and 4; prove the classification rather than trusting that inspection or a list of names alone.
-C_CALL3 passes accu::stack.take 2 and C_CALL5 passes accu::stack.take 4 only after the real stack-depth check. Include all outcomes (.ok, .exit, .raise, .unsupported) and reject malformed operands/negative/out-of-range primitive indices exactly as stepI does.
+C_CALL3 passes accu::stack.take 2 and C_CALL5 passes accu::stack.take 4 only after the real stack-depth check. Include all outcomes (.ok, .exit, .raise, .callback, .unsupported) and reject malformed operands/negative/out-of-range primitive indices exactly as stepI does.
 Reuse prim_arity/CcallShort where applicable, shared run laws and ArmOutcome interfaces. A successful return contract alone does not exclude exit/halt; account for caml_sys_exit's unary pattern explicitly.
 Derive complete OpArm P (CountedLoopAt Customs f1Layout P) for both opcodes from semantic impossibility at InF1/GoodF1 sites. Do not constrain the primitive table, add a new guard or assume unreachable C_CALL3/5.
 Tie any updated opcode census to these actual whole-row terms. Preserve all 129 prior row terms, named CustomMemCall and counted BarrierGrowthFull boundaries; full C_CALL1/2/4 remain open.
