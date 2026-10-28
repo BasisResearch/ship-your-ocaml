@@ -111,7 +111,7 @@ theorem named_kept (custom : Gc.CustomMemCall Ready state Customs)
     by_cases lo : x < head.toNat + 56
     · exact Or.inl lo
     · exact Or.inr (by apply Classical.byContradiction; intro hi; apply apart; constructor <;> dsimp only <;> omega)
-  refine o.kept x (fun stateX => (custom.apart c x stateX).named read) noFoot
+  refine o.kept x (fun stateX => heap.customSpace.named x (custom.footprint c x stateX) read) noFoot
     (outW_openWindows_static h.frame bounds.2 (Or.inr (by omega)) (Or.inr (by omega))
       (Or.inr (by omega)) recOut headOut) (Or.inl (by omega)) ?_ ?_
   · dsimp only at minor
@@ -122,6 +122,52 @@ theorem named_kept (custom : Gc.CustomMemCall Ready state Customs)
     dsimp only at dom
     simp only [Layout.off_young_ptr, Layout.domainStateBytes] at *
     omega
+
+/-- Actual opening returns complete custom ownership, retained named roots
+and spatial separation from the new record and every old live runtime region,
+all with the same returned allocator ledger. -/
+theorem OpenedOut.spatial_heap (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
+    (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
+    (N : OutNursery H chs c) :
+    ∃ H' capacity, Boot.Startup.HeapReady H' capacity d ∧ Gc.CustomOwned Gc.CustomFoot H' d ∧
+      Gc.CustomSpace ((o.opening.record.toNat, recordBytes) :: Gc.namedBlocked chs c) d ∧
+      Gc.NamedLedger H' (Gc.namedBlocked chs c) d ∧ Gc.CustomLedger H' d ∧
+      ∀ e ∈ (o.opening.record.toNat, recordBytes) :: H, e ∈ H' := by
+  let H1 := (o.opening.record.toNat, recordBytes) :: H
+  have sub : ∀ e ∈ H, e ∈ H1 := fun e he => List.mem_cons_of_mem _ he
+  have fresh : FreshBlock vsaLayoutP H o.opening.record.toNat recordBytes :=
+    ⟨by have lo := o.opening.low; unfold heapStart at lo; omega,
+      o.opening.low, o.opening.high, o.opening.fresh⟩
+  have space := heap.customSpace.allocate heap.custom.owned fresh (Nat.le_refl recordBytes)
+  have coverage : ∀ e ∈ (o.opening.record.toNat, recordBytes) :: Gc.namedBlocked chs c,
+      Gc.Covered H1 e := by
+    intro e he
+    rcases List.mem_cons.mp he with rfl | old
+    · exact ⟨_, List.mem_cons_self, Nat.le_refl _, Nat.le_refl _⟩
+    · obtain ⟨owner, member, lo, hi⟩ := heap.blocked_covered e old
+      exact ⟨owner, sub owner member, lo, hi⟩
+  have keepNamed : ∀ a, NamedRead c a → byte d a = byte c a := by
+    intro a read
+    rw [byte_total, byte_total]
+    exact named_kept custom o heap h N read
+  have namedProtected : ∀ a, NamedRead c a → ¬ vsaFoot H1 a := by
+    intro a read
+    rcases heap.named.read_covered read with bucket | ⟨owner, member, lo, hi⟩
+    · rintro (global | ⟨low, _, _⟩)
+      · unfold allocGlobal InRange at global
+        simp only [Layout.sym_named_value_table] at bucket
+        omega
+      · simp only [Layout.sym_named_value_table, heapStart] at *
+        omega
+    · exact Gc.Covered.notFoot (e := (a, 1)) ⟨owner, sub owner member, lo, hi⟩
+        (fun _ member => o.opening.heap.block_bounds member) ⟨Nat.le_refl _, by dsimp only; omega⟩
+  have spaceD := space.grow heap.named keepNamed o.allocIn
+    (fun e he _ inside => (coverage e he).notFoot (fun _ member => o.opening.heap.block_bounds member) inside)
+    namedProtected
+  obtain ⟨H', capacity, ready, owned, ledger, old⟩ := o.heap
+  exact ⟨H', capacity, ready, custom.owned_physical owned o.ready, spaceD,
+    (heap.named.frame keepNamed).mono (fun e he => old e (sub e he)), ledger, old⟩
 
 /-- **An open record is kept**, except the old head's `prev` word (bytes
 56–63), which the opening rewrites. -/
@@ -145,8 +191,8 @@ theorem record_kept (custom : Gc.CustomMemCall Ready state Customs)
   simp only [Gc.minorRegion] at minor lowM highM
   dsimp only at dom minor
   refine o.kept x (fun s => ?_) ?_ ?_ (Or.inl (by omega)) ?_ ?_
-  · have a := (custom.apart c x s).records chs heap.channels r hr
-    unfold chanOffBuff ioBufferSize at a; omega
+  · have a := heap.custom_apart_record (custom.footprint c x s) hr
+    unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at a; omega
   · rintro (g | ⟨_, _, no⟩)
     · rcases allocGlobal_off_arena _ g with y | y <;> omega
     · exact no b hb ⟨by omega, by omega⟩

@@ -2,6 +2,19 @@
 
 ## Current status
 
+**2026-10-28 local custom spatial migration: checked for lead review.**
+The conditional pinned-domain record/frame obstruction is checked; both global
+`CallerApart.records/named` laws are removed. Actual opening/listing and counted
+frames consume selected ownership plus local `CustomSpace`. Full custom storage
+ledgers and allocated-storage growth survive actual native returns, iterations
+and epilogues; same-heap spatial/ownership evidence is exposed at return.
+The final affected build passes 3,653 jobs and the 57-report allowed-axiom audit
+covers all 23 new theorems. Full Audit/integration stay with the lead. Primitive
+and counted-row totals are unchanged; GoodF1 is preserved. Physical accounting,
+quietness, domain table-pointer input/frame, native `CustomMemCall` and concrete
+runtime suppliers remain open, as detailed at the top of `a6-gc.md`.
+`BarrierGrowthFull` stays G2; C4 round 2 waits for F1.
+
 **2026-10-28 ordinary counted memory/control continuation (base `ed54de04`):
 122/134 complete counted F1 row instances checked; lead integration pending.**
 

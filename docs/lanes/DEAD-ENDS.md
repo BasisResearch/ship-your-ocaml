@@ -20,17 +20,39 @@
   under plain `decide`; use kernel evaluation of that generated literal census,
   without changing proof budgets or count/frame premises.
 
-- 2026-10-27 custom global-frame review: `CustomMemCall.frame` preserves
-  `state` under arbitrary outside writes, while `CallerApart.records`
-  quantifies over linked lists reconstructed from those outside bytes.
-  A candidate obstruction redirects the opened-list head to the retained
-  domain resource byte and writes a null next word outside custom state.
-  It requires a checked conditional proof before being called a defect;
-  empty Ready/state may make the whole contract vacuous. The analogous
-  external dependency of `.named` also needs review. Selected ownership
-  alone does not establish frame-stable separation from arbitrary forged
-  lists. `tasks/sol-custom-apart-local.md` records the follow-up; do not
-  silently infer physical custom-state realizability from the ledger repair.
+
+- 2026-10-28 custom global-frame review: the candidate is now checked by
+  `Gc.global_records_frame_obstruction` in `CustomFrameObstruction.lean`.
+  Its minimal `CustomOutsideFrame` uses only footprint-local apart and frame
+  laws. Given `Ready k c`, the pinned valid domain D and retained byte at
+  `D + off_extra_heap_resources_minor`, the actual two-entry write log puts
+  `D + 96` in the opened-list head and zero at that address plus `chanOffNext`.
+  `CallerApart.static/domainField` separate both writes from custom state;
+  `Caml_state` is preserved. The framed state then contradicts the rejected
+  `GlobalRecordApart` on the constructed singleton list. Generated domain
+  offsets and actual `writeLog_out`, `bytesT_writeLog_out` and
+  `word_writeLog_at` are used. This is a conditional memory-contract
+  obstruction, not a Sail execution or global inconsistency: empty
+  readiness/state can remain vacuous.
+  The former `.named` likewise depended on an external memory table; that
+  dependency is reviewed by inspection, with no checked forged-named-table
+  counterexample claimed. Both global fields are removed. `CustomSpace`
+  lives beside the selected heap/actual records and named snapshot, and its
+  frame explicitly retains table addressing words and the named roots.
+  `NamedLedger.read_back` proves why every post-frame representation then
+  has the same physical footprint. Do not restore a global record/named law
+  or infer record ownership from a linked list alone.
+  Directly normalizing the concatenated two-store readback hit the default
+  whnf budget during this check; `Readback.word_writeLog_at` supplies the
+  bounded readback without reducing the nested memory writes. Do not raise
+  the proof budget for that route.
+  The old `CustomMemReturned.grows` describes all state bytes, including
+  resource accumulators. By contract inspection it alone cannot prohibit
+  reclassifying an old resource byte as allocated backing storage. The
+  actual native boundary now separately requires `allocGrows`, full
+  returned `CustomLedger`, and ready-footprint completeness (`physical`).
+  These are explicit physical supplier obligations, not checked native
+  execution or an assumed whole primitive return.
 
 - 2026-10-27 counted ordinary C_CALL interface inspection: the existing
   `CountedPrimReturnsAtR` accepts only ordinary `CcallReady` at the original

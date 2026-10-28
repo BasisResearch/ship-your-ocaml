@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.CustomFrameObstruction
 import OCaml.Vm.Gc.ChannelCustomCount
 import OCaml.Vm.Gc.CustomLedgerObstruction
 import OCaml.Vm.Gc.NamedOwnership
@@ -7947,3 +7948,29 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_opcode_census
 #print axioms OCaml.Vm.Sim.counted_opcode_count
 #print axioms OCaml.Vm.Sim.counted_remaining_count
+
+-- Local custom spatial invariants and the conditional global-frame obstruction.
+#print axioms OCaml.Vm.Gc.global_records_frame_obstruction
+#print axioms OCaml.Vm.Gc.customFoot_congr
+#print axioms OCaml.Vm.Gc.CustomSpace.restrict
+#print axioms OCaml.Vm.Gc.CustomSpace.frame
+#print axioms OCaml.Vm.Gc.Covered.notFoot
+#print axioms OCaml.Vm.Gc.CustomSpace.grow
+#print axioms OCaml.Vm.Gc.CustomSpace.of_empty
+#print axioms OCaml.Vm.Gc.CustomSpace.allocate
+#print axioms OCaml.Vm.Gc.customAddresses_frame
+#print axioms OCaml.Vm.Gc.CustomMemCall.owned_physical
+#print axioms OCaml.Vm.Gc.CustomMemReturned.space
+#print axioms OCaml.Vm.Gc.CustomMemCall.returned_space
+#print axioms OCaml.Vm.Gc.CustomMemCall.addresses_frame
+#print axioms OCaml.Vm.Gc.CustomSpace.record_apart
+#print axioms OCaml.Vm.Gc.LibHeapAt.custom_apart_record
+#print axioms OCaml.Vm.Gc.LibHeapAt.blocked_covered
+#print axioms OCaml.Vm.Gc.LibHeapAt.space_frame
+#print axioms OCaml.Vm.Gc.NamedLedger.read_back
+#print axioms OCaml.Vm.Primitives.Channel.OutNursery.record_apart
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.spatial_heap
+#print axioms OCaml.Vm.Sim.OutListWalk.OutListReturned.physical_records
+#print axioms OCaml.Vm.Sim.OutListWalk.WalkGeometry.state_record_apart
+
+#print axioms OCaml.Vm.Sim.OutListWalk.OutListReturned.spatial_heap

@@ -163,7 +163,7 @@ structure WalkGeometry (w : Walk) (n : Nat) : Prop where
   coverDomain : ∃ x ∈ w.H0, x.1 ≤ w.D ∧ w.D + Layout.domainStateBytes ≤ x.1 + x.2
   /-- the entry's state lies where the custom calls' callers may not write
   (`CallerApart` at the entry, whose open-channel list and domain are the walk's) -/
-  stateApart : ∀ a, w.S a → ∃ c, Gc.CallerApart c a ∧ Gc.OpenChannelList c.σ.mem w.chs ∧
+  stateApart : ∀ a, w.S a → ∃ c, Gc.CallerApart c a ∧ (∀ r ∈ w.chs, a < r ∨ r + recBytes ≤ a) ∧
     (word c Layout.sym_Caml_state).toNat = w.D
 
 /-- The callee-saved registers the walk keeps. -/
@@ -200,9 +200,29 @@ structure WalkAt (w : Walk) (Ready : Nat → Config → Prop) (state : Config �
   frame : ∀ a, ¬ Written w state a → bytesT d.σ.mem a 1 = bytesT e.σ.mem a 1
   counted : Gc.CustomCountStep Customs e d (listedRecs e.σ.mem pre).length
   ready : Ready (k + (listedRecs e.σ.mem rest).length) d
-  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap d ∧ Gc.CustomOwned state H d ∧ ∀ x ∈ w.H0, x ∈ H
+  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap d ∧ Gc.CustomOwned state H d ∧ Gc.CustomLedger H d ∧ ∀ x ∈ w.H0, x ∈ H
   /-- the state now lies in the entry's state or newlib's free space at the entry -/
   stateIn : ∀ a, state d a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
+  allocIn : ∀ a, Gc.CustomAllocFoot d a → Gc.CustomAllocFoot e a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
+
+/-- Entry spatial evidence and owned records exclude those records from
+subsequent state growth into the selected allocator's free footprint. -/
+theorem WalkGeometry.state_record_apart {w : Walk} {n : Nat} (g : WalkGeometry w n)
+    {S : Nat → Prop} (inside : ∀ a, S a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a)
+    {a r : Nat} (state : S a) (member : r ∈ w.chs) : a < r ∨ r + recBytes ≤ a := by
+  rcases inside a state with old | free
+  · obtain ⟨_, _, records, _⟩ := g.stateApart a old
+    exact records r member
+  · apply Classical.byContradiction
+    intro no
+    obtain ⟨e, he, lo, hi⟩ := g.coverRecords r member
+    rcases free with global | ⟨_, _, outside⟩
+    · rcases VsaIris.VsaHeap.allocGlobal_off_arena a global with low | high
+      · have bound := (g.records r member).low
+        omega
+      · have bound := (g.records r member).high
+        omega
+    · exact outside e he ⟨by omega, by omega⟩
 
 /-- A record's `Listed` test reads the bytes the walk keeps. -/
 theorem listed_iff {m m' : Std.ExtHashMap Nat (BitVec 8)} {r : Nat} (fit : r + 80 < 2 ^ 64)
@@ -344,7 +364,8 @@ theorem walk_skip {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state 
       simpa using h.counted.trans fr.counts
     ready := fr.ready
     stateIn := fun a hs => h.stateIn a ((fr.state a).mp hs)
-    heap := by obtain ⟨H, cap, hr, owned, sub⟩ := h.heap; exact ⟨H, cap, HeapReady.of_mem hr m', owned.frame fr.state, sub⟩ }⟩
+    allocIn := fun a ha => h.allocIn a (((Gc.customFoot_congr fr.addresses.1 fr.addresses.2).2 a).mp ha)
+    heap := by obtain ⟨H, cap, hr, owned, ledger, sub⟩ := h.heap; exact ⟨H, cap, HeapReady.of_mem hr m', owned.frame fr.state, ledger.congr fr.addresses.1 fr.addresses.2, sub⟩ }⟩
 
 /-- Arithmetic over the walk's layout constants. -/
 macro "walk_omega" : tactic => `(tactic| (
@@ -464,7 +485,7 @@ theorem walk_enter {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
   have room := g.room; have yh := g.nurseryHigh; have nl := g.nurseryLow; have ya := g.youngAligned
   have jlt : (listedRecs e.σ.mem pre).length + 1 ≤ n := by omega
   obtain ⟨fy, fl⟩ := fields_of_words (c := f) (by walk_omega) (by walk_omega) (by walk_omega) wDom wYoung wLimit
-  obtain ⟨H, cap, heap, owned, sub⟩ := h.heap
+  obtain ⟨H, cap, heap, owned, _ledger, sub⟩ := h.heap
   -- bytes outside the two stores
   have keepByte : ∀ a, (a < r + 64 ∨ r + 68 ≤ a) → (a < w.sp.toNat + 8 ∨ w.sp.toNat + 16 ≤ a) →
       (f.σ.mem[a]?).getD 0 = (d.σ.mem[a]?).getD 0 := by
@@ -484,7 +505,7 @@ theorem walk_enter {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
   rw [listedRecs_cons_go go, List.length_cons, ← Nat.add_assoc] at readyD
   have frF := custom.frame_counted _ d f readyD (fun a sa => by
     have ap := custom.apart d a sa
-    have recA := ap.records w.chs h.opened r mem
+    have recA := g.state_record_apart h.stateIn sa mem
     have below := ap.belowStack
     exact keepByte a (by walk_omega) (by walk_omega))
     (word_keep mf (out8 _ (by walk_omega) (by walk_omega)))
@@ -697,9 +718,8 @@ theorem record_not_written {w : Walk} {n : Nat} {Ready : Nat → Config → Prop
     · rcases g.recordsApart r mem r' mem' (Ne.symm same) with a | a <;> walk_omega
   · walk_omega
   · obtain ⟨c, ap, op, _⟩ := g.stateApart _ hs
-    have := ap.records w.chs op r mem
-    simp only [chanOffBuff, OCaml.Bytecode.ioBufferSize] at this
-    simp only [recBytes, chanOffBuff, OCaml.Bytecode.ioBufferSize] at hj; omega
+    have := op r mem
+    omega
   · obtain ⟨x, hx, xlo, xhi⟩ := g.coverRecords r mem
     exact not_vsaFoot_in hx (by omega) ⟨by omega, by simp only [recBytes] at hj xhi; omega⟩ foot
 
@@ -803,6 +823,7 @@ structure ListedStep (w : Walk) (Ready : Nat → Config → Prop) (state : Confi
   readyG : Ready (k + (listedRecs e.σ.mem rest).length) g'
   heapG : OCaml.Vm.Boot.Startup.HeapReady H' cap' g'
   ownedG : Gc.CustomOwned state H' g'
+  ledgerG : Gc.CustomLedger H' g'
   sub' : ∀ x ∈ H, x ∈ H'
   afterMem : d'.σ.mem = writeLog g'.σ.mem (afterLog g'.σ.mem w.sp r V w.D)
   post : EffectPost [10, 11, 15, 1, 6, 10, 12, 13, 14, 15, 16, 17, 12, 14, 15, 8, 13]
@@ -813,6 +834,7 @@ structure ListedStep (w : Walk) (Ready : Nat → Config → Prop) (state : Confi
   link : gprGet d'.σ 1 = some cons_call.link
   stateF : ∀ a, state f a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
   stateG : ∀ a, state g' a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
+  allocGrowth : ∀ a, Gc.CustomAllocFoot g' a → Gc.CustomAllocFoot d a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
 
 /-- **A listed record's machine run** exists. -/
 theorem walk_listed_run {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
@@ -862,7 +884,7 @@ theorem walk_listed_run {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
   have openedF : Gc.OpenChannelList f.σ.mem w.chs := opened_transfer h.opened (by
     rw [mf]; apply bytesT_writeLog_out
     simp only [enterLog, OutLRange, r64, s8, and_true]; walk_omega) nextsF
-  obtain ⟨H', cap', heapG, ownedG, sub'⟩ := ret.heap
+  obtain ⟨H', cap', heapG, ownedG, ledgerG, sub'⟩ := ret.heap
   have stateF : ∀ a, state f a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a := fun a hs => h.stateIn a ((iffF.state a).mp hs)
   have grows : ∀ a, state g' a → state f a ∨ VsaIris.VsaHeap.vsaFoot H a := grows _ _ _ _ _ ret.toCustomMemReturned
   exact ⟨f, g', d', v.toNat, H, H', cap', {
@@ -891,6 +913,11 @@ theorem walk_listed_run {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
     readyG := readyG
     heapG := heapG
     ownedG := ownedG
+    ledgerG := ledgerG
+    allocGrowth := fun a ha => by
+      rcases ret.allocGrows a ha with old | free
+      · exact Or.inl (((Gc.customFoot_congr iffF.addresses.1 iffF.addresses.2).2 a).mp old)
+      · exact Or.inr (vsaFoot_sub sub free)
     sub' := sub'
     afterMem := post3.memory
     post := post3
@@ -982,7 +1009,7 @@ theorem ListedStep.recordAtReturn {w : Walk} {n : Nat} {Ready : Nat → Config �
   have nl := g.nurseryLow; have nh := g.nurseryHigh; have spl := g.spLow
   obtain ⟨xr, xrIn, xrl, xrh⟩ := g.coverRecords r mem
   apply s.atReturn g mem (by omega) (by walk_omega)
-  · intro hs; have := (custom.apart f _ hs).records w.chs s.openedF r mem
+  · intro hs; have := g.state_record_apart s.stateF hs mem
     have : chanOffBuff + OCaml.Bytecode.ioBufferSize = recBytes := rfl
     omega
   · exact not_vsaFoot_in (s.sub _ xrIn) (by omega) ⟨by omega, by omega⟩
@@ -1029,7 +1056,7 @@ theorem ListedStep.refwords {w : Walk} {n : Nat} {Ready : Nat → Config → Pro
     intro i hi
     have hs : ¬ state f (q + chanOffRefcount + i) := by
       intro hs
-      have := (custom.apart f _ hs).records w.chs s.openedF q member
+      have := g.state_record_apart s.stateF hs member
       unfold chanOffRefcount at *
       omega
     have hf : ¬ VsaIris.VsaHeap.vsaFoot H (q + chanOffRefcount + i) :=
@@ -1172,7 +1199,8 @@ theorem ListedStep.ready {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} 
     (s : ListedStep w Ready state Customs k e pre rest r d f g' d' V j H H' cap') (g : WalkGeometry w n) :
     Ready (k + (listedRecs e.σ.mem rest).length) d' ∧ word d' Layout.sym_Caml_state = BitVec.ofNat 64 w.D ∧
       (∀ a, state d' a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a) ∧
-      Gc.CustomCountStep Customs g' d' 0 ∧ Gc.CustomOwned state H' d' := by
+      Gc.CustomCountStep Customs g' d' 0 ∧ Gc.CustomOwned state H' d' ∧ Gc.CustomLedger H' d' ∧
+      (∀ a, Gc.CustomAllocFoot d' a → Gc.CustomAllocFoot g' a) := by
   obtain ⟨vlm, vy, vl, vf, spf⟩ := s.nums g
   have spl := g.spLow; have nh := g.nurseryHigh; have dh := g.domainHigh; have nl := g.nurseryLow
   have dD : word d' Layout.sym_Caml_state = BitVec.ofNat 64 w.D := by
@@ -1188,7 +1216,8 @@ theorem ListedStep.ready {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} 
     obtain ⟨c1, c2, c3, c4⟩ := state_misses_after ap.minor ap.belowStack yp nl vlm vy nh spl
     rw [s.afterMem, writeLog_out _ _ _ (afterLog_outL spf vf vl c1 c2 c3 c4)])
     (dD.trans s.domainG.symm)
-  exact ⟨fr.ready, dD, (fun a hs => s.stateG a ((fr.state a).mp hs)), fr.counts, s.ownedG.frame fr.state⟩
+  exact ⟨fr.ready, dD, (fun a hs => s.stateG a ((fr.state a).mp hs)), fr.counts, s.ownedG.frame fr.state, s.ledgerG.congr fr.addresses.1 fr.addresses.2,
+    fun a ha => ((Gc.customFoot_congr fr.addresses.1 fr.addresses.2).2 a).mp ha⟩
 
 /-- newlib's heap from the return to the head. -/
 theorem ListedStep.heap {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
@@ -1279,7 +1308,7 @@ theorem walk_listed {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {stat
     rw [listedNew, List.length_append]; rfl
   have ns : ∀ n ∈ calleeSaved, n ∉ [10, 11, 15, 1, 6, 10, 12, 13, 14, 15, 16, 17, 12, 14, 15, 8, 13] ∧
       n ∉ [15, 10, 11, 12, 15, 1] ∧ 1 ≤ n ∧ n ≤ 31 := by decide
-  obtain ⟨readyD, domD, stateD, countedD, ownedD⟩ := s.ready custom g
+  obtain ⟨readyD, domD, stateD, countedD, ownedD, ledgerD, allocD⟩ := s.ready custom g
   refine ⟨d', s.run, {
     good := s.post.good, image := s.post.image, minstret := s.post.minstret, tick := s.post.tick
     link := ⟨cons_call.link, s.link, by decide⟩
@@ -1336,8 +1365,12 @@ theorem walk_listed {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {stat
       rw [lenNew]
       simpa using ((h.counted.trans s.countedF).trans s.countedG).trans countedD
     ready := readyD
-    heap := ⟨H', cap', s.heap g, ownedD, fun x hx => s.sub' x (s.sub x hx)⟩
-    stateIn := stateD }⟩
+    heap := ⟨H', cap', s.heap g, ownedD, ledgerD, fun x hx => s.sub' x (s.sub x hx)⟩
+    stateIn := stateD
+    allocIn := fun a ha => by
+      rcases s.allocGrowth a (allocD a ha) with old | free
+      · exact h.allocIn a old
+      · exact Or.inr free }⟩
 
 /-- Any two invariants at one configuration name the same rest of the list. -/
 theorem WalkAt.rest_unique {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}

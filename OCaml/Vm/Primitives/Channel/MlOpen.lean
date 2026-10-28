@@ -119,6 +119,8 @@ heap are live blocks of `H`, the open records `chs` lie apart from
 `Caml_state`, and the nursery has room for the custom block. -/
 structure OutNursery (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
   custom : Gc.CustomLedger H c
+  space : Gc.CustomSpace (chs.map (fun r => (r, Gc.chanRecordBytes))) c
+  records : ∀ r ∈ chs, Gc.Covered H (r, Gc.chanRecordBytes)
   domain : Gc.Covered H (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)
   minor : Gc.Covered H (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo)
   channels : Gc.OpenChannelList c.σ.mem chs
@@ -128,6 +130,18 @@ structure OutNursery (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Pro
   aligned : (runtimeFields c).youngPtr % 8 = 0
   low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr
   high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi
+
+/-- The owned selected record extents and local custom space supply the
+opening's refcount/prev-store separation. -/
+theorem OutNursery.record_apart {H : List (Nat × Nat)} {chs : List Nat} {c : Config}
+    {cap a r : Nat} (h : OutNursery H chs c) (heap : HeapReady H cap c)
+    (foot : Gc.CustomFoot c a) (member : r ∈ chs) :
+    a < r ∨ r + chanOffBuff + ioBufferSize ≤ a := by
+  obtain ⟨e, he, elo, _⟩ := h.records r member
+  have low := (heap.block_bounds he).1
+  have sep := h.space.record_apart foot (by dsimp only at elo; omega)
+    (h.recordsApart r member) (List.mem_map.mpr ⟨r, member, rfl⟩)
+  simpa only [Gc.chanRecordBytes, Nat.add_assoc] using sep
 
 /-- A nonzero list head is an open record. -/
 theorem head_mem {m : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {head : BitVec 64}
@@ -167,13 +181,17 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   ready : Ready k d
   counted : Gc.CustomCountStep Customs c d 1
   /-- Heap readiness and state ownership use the same returned ledger. -/
-  heap : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧
+  heap : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧ Gc.CustomLedger H' d ∧
     ∀ e ∈ (opening.record.toNat, recordBytes) :: H, e ∈ H'
   /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
   block : value.toNat + 16 = (runtimeFields c).youngPtr
   youngPtr : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24
   youngLimit : (runtimeFields d).youngLimit = (runtimeFields c).youngLimit
   domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state
+  /-- Physical allocated-table growth at this actual opening, relative to the
+  ledger that already contains the freshly allocated channel record. -/
+  allocIn : ∀ a, Gc.CustomAllocFoot d a → Gc.CustomAllocFoot c a ∨
+    vsaFoot ((opening.record.toNat, recordBytes) :: H) a
   /-- **The primitive's memory frame**: every byte outside the runtime's
   custom state, newlib's free space, the opening's windows, the primitive's
   frame, the 24-byte block and the `young_ptr` word reads as at the entry. -/
@@ -260,7 +278,8 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     have below := ap.belowStack
     have free := custom.notFoot owned s
     refine keptF a (outOpen a below (fun l => ?_) ?_ fun hz => headApart a hz
-      (ap.records chs N.channels _ (head_mem N.channels h.headWord hz))) free (Or.inl (by arena_omega))
+      (N.record_apart h.ready.heap (custom.footprint c a s)
+        (head_mem N.channels h.headWord hz))) free (Or.inl (by arena_omega))
     · have e := ap.static l
       simp only [VsaIris.InExt, Layout.sym_caml_extra_heap_resources] at e
       omega
@@ -438,12 +457,24 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     simp only [Gc.minorRegion] at m
     omega)) domD
   have readyD := framedD.ready
-  have heapD : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧
+  obtain ⟨baseF, endF⟩ := custom.addresses_frame ready stateOut
+  obtain ⟨baseD, endD⟩ := custom.addresses_frame readyA (fun a s => doneOut a (by
+    have m := (custom.apart allocated a s).minor
+    simp only [Gc.minorRegion] at m
+    omega))
+  have allocIn : ∀ a, Gc.CustomAllocFoot d a → Gc.CustomAllocFoot c a ∨
+      vsaFoot ((O.record.toNat, recordBytes) :: H) a := by
+    intro a ha
+    have atA := ((Gc.customFoot_congr baseD endD).2 a).mp ha
+    rcases C.allocGrows a atA with old | free
+    · exact Or.inl (((Gc.customFoot_congr baseF endF).2 a).mp old)
+    · exact Or.inr free
+  have heapD : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧ Gc.CustomLedger H' d ∧
       ∀ e ∈ (O.record.toNat, recordBytes) :: H, e ∈ H' := by
-    obtain ⟨H', cap', heapA, ownedA, sub⟩ := C.heap
+    obtain ⟨H', cap', heapA, ownedA, ledgerA, sub⟩ := C.heap
     refine ⟨H', cap', Gc.HeapReady.keep_windows heapA
       (ws := [⟨value.toNat + 8, value.toNat + 16⟩]) ?_
-      (fun a ha => doneOut a (ha _ List.mem_cons_self)), ownedA.frame framedD.state, sub⟩
+      (fun a ha => doneOut a (ha _ List.mem_cons_self)), ownedA.frame framedD.state, ledgerA.congr baseD endD, sub⟩
     intro w hw
     simp only [List.mem_singleton] at hw
     subst w
@@ -478,6 +509,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     youngPtr := ptrD
     youngLimit := limD
     domain := domainD
+    allocIn := allocIn
     kept := fun a notState notFoot o frame blk yw => by
       have youngW : a + 8 ≤ Gc.domainAddr flagged Layout.off_young_ptr ∨
           Gc.domainAddr flagged Layout.off_young_ptr + 8 ≤ a := by
@@ -621,6 +653,10 @@ theorem out_nursery {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Co
     (low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr)
     (high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi) : OutNursery H chs c where
   custom := heap.custom
+  space := heap.customSpace.restrict (fun e he => by
+    simp only [Gc.namedBlocked, List.mem_append]
+    exact Or.inl (Or.inr he))
+  records := heap.records
   domain := heap.extents _ (by simp [Gc.f1Covered])
   minor := heap.extents _ (by simp [Gc.f1Covered])
   channels := heap.channels

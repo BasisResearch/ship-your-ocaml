@@ -276,12 +276,7 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     have kept := h.named.frame (c' := c') namedKeep
     simpa only [namedBlocked, tableWord Layout.off_ref_table_base (by decide) (by decide),
       tableWord Layout.off_ref_table_end (by decide) (by decide)] using kept
-  refine {
-    room := by rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]; exact h.room
-    channelsBound := h.channelsBound
-    ready := HeapReady.keep_windows h.ready (fun w hw => ?_) keep
-    extents := h.extents
-    custom := h.custom.frame fun a inside => by
+  have keepCustom : ∀ a, VsaIris.InExt (customTable, Layout.custom_table_bytes) a → byte c' a = byte c a := fun a inside => by
       rw [byte_total, byte_total]
       apply keep a
       intro w hw
@@ -296,6 +291,14 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
         have high := inside.2
         dsimp only at *
         omega
+  refine {
+    room := by rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]; exact h.room
+    channelsBound := h.channelsBound
+    ready := HeapReady.keep_windows h.ready (fun w hw => ?_) keep
+    extents := h.extents
+    custom := h.custom.frame keepCustom
+    customSpace := h.space_frame namedKeep keepCustom
+      (tableWord _ (by decide) (by decide)) (tableWord _ (by decide) (by decide))
     customRecords := h.customRecords
     channels := ?_
     records := h.records

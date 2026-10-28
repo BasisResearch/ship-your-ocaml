@@ -118,7 +118,9 @@ structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (s
   entry : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat),
     L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
     ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
-      Gc.CustomLedger H c ∧ Gc.NamedLedger H [] c ∧
+      Gc.CustomLedger H c ∧
+      Gc.CustomSpace ((Gc.placedChannels cp s.world.chans.length).map (fun r => (r, recBytes))) c ∧
+      Gc.NamedLedger H [] c ∧
       RecordsPlaced H (word c Layout.sym_Caml_state).toNat (Gc.placedChannels cp s.world.chans.length) ∧
       (∃ x ∈ H, x.1 ≤ Gc.minorRegion.lo ∧ Gc.minorRegion.hi ≤ x.1 + x.2) ∧
       (∃ x ∈ H, x.1 ≤ (word c Layout.sym_Caml_state).toNat ∧
@@ -184,8 +186,11 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have g := setup.geometry
   have ng := g.nursery
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨H, cap, heap, customLedger, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
+  obtain ⟨H, cap, heap, customLedger, space, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
     rt.entry P s c pl cp sp high input.runtime g
+  have fixedDomain : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+    rw [show word c Layout.sym_Caml_state = Boot.Startup.firstDomainPtr from heap.domainWord]
+    rfl
   have xdb := heap.block_bounds (q := xd.1) (n := xd.2) xdIn
   have nl := e.nativeLow; have nh := e.nativeHigh; have na := e.nativeAligned
   have dh := e.domainHigh; have da := e.domainAligned; have rm := e.room
@@ -235,7 +240,9 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       coverMinor := ⟨xm, xmIn, xml, xmh⟩
       coverRecords := recs.covered
       coverDomain := ⟨xd, xdIn, xdl, xdh⟩
-      stateApart := fun a hs => ⟨c, rt.custom.apart c a hs, ng.channelsListed, rfl⟩ }
+      stateApart := fun a hs => ⟨c, rt.custom.apart c a hs,
+        fun r hr => space.record_apart (rt.custom.footprint c a hs) (recs.low r hr) (by simpa only [fixedDomain, recBytes, Gc.chanRecordBytes] using recs.domain r hr)
+          (List.mem_map.mpr ⟨r, hr, rfl⟩), rfl⟩ }
     input := {
       leaf := input.toLeafInput
       pc := pcE
@@ -255,14 +262,15 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       opened := ng.channelsListed
       ready := by rw [← nN]; simpa only [Nat.zero_add] using ready
       heap := heap
-      owned := ⟨fun a ha => customLedger.owned.bytes a (rt.custom.footprint c a ha)⟩ }
+      owned := ⟨fun a ha => customLedger.owned.bytes a (rt.custom.footprint c a ha)⟩
+      ledger := customLedger }
     listed := listed
     payload := pay
     named := fun a f => by
       obtain ⟨chains, table⟩ := input.data.named
       have read : NamedRead c a := ⟨pl, s.world.named, chains, table, f⟩
       exact ⟨ledger.read_bounds heap read, ledger.read_not_foot heap read,
-        fun st => (rt.custom.apart c a st).named read⟩
+        fun st => space.named a (rt.custom.footprint c a st) read⟩
     stateS := fun _ => Iff.rfl
     chs := rfl
     domain := rfl

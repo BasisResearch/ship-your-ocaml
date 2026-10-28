@@ -1109,12 +1109,12 @@ theorem libHeap_of {c : Config}
     rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   have reserve : reserved (word c (refTable + Layout.off_ref_table_base)).toNat ([] : List Nat).length ≤ cap := by
     rw [base]; simp only [reserved, tableCharge, recordCharge, maxChannels, if_true, List.length_nil] at *; omega
+  have buckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0 := by
+    intro b hb
+    unfold word
+    rw [bytesT_memEqv memory, ← bytesT_memEqv WhileMin.memory_equiv]
+    exact WhileMin.namedBuckets b hb
   have namedLedger : NamedLedger H (namedBlocked [] c) c := by
-    have buckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0 := by
-      intro b hb
-      unfold word
-      rw [bytesT_memEqv memory, ← bytesT_memEqv WhileMin.memory_equiv]
-      exact WhileMin.namedBuckets b hb
     refine ⟨WhileMinHeap.place, [], fun _ => [], NamedRepr.empty c _ buckets, NamedOwned.empty H _, ?_⟩
     intro x f e he inside
     have bucket := NamedPlFoot.empty.mp f
@@ -1134,10 +1134,21 @@ theorem libHeap_of {c : Config}
     · unfold customBase customTable
       rw [WhileMinRuntime.read_custom_table_base memory]
       rfl
+  have customSpace : CustomSpace (namedBlocked [] c) c := by
+    apply CustomSpace.of_empty (c := c) (by
+      unfold customBase customTable
+      rw [WhileMinRuntime.read_custom_table_base memory]
+      rfl) buckets
+    intro e he
+    have member : e ∈ f1Covered := by simpa only [namedBlocked, List.map_nil,
+      List.append_nil, base, ite_true] using he
+    have sep : ∀ e ∈ f1Covered, customTable + Layout.custom_table_bytes ≤ e.1 ∨
+        e.1 + e.2 ≤ customTable := by decide
+    exact sep e member
   refine ⟨H, cap, [], ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
     (fun _ h => by cases h), (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
       Or.inl ⟨?_, ?_, ?_⟩⟩,
-    exact _ List.mem_cons_self, namedLedger, customLedger, (fun _ h => by cases h)⟩⟩
+    exact _ List.mem_cons_self, namedLedger, customLedger, customSpace, (fun _ h => by cases h)⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl

@@ -4,6 +4,7 @@ import OCaml.Vm.Boot.Startup.NativeFrame
 import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Gc.F1Heap
+import OCaml.Vm.Gc.NamedOwnership
 
 /-!
 # `caml_alloc_custom_mem` for a channel's custom block, from any call site
@@ -26,15 +27,18 @@ several calls (`caml_ml_out_channels_list`) chains it. `Ready` reads only the
 runtime's own state (`CustomMemCall.state`): the static
 `caml_extra_heap_resources`, the domain's `extra_heap_resources_minor`, and the
 custom table's struct and storage (live blocks of newlib's heap). It lies apart
-from what callers write (`CallerApart`):
+from the fixed caller-write regions (`CallerApart`):
 * allocator globals (selected-ledger ownership excludes free arena bytes);
 * F1's covered regions other than the domain record;
 * the native stack;
 * the minor heap;
-* the open channel records;
 * the domain's `young_ptr`, `young_limit` and `local_roots` words.
 
-Callers therefore keep `Ready` across their own stores (`CustomMemRuntime.frame`).
+Actual records, named roots and other live allocations carry local separation
+in the selected heap's `CustomSpace`; their memory-linked shapes do not imply
+allocator ownership. Callers keep `Ready` through their checked byte frames.
+`CustomMemReturned.allocGrows` bounds physical backing-storage growth, and its
+single returned heap also carries `CustomLedger` for that storage.
 -/
 
 namespace OCaml.Vm.Gc
@@ -81,13 +85,8 @@ def domainAddr (c : Config) (offset : Nat) : Nat :=
 /-- What callers write around the call: the runtime's custom-allocation state
 lies apart from it. -/
 structure CallerApart (c : Config) (a : Nat) : Prop where
-  /-- The custom table/state owns allocations separate from the physical
-  named table. The custom allocator producer supplies this resource separation;
-  fresh growth preserves it against the same selected live-block ledger. -/
-  named : ¬ NamedRead c a
   belowStack : a < Vsa.Sim.DlHeap.heapEnd
   minor : a < minorRegion.lo ∨ minorRegion.hi ≤ a
-  records : ∀ chs, OpenChannelList c.σ.mem chs → ∀ r ∈ chs, a < r ∨ r + chanOffBuff + OCaml.Bytecode.ioBufferSize ≤ a
   youngPtr : a + 8 ≤ domainAddr c Layout.off_young_ptr ∨ domainAddr c Layout.off_young_ptr + 8 ≤ a
   youngLimit : a + 8 ≤ domainAddr c Layout.off_young_limit ∨ domainAddr c Layout.off_young_limit + 8 ≤ a
   localRoots : a + 8 ≤ domainAddr c Layout.off_local_roots ∨ domainAddr c Layout.off_local_roots + 8 ≤ a
@@ -141,7 +140,7 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   /-- newlib's heap over every block of `H` (plus the custom table's on the
   first call), ready for the next call; ownership of the returned state is
   certified in that same existential ledger -/
-  heap : ∃ H' cap', HeapReady H' cap' d ∧ CustomOwned state H' d ∧ ∀ e ∈ H, e ∈ H'
+  heap : ∃ H' cap', HeapReady H' cap' d ∧ CustomOwned state H' d ∧ CustomLedger H' d ∧ ∀ e ∈ H, e ∈ H'
   kept : ∀ a, ¬ state f a → ¬ VsaIris.VsaHeap.vsaFoot H a →
     (a < site.sp.toNat - customStackBytes ∨ site.sp.toNat ≤ a) →
     (a + 24 < (runtimeFields f).youngPtr ∨ (runtimeFields f).youngPtr ≤ a) →
@@ -150,6 +149,10 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   /-- the runtime's state grows only into newlib's free space at the call
   (the custom table's storage, first allocated or reallocated) -/
   grows : ∀ a, state d a → state f a ∨ VsaIris.VsaHeap.vsaFoot H a
+  /-- Actual custom-table allocation/reallocation grows allocated storage
+  only into this input ledger's free footprint. Resource accumulator bytes
+  cannot be reclassified as backing storage. Supplied by the native callee. -/
+  allocGrows : ∀ a, CustomAllocFoot d a → CustomAllocFoot f a ∨ VsaIris.VsaHeap.vsaFoot H a
 
 /-- Quiet channel custom allocations since the cut: each adds
 `57424/297968` to `caml_extra_heap_resources`, so the sixth requests a
@@ -216,6 +219,7 @@ structure CustomFramed (Ready : Nat → Config → Prop) (state Customs : Config
   ready : Ready k d
   state : ∀ a, state d a ↔ state c a
   counts : CustomCountStep Customs c d 0
+  addresses : customBase d = customBase c ∧ customEnd d = customEnd c
 
 /-- Exact physical accounting on this execution, in addition to the allocator's
 ordinary return facts. It is supplied by the actual `FnSummary` post. -/
@@ -235,6 +239,10 @@ structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Na
   custom table with its actual storage. This does not assert quietness or a
   complete physical accounting predicate. -/
   footprint : ∀ c a, state c a → CustomFoot c a
+  /-- A ready physical runtime includes the whole table struct and current
+  storage in its read/write footprint, as well as both resource words.
+  The concrete physical supplier must prove this; occupancy alone cannot. -/
+  physical : ∀ k c, Ready k c → ∀ a, CustomFoot c a → state c a
   accounting : CustomAccounting Ready state Customs
   apart : ∀ c a, state c a → CallerApart c a
   /-- a caller's stores outside the runtime's state keep it ready -/
@@ -250,6 +258,53 @@ theorem CustomMemCall.owned {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
     {H cap chs c} (heap : LibHeapAt H cap chs c) : CustomOwned state H c :=
   ⟨fun a ha => heap.custom.owned.bytes a (custom.footprint c a ha)⟩
+
+/-- The same selected native-return ledger owns all dynamic custom storage,
+not only a potentially partial accounting footprint. -/
+theorem CustomMemCall.owned_physical {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {H c k} (owned : CustomOwned state H c) (ready : Ready k c) : CustomOwned CustomFoot H c :=
+  ⟨fun a ha => owned.bytes a (custom.physical k c ready a ha)⟩
+
+/-- Physical table growth keeps separation from actually owned live regions
+and the selected named roots. Its memory frame is supplied at the actual native
+call boundary, rather than by an unconditional law of arbitrary memory lists. -/
+theorem CustomMemReturned.space {state : Config → Nat → Prop} {H blocked roots : List (Nat × Nat)}
+    {site : CustomMemSite} {v : BitVec 64} {f d : Config} {cap : Nat}
+    (ret : CustomMemReturned state H site v f d) (space : CustomSpace blocked f)
+    (heap : HeapReady H cap f) (named : NamedLedger H roots f)
+    (covered : ∀ e ∈ blocked, Covered H e)
+    (keepNamed : ∀ a, NamedRead f a → byte d a = byte f a) : CustomSpace blocked d := by
+  exact space.grow named keepNamed ret.allocGrows
+    (fun e he _ inside => (covered e he).notFoot (fun _ member => heap.block_bounds member) inside)
+    (fun _ read => named.read_not_foot heap read)
+
+/-- The native return packages spatial evidence and complete physical
+ownership with its own existential heap, including after backing-storage growth. -/
+theorem CustomMemCall.returned_space {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {H blocked roots : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64}
+    {f d : Config} {k cap : Nat} (ret : CustomMemReturned state H site v f d)
+    (ready : Ready k d) (space : CustomSpace blocked f) (heap : HeapReady H cap f)
+    (named : NamedLedger H roots f) (covered : ∀ e ∈ blocked, Covered H e)
+    (keepNamed : ∀ a, NamedRead f a → byte d a = byte f a) :
+    ∃ H' cap', HeapReady H' cap' d ∧ CustomOwned CustomFoot H' d ∧
+      CustomSpace blocked d ∧ CustomLedger H' d ∧ ∀ e ∈ H, e ∈ H' := by
+  obtain ⟨H', cap', heap', owned, ledger, sub⟩ := ret.heap
+  exact ⟨H', cap', heap', custom.owned_physical owned ready,
+    ret.space space heap named covered keepNamed, ledger, sub⟩
+
+/-- A ready state's table words are inside its physical footprint, so actual
+caller byte frames determine the backing-storage addresses as well. -/
+theorem CustomMemCall.addresses_frame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {c d : Config} {k : Nat} (ready : Ready k c)
+    (keep : ∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) :
+    customBase d = customBase c ∧ customEnd d = customEnd c := by
+  apply customAddresses_frame
+  intro a ha
+  rw [Primitives.byte_total, Primitives.byte_total]
+  exact keep a (custom.physical k c ready a (Or.inr (Or.inr (Or.inl ha))))
 
 /-- Selected owned bytes are outside newlib's footprint. -/
 theorem CustomMemCall.notFoot {Ready : Nat → Config → Prop}
@@ -290,7 +345,7 @@ theorem CustomMemCall.frame_counted {Ready : Nat → Config → Prop}
     (domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state) :
     CustomFramed Ready state Customs k c d := by
   obtain ⟨readyD, stateD⟩ := custom.frame k c d ready memory domain
-  refine ⟨readyD, stateD, ?_⟩
+  refine ⟨readyD, stateD, ?_, custom.addresses_frame ready memory⟩
   constructor
   intro n h
   simpa only [Nat.add_zero] using custom.accounting.frame h memory domain

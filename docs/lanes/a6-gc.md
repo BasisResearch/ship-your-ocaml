@@ -1,5 +1,117 @@
 # Lane a6-gc
 
+## Local custom spatial contract repair (2026-10-28)
+
+- Read the binding guidance, selected-ledger log, task brief, A1 plan/status
+  and `DEAD-ENDS.md`; ran `scripts/abs_inventory.sh` before proofs. Work is
+  confined to this worktree. No subagents, Git metadata writes, commits,
+  integration or generated-file edits. Inherited selected-ledger work and
+  GoodF1 are preserved.
+- `Gc.global_records_frame_obstruction` in `CustomFrameObstruction.lean` checks the precise conditional obstruction.
+  Minimal `CustomOutsideFrame` retains only the old local apart/frame laws,
+  independently of new physical/native obligations. Given `Ready k c`, a
+  pinned valid domain D and its retained minor-resource byte, it writes
+  head := D + off_extra_heap_resources_minor and next := 0. Generated
+  offsets reduce to 96/928; the existing `chanOffNext` is 48. Static/domain
+  separation keeps custom bytes, and the actual write-log/readback lemmas
+  preserve `Caml_state` and construct `OpenChannelList [D+96]`. The framed
+  retained byte contradicts `GlobalRecordApart`. This is a conditional
+  memory-contract obstruction, with no Sail/reset reachability or global
+  inconsistency claim; empty Ready/state can satisfy the abstract laws.
+- Removed both global `CallerApart.records` and `.named`. The analogous
+  named dependency is an inspection finding, not a checked named forgery.
+  `CustomAllocFoot` identifies the table struct/current live backing storage;
+  `CustomSpace blocked c` separates those allocations from actual protected
+  extents and the full physical footprint from named reads at that selected
+  snapshot. It lives beside `LibHeapAt`'s heap, records, custom and named
+  ledgers, protecting `namedBlocked` (including remembered storage).
+  `NamedLedger.read_back` transports named reads only with a retained actual
+  snapshot; arbitrary external table writes carry no such frame.
+- `CustomSpace.of_empty` and actual `libHeap_of` supply the startup witness
+  from captured null custom storage, empty named buckets and checked table
+  extent separation. `CustomSpace.frame/grow/allocate/restrict`,
+  `Covered.notFoot` and `LibHeapAt.space_frame/blocked_covered` share the
+  spatial transports. Actual ordinary/record windows, fresh channel linking,
+  remembered allocation/growth and insertion preserve them. New-record
+  separation uses `CustomOwned.fresh` and the actual `FreshBlock`.
+  `OutNursery.record_apart` and `LibHeapAt.custom_apart_record` consume real
+  owned bounds and local spatial evidence. `WalkGeometry.state_record_apart`
+  uses actual entry separation and checked growth into free bytes, including
+  in the enter/refcount and post-call record frames; no arbitrary linked
+  list supplies separation.
+- Actual opening exposes `allocIn`, proved by its caller byte frames,
+  native `allocGrows` and actual done store. `OpenedOut.spatial_heap`
+  returns full custom ownership, local separation from the new record and
+  every original live runtime/remembered/record extent, retained named roots
+  and full `CustomLedger` under its one returned heap. Listing entry receives
+  local spatial evidence with its selected heap. The walk carries full
+  `CustomLedger` through skips, native returns, cons stores, and both actual
+  epilogues. `OutListReturned.stateIn/allocIn` are proved by those executions;
+  `.physical_records` returns physical ownership, real-record separation and
+  full custom ledger under the same H. `.spatial_heap` additionally retains
+  separation from all actual entry-owned protected regions and named roots,
+  using the actual named byte frame. Allocated-storage growth is threaded
+  separately from accumulator/state growth through every iteration and
+  epilogue, so a resource byte cannot be silently reclassified as storage. No poststate-coherence or whole
+  primitive-return premise was added.
+- Physical/native obligations remain explicit at their actual boundaries:
+  `CustomMemCall.physical` requires Ready to include both resource words and
+  the entire table struct/current storage in state; this is footprint
+  completeness, not readiness from occupancy. The concrete supplier must
+  also prove physical accounting uniqueness/frame, startup resource values,
+  resource arithmetic and quietness. Domain `custom_table` pointer identity
+  still needs a real pin/frame (the current `domainField` was not widened).
+  The unrestricted custom frame does not supply that external observation:
+  a complete native instance must put the pin in its actual call inputs or
+  revise the footprint with checked caller producers. This patch makes no
+  claim that the remaining full physical `CustomMemCall` is realizable.
+  The native `call` must establish actual execution, nursery/table room,
+  header/ops, ABI/image/output frames, old/new heap inclusion, exact count,
+  state growth and `allocGrows`; its same existential H now also carries
+  full `CustomLedger`, including whole backing-storage coverage. The old
+  state-growth law includes resource bytes and alone cannot establish
+  allocated-storage growth. `CustomMemReturned.space` proves local spatial
+  preservation from owned extents, the actual named frame and `allocGrows`;
+  `CustomMemCall.returned_space` packages it with full ownership and custom
+  ledger in that native returned H. Concrete `OpenOutRuntimeAt.pins/after`,
+  `OutListRuntime.entry/runtime`, remaining counted rows/arities and F1
+  assembly stay open. Their entry spatial facts come from the strengthened
+  selected invariant; no new primitive-return premise was introduced.
+  The existing concrete named-registration return supplier is also open:
+  its found/miss table mutation must rebuild `CustomSpace.named` from actual
+  retained roots or fresh node ownership in that same heap, rather than
+  invoking the removed global law. `BarrierGrowthFull` stays G2 and C4
+  round 2 waits for F1.
+- Validation: the final guarded/capped affected build passes **3,653 jobs**
+  (`/tmp/custom-apart-final-affected.log`). Explicit targets:
+  `OCaml.Vm.Gc.CustomFrameObstruction`, `OCaml.Vm.Gc.ChannelCustomCount`,
+  `OCaml.Vm.Gc.F1Barrier`, `OCaml.Vm.Gc.F1Grow`,
+  `OCaml.Vm.Sim.CountedChannelRows`, `OCaml.Vm.Sim.CountedAllocRows`,
+  `OCaml.Vm.Sim.CountedEntry`, `OCaml.Vm.Sim.F1Table`,
+  `OCaml.Vm.Sim.WhileMinTable`. The closure checks all changed modules and
+  affected opening/listing/count consumers. The preceding full returned-
+  ledger build also passed 3,653 jobs (`/tmp/custom-apart-ledger-return.log`).
+  The standalone `/tmp/custom-apart-focused-audit.lean` passes via guarded
+  `lake env lean -M 6000 -j 1`: **57 reports**, all using only `propext`,
+  `Classical.choice`, `Quot.sound`, including all **23 new theorems** and
+  actual startup, heap, native/custom, opening/listing and counted-frame
+  regressions. `/tmp/custom-apart-check-audit.py` checks exact report names,
+  count and the allowed set; `/tmp/custom-apart-new-theorems.txt` records
+  the new names, `/tmp/custom-apart-audit-names.txt` all reports, and
+  `/tmp/custom-apart-focused-audit.log` the evidence. All 57 reports are
+  registered exactly once in `OCaml/Audit.lean`; full Audit was not run.
+- Layout regeneration matches byte for byte. Channel-opening, counted
+  stack/allocation and F1-table generator drift, collector CFG, holes
+  (4,746 files), discipline (27 rules), abstraction gate and diff checks pass.
+  C4 stays at 3. No generated output, proof budget, or GoodF1 change.
+  Every Lean launch used `python3 scripts/lean-guarded.py --log /tmp/... --
+  scripts/lean-capped.sh lake ...`, sequentially under the inherited 12 GiB
+  scope/two-thread policy, with `free -g` checked before each launch. The
+  final build had 85 GB available, the focused audit 63 GB (both ≥25 GB).
+  No virtual-address limit was used. Checked edits are uncommitted for
+  lead review/integration through `scripts/integrate.sh`; this worker's
+  Git metadata/landing queue remain read-only.
+
 ## Selected custom-state ledger repair (2026-10-28)
 
 - Recovered proof edits are preserved in `87997286`. The inherited
@@ -86,9 +198,8 @@
   of these laws. `OpenOutRuntimeAt.pins`/`.after`, `OutListRuntime.entry`
   (heap, custom/named ledgers, records and payload separation) and `.runtime`
   remain concrete suppliers, as do remaining counted rows/arities and full
-  F1 assembly. The global `.records`/`.named` versus arbitrary outside-write
-  frame issue is separately queued in `tasks/sol-custom-apart-local.md`;
-  its candidate obstruction is not proved by this patch. `CustomMemCall`
+  F1 assembly. The subsequent local-spatial repair above checks the conditional
+  `.records` obstruction and removes both global fields. `CustomMemCall`
   stays named, `BarrierGrowthFull` stays G2, C4 round 2 waits for F1 and
   reset-to-cut execution remains open. Full `OCaml.Audit` and integration
   remain the lead gate; checked edits are left for lead review.

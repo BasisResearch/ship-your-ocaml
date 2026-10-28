@@ -165,6 +165,17 @@ theorem NamedLedger.frame {H blocked : List (Nat × Nat)} {c c' : Config}
   obtain ⟨pl, named, chains, snapshot⟩ := h
   exact ⟨pl, named, chains, snapshot.frame fun x f => keep x ⟨pl, named, chains, snapshot.repr, f⟩⟩
 
+/-- A retained physical snapshot identifies post-frame named reads with the
+same entry reads. This uses the selected snapshot, not arbitrary external writes. -/
+theorem NamedLedger.read_back {H blocked : List (Nat × Nat)} {c d : Config}
+    (h : NamedLedger H blocked c)
+    (keep : ∀ x, NamedRead c x → byte d x = byte c x) {x : Nat}
+    (read : NamedRead d x) : NamedRead c x := by
+  obtain ⟨pl, names, chains, snapshot⟩ := h
+  have kept := snapshot.frame (c' := d) fun x f => keep x ⟨pl, names, chains, snapshot.repr, f⟩
+  obtain ⟨pl', names', chains', table, foot⟩ := read
+  exact ⟨pl, names, chains, snapshot.repr, (table.foot_eq kept.repr x).mp foot⟩
+
 /-- The matching runtime ledger covers any physically named read. -/
 theorem NamedLedger.read_covered {H blocked : List (Nat × Nat)} {c : Config}
     (h : NamedLedger H blocked c) {x : Nat} (read : NamedRead c x) :

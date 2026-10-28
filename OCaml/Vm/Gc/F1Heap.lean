@@ -187,8 +187,46 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   /-- The physical named table shares this selected live-block ledger. -/
   named : NamedLedger H (namedBlocked chs c) c
   custom : CustomLedger H c
+  /-- Local separation for this selected ledger's records, runtime regions
+  (including live remembered storage) and retained physical named roots. -/
+  customSpace : CustomSpace (namedBlocked chs c) c
   customRecords : ∀ a ∈ chs, a + chanRecordBytes ≤ customTable ∨
     customTable + Layout.custom_table_bytes ≤ a
+
+/-- Separation of an actual record follows from the selected spatial
+invariant and its real arena/domain bounds, not merely its linked-list shape. -/
+theorem CustomSpace.record_apart {blocked : List (Nat × Nat)} {c : Config} {a r : Nat}
+    (h : CustomSpace blocked c) (foot : CustomFoot c a)
+    (low : heapStart ≤ r)
+    (domain : r + chanRecordBytes ≤ Boot.WhileMinRuntime.domain ∨
+      Boot.WhileMinRuntime.domain + Layout.domainStateBytes ≤ r)
+    (member : (r, chanRecordBytes) ∈ blocked) :
+    a < r ∨ r + chanRecordBytes ≤ a := by
+  rcases foot with static | resource | alloc
+  · have bound : Layout.sym_caml_extra_heap_resources + 8 ≤ heapStart := by decide
+    have high := static.2
+    dsimp only at high
+    exact Or.inl (by omega)
+  · have lo := resource.1
+    have hi := resource.2
+    have bound : Layout.off_extra_heap_resources_minor + 8 ≤ Layout.domainStateBytes := by decide
+    dsimp only at lo hi
+    omega
+  · have apart := h.allocated a alloc _ member
+    apply Classical.byContradiction
+    intro no
+    exact apart ⟨by omega, by dsimp only; omega⟩
+
+/-- The selected ledger supplies the physical record bounds used above. -/
+theorem LibHeapAt.custom_apart_record {H cap chs c} (h : LibHeapAt H cap chs c)
+    {a r : Nat} (foot : CustomFoot c a) (member : r ∈ chs) :
+    a < r ∨ r + chanRecordBytes ≤ a := by
+  obtain ⟨e, he, elo, ehi⟩ := h.records r member
+  have low := (h.ready.block_bounds he).1
+  apply h.customSpace.record_apart foot (by dsimp only at elo; omega)
+    (h.recordsApart r member (Boot.WhileMinRuntime.domain, Layout.domainStateBytes) (by simp [f1Covered]))
+  simp only [namedBlocked, List.mem_append]
+  exact Or.inl (Or.inr (List.mem_map.mpr ⟨r, member, rfl⟩))
 
 /-- A selected ledger's named reads miss each fixed runtime allocation. -/
 theorem LibHeapAt.named_fixed {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
@@ -212,6 +250,23 @@ theorem LibHeapAt.named_storage {H : List (Nat × Nat)} {cap : Nat} {chs : List 
       (word c (refTable + Layout.off_ref_table_end)).toNat -
         (word c (refTable + Layout.off_ref_table_base)).toNat) x :=
   h.named.read_apart read (by simp [namedBlocked, nonzero])
+
+/-- Every protected runtime/record extent is owned in this same selected
+ledger, including the dynamically allocated remembered-set storage. -/
+theorem LibHeapAt.blocked_covered {H cap chs c} (h : LibHeapAt H cap chs c) :
+    ∀ e ∈ namedBlocked chs c, Covered H e := by
+  intro e he
+  simp only [namedBlocked, List.mem_append] at he
+  rcases he with (fixed | record) | storage
+  · exact h.extents e fixed
+  · obtain ⟨r, member, rfl⟩ := List.mem_map.mp record
+    exact h.records r member
+  · rcases h.table.shape with empty | allocated
+    · rw [empty.1] at storage
+      simp at storage
+    · rw [if_neg allocated.nonzero] at storage
+      obtain rfl := List.mem_singleton.mp storage
+      exact allocated.covered
 
 /-- The custom table is not among the ordinary caller-write extents. -/
 theorem F1HeapSafe.custom_out {w : W} (safe : F1HeapSafe w) {a : Nat}
@@ -390,6 +445,17 @@ theorem LibHeapAt.named_record_out {H : List (Nat × Nat)} {cap : Nat} {chs : Li
   · exact Or.inl l
   · exact Or.inr (by apply Classical.byContradiction; intro no; exact apart ⟨by omega, by omega⟩)
 
+/-- Retain local custom separation when the actual table/named roots and
+remembered storage addresses are unchanged. -/
+theorem LibHeapAt.space_frame {H cap chs c d} (h : LibHeapAt H cap chs c)
+    (keepNamed : ∀ x, NamedRead c x → byte d x = byte c x)
+    (keepCustom : ∀ x, VsaIris.InExt (customTable, Layout.custom_table_bytes) x → byte d x = byte c x)
+    (base : word d (refTable + Layout.off_ref_table_base) = word c (refTable + Layout.off_ref_table_base))
+    (end_ : word d (refTable + Layout.off_ref_table_end) = word c (refTable + Layout.off_ref_table_end)) :
+    CustomSpace (namedBlocked chs d) d := by
+  obtain ⟨cb, ce⟩ := customAddresses_frame keepCustom
+  simpa only [namedBlocked, base, end_] using h.customSpace.frame h.named keepNamed cb ce
+
 /-- **The F1 heap invariant survives writes confined to safe windows**, given
 byte equality outside them and an unchanged open-channel list head. -/
 theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
@@ -405,6 +471,15 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   custom := h.custom.frame fun a ha => by
     rw [Primitives.byte_total, Primitives.byte_total]
     exact keep a fun w hw => (safe w hw).custom_out ha
+  customSpace := h.space_frame
+    (fun x read => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => (safe w hw).named_out h read)
+    (fun x hx => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => (safe w hw).custom_out hx)
+    (structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) (by decide))
+    (structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) (by decide))
   customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
@@ -491,6 +566,27 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       rcases safe w hw with safe | ⟨lo, hi, _⟩
       · exact safe.custom_out hx
       · exact h.custom_record_out ha hx lo hi
+  customSpace := h.space_frame
+    (fun x read => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => by
+        rcases safe w hw with safe | ⟨lo, hi, _⟩
+        · exact safe.named_out h read
+        · exact h.named_record_out ha lo hi read)
+    (fun x hx => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => by
+        rcases safe w hw with safe | ⟨lo, hi, _⟩
+        · exact safe.custom_out hx
+        · exact h.custom_record_out ha hx lo hi)
+    (structWord_keep (fun y hy => keep y fun w hw => by
+      rcases safe w hw with safe | rec
+      · exact safe.misses_table hy
+      · exact rec.misses_table h ha hy) (by decide))
+    (structWord_keep (fun y hy => keep y fun w hw => by
+      rcases safe w hw with safe | rec
+      · exact safe.misses_table hy
+      · exact rec.misses_table h ha hy) (by decide))
   customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
@@ -595,6 +691,26 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   ready := ready
   extents := fun x hx => (h.extents x hx).mono _
   custom := (h.custom.frame keepCustom).mono (fun e he => List.mem_cons_of_mem _ he)
+  customSpace := by
+    obtain ⟨cb, ce⟩ := customAddresses_frame keepCustom
+    have framed := h.customSpace.frame h.named keepNamed cb ce
+    have owned := (h.custom.frame keepCustom).owned
+    have alow := (ready.block_bounds (q := a) (n := req) List.mem_cons_self).1
+    have ahigh := (ready.block_bounds (q := a) (n := req) List.mem_cons_self).2
+    have positive : 0 < chanRecordBytes := by decide
+    have allocated := framed.allocate (p := a) (req := req) owned ⟨by
+      have pos : 0 < heapStart := by decide
+      omega, alow, ahigh, fresh⟩ big
+    apply allocated.restrict
+    intro e he
+    have rb := structWord_keep keepTable (off := Layout.off_ref_table_base) (by decide)
+    have re := structWord_keep keepTable (off := Layout.off_ref_table_end) (by decide)
+    simp only [namedBlocked, rb, re, List.map_cons, List.mem_append, List.mem_cons] at he ⊢
+    rcases he with (he | he | he) | he
+    · exact Or.inr (Or.inl (Or.inl he))
+    · exact Or.inl he
+    · exact Or.inr (Or.inl (Or.inr he))
+    · exact Or.inr (Or.inr he)
   customRecords := by
     intro r hr
     rcases List.mem_cons.mp hr with rfl | hr
@@ -710,6 +826,20 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   ready := ready
   extents := fun x hx => (h.extents x hx).mono _
   custom := (h.custom.frame keepCustom).mono (fun e he => List.mem_cons_of_mem _ he)
+  customSpace := by
+    obtain ⟨cb, ce⟩ := customAddresses_frame keepCustom
+    have framed := h.customSpace.frame h.named keepNamed cb ce
+    have owned := (h.custom.frame keepCustom).owned
+    have plow := (ready.block_bounds (q := p) (n := req) List.mem_cons_self).1
+    have phigh := (ready.block_bounds (q := p) (n := req) List.mem_cons_self).2
+    have allocated := framed.allocate (p := p) (req := req) owned ⟨nonzero, plow, phigh, fresh⟩ (Nat.le_refl req)
+    apply allocated.restrict
+    intro e he
+    simp only [namedBlocked, base', end', nonzero, if_false, Nat.add_sub_cancel_left,
+      List.mem_append, List.mem_singleton] at he
+    rcases he with he | rfl
+    · exact List.mem_cons_of_mem _ (by simp only [namedBlocked, List.mem_append]; exact Or.inl he)
+    · exact List.mem_cons_self
   customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
