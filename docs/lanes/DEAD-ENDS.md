@@ -1,5 +1,32 @@
 # Routes not to repeat
 
+- 2026-10-28 CODE epilogue elaboration (checked build obstruction):
+  the combined `0x80004c64`–`0x80004c98` reload/restore summary hit the
+  default 200,000-heartbeat whnf limit. Do not increase that limit or
+  recursion budgets. The generator now exposes `SeekOptionalReload`,
+  `SeekOptionalRestoreBank` and `SeekOptionalRestoreLink` as bounded
+  observations of the same native instructions, for FnSummary composition.
+  The reload slice needs its own declaration prefix because it shares the
+  full epilogue's entry address. Existing source/length/offset certificates
+  stay unchanged. For ADDIW, expose the actual `extractLsb (count + sext imm)`
+  expression (`seekCountDown`), and use the existing store/skip adapters
+  when a load follows its region's own saves. The combined
+  entry also exceeded kernel recursion at default limits;
+  `SeekOptionalAdjust`/`SeekOptionalSave` separate its stack adjustment
+  from the three saves and count load. These bounded summaries check
+  without changing any elaboration budget.
+
+- 2026-10-28 CODE four-byte strncmp ingress (interface inspection):
+  `strncmp_dispatch` is an unaligned-pointer summary; it cannot be applied
+  unconditionally to the CODE call. The executable literal is at the
+  8-aligned address `0x80055e60`, and no unaligned selected-table premise is
+  supplied by reset. With count exactly four, the aligned route instead
+  takes `strncmpX0cc8FSeg`, `strncmpX0cccFSeg`, `strncmpX0cd8TSeg` to the
+  existing byte loop, without loading a word. `strncmp_four_dispatch`
+  handles both alignment alternatives. Keep the CRCS equal first byte and
+  actual second-byte mismatch; neither an unaligned assumption nor a
+  stock-image word certificate supplies this native call.
+
 - 2026-10-28 counted unary classification: `first` around
   `exact Or.inr (by simp)` selected the unfinished name-disjunction proof
   for the eight wrong-arity names and exit, leaving `False` goals before

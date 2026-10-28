@@ -1,6 +1,88 @@
 # Lane a0-boot
 
-## Current CODE source observations from reset (2026-10-28; checked for lead review)
+## Completed native CODE reverse scan (2026-10-28; checked for lead review)
+
+`SeekCode.whileMin_reset_code_seek` universally extends the original
+parsed/matching-ELF reset through the real optional-section call and back
+to `caml_main` at `0x80004eb0`. `ResetCodeSeekDone` retains the actual
+`ResetCodeSeekEntry`, its reset/source ancestry, local `Steps` and global
+`Steps (fillZero initial)`. `CodeSeekDone` exposes return length **764**,
+fd-3 position **57**, the same selected H/capacity, descriptor ownership,
+current descriptor bytes/table pointer, `OpenFile`, `EmbedImage` and the
+fd/argv ABI. No later-memory matching or additional native-run premise is
+introduced; `ResetCodeSeekEntry.scan_input` consumes the reviewed
+`observations`/`CodeSeekSourceObserved` and actual selected allocations.
+
+`CodeScanInput`, `CodeScanAt`, `CodeScanCompared` and `CodeSeekDone` name
+the input, indexed invariant, comparison result and completed output.
+`code_scan_loop` folds the six non-CODE iterations with `indexed_loop`
+and the observed native countdown. The actual unsigned LWU accumulation
+reuses the existing certificates and offsets
+`[72,123,407,709,8567,8567,8567,9331]`. All comparisons have count exactly
+four. `StrncmpShort` handles either pointer alignment; CRCS reuses
+`seek_crcs_common_prefix`, its equal first byte and actual R/O second-byte
+mismatch. CODE reuses the existing equal-byte loop. Descriptor/name/length
+observations use `SeekSectionData` and the selected reset image, never the
+stock ELF's different embedded CODE.
+
+The equal CODE comparison reaches the actual lseek call at `0x80004c60`.
+The existing `lseek_file` summary executes newlib/HTIF with fd=3,
+delta=-9331 and SEEK_END on the selected 9388-byte source. Its real position
+store yields 57. The native epilogue then reloads the current descriptor's
+signed LW length, restores the saved bank and returns to `0x80004ea8`.
+`code_seek_present` executes the real main test and excludes the
+missing-section edge, reaching `0x80004eb0` with a0=764.
+
+The exact prologue save log remains attached to the actual execution.
+Selected `LiveFrame` evidence protects owned descriptors and the original
+filename; the lseek `CallerFrame` protects the saved words above its entry
+stack. `MemSame` and the existing window/log abstractions compose the
+128-byte native scratch bound, errno windows and the actual fd-position
+store. Source records, embedded bytes and trailer loads are framed from
+those effects, without inferring memory equality from Steps. Generator
+slices `SeekOptionalAdjust`/`SeekOptionalSave` and
+`SeekOptionalReload`/`SeekOptionalRestoreBank`/`SeekOptionalRestoreLink`
+avoid the checked default-budget failures recorded in DEAD-ENDS. Existing
+optional-seek spans and all source/length/offset certificates stay intact.
+`--seek-return-only` regenerates only these entry/epilogue slices and the
+focused seek audit.
+
+Validation: the guarded/capped affected `SeekAudit` build passes **3545
+jobs** (`/tmp/code-scan-complete-7.log`). All **80** new public theorems,
+including generated slice certificates, are registered in `SeekAudit` and
+pass `/tmp/code-scan-new-axioms.lean`: 78 reports use only `propext`,
+`Classical.choice`, `Quot.sound`, and two are axiom-free
+(`/tmp/code-scan-new-axioms.log`). Every axiom report in the affected build
+also passes the allow-list. Generator drift passes for all 2157 outputs
+(`/tmp/code-scan-generator-final.log`); targeted entry/epilogue and audit
+drift checks also pass (`/tmp/code-scan-{return,audit}-drift.log`).
+Whitespace checks pass. Hole (4903 files), discipline and abstraction
+checks pass (`/tmp/code-scan-{holes,discipline,abstraction}-final.log`). ELF
+pins pass with 114928 bytes and zero mismatches
+(`/tmp/code-scan-pins.log`). Every Lean invocation followed `free -g`
+with available memory >=25 GB and used lean-guarded/lean-capped under the
+inherited 12 GB/two-thread policy. No Git metadata or landing queue was
+written; full `OCaml.Audit`, commit and `scripts/integrate.sh` remain the
+lead gate.
+
+CODE allocation/read, code-fragment/MD5, PRIM, DATA, promotion, system/argv
+initialization and reset-to-Loaded remain open. Captured image certificates
+still do not assert execution. GoodF1 is unchanged; BarrierGrowthFull stays
+G2, CustomMemCall remains named, and C4 round 2 waits for F1.
+
+Reproduction:
+
+```sh
+free -g
+python3 scripts/lean-guarded.py --log /tmp/code-scan-complete-7.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.SeekAudit
+free -g
+python3 scripts/lean-guarded.py --log /tmp/code-scan-new-axioms.log -- scripts/lean-capped.sh lake env lean /tmp/code-scan-new-axioms.lean
+python3 scripts/gen_startup_rows.py --seek-return-only --check
+python3 scripts/gen_startup_rows.py --seek-audit-only --check
+python3 scripts/gen_startup_rows.py --check
+```
+
+## Reviewed CODE source handoff (2026-10-28; checked for lead review)
 
 The source-frame residual at `0x80004bcc` is closed.
 `SeekCodeReset.whileMin_reset_code_seek_source` takes the original
@@ -33,14 +115,12 @@ actual deepest scratch frame. Low HTIF frames separately retain file
 records and fd positions. `GcTailKeep` now covers bytes below the quiet
 message spill as well as the caller's side of the stack.
 
-Remaining: the bounded reverse scan and actual lseek/HTIF composition to
-`0x80004eb0`. Reuse `indexedLoop`, bounded strncmp (CRCS shares CODE's first
-byte), the certified reverse offset 9331 and actual lseek machinery to
-produce position 57 and return length 764. No updated fd position or
-missing-section exclusion after the scan is claimed here. CODE
-allocation/read, code-fragment/MD5, PRIM/DATA, promotion, sys/argv and Loaded
-remain open. GoodF1 is unchanged; BarrierGrowthFull stays G2,
-CustomMemCall remains named, and C4 round 2 waits for F1.
+The bounded reverse scan and actual lseek/HTIF composition from this
+handoff are now completed by `SeekCode.whileMin_reset_code_seek`, as
+recorded above: precise main PC `0x80004eb0`, return length 764 and updated
+position 57. CODE allocation/read, code-fragment/MD5, PRIM/DATA, promotion,
+sys/argv and Loaded remain open. GoodF1 is unchanged; BarrierGrowthFull
+stays G2, CustomMemCall remains named, and C4 round 2 waits for F1.
 
 Validation: affected initialization/entry modules and all four focused
 audits pass the guarded/capped 3533-job build
@@ -70,11 +150,11 @@ python3 scripts/gen_startup_rows.py --seek-audit-only --check
 python3 scripts/gen_startup_rows.py --check
 ```
 
-## CODE seek entry and trailer frame (2026-10-28; checked partial)
+## CODE seek entry and trailer frame (2026-10-28; previous partial handoff)
 
-Status: the requested reset-to-CODE-seek theorem at `0x80004eb0` remains
-open. Checked edits are left for lead review; no commit or landing metadata
-was written.
+This earlier partial handoff is superseded by the completed native CODE
+scan at the top of this log. Its entry and trailer results are retained;
+no commit or landing metadata was written.
 
 `SeekCodeReset.whileMin_reset_code_seek_entry` universally extends the
 parsed/matching-ELF reset prefix through the actual JAL at `0x80004ea4` to
