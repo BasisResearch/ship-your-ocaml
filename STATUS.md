@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:23 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:30 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,13 +18,13 @@ None currently.
 
 ## Published
 
-`origin/main` is **`a017d2bae8440602a4a5e8a94b5af45415a196fc`**, verified remotely
+`origin/main` is **`7c424e61884f4f8828d9a4bac45299fe2088f165`**, verified remotely
 after the full gate passed. It passed **6,157 build jobs**, **9,736 main
 allowed-axiom reports** (9,740 including TCB), 150 axiom-free reports in the
 gate transcript, generator/ELF checks and **329 OS traces** (5,069 steps,
 324 accepted, 5 special, zero rejected or unsupported). All build dependency
 reports also use only allowed axioms. Evidence:
-`logs/{integrate,build}-a017d2ba.log`, `logs/gate-a017d2ba.json`.
+`logs/{integrate,build}-7c424e61.log`, `logs/gate-7c424e61.json`.
 The build also checks imported audit modules: 11,825 allowed-axiom reports
 across the whole build, including the 56 new G2 theorem registrations.
 
@@ -105,17 +105,30 @@ Snapshot: `keep/g2-bounded-large-reviewed-20261028`;
 evidence: `logs/a6-bounded-*`. Published in `a017d2ba` after the full gate passed at 17:23 UTC;
 log `/tmp/syo-bounded-large-integrate.log`.
 
+## Reviewed CODE seek entry
+
+The startup prefix now reaches the actual optional-section entry at
+`0x80004bcc`, with RA `0x80004ea8`, current trailer count/pointer and selected
+descriptor ownership. The missing-section test is checked separately; the
+reverse scan has not executed. Review checked all 247 new public theorem
+registrations, 3,533 build jobs, 1,702 unique allowed-axiom and seven pure
+reports. Focused audit registrations overlap intentionally.
+Snapshot: `keep/startup-code-seek-entry-reviewed-20261028`;
+evidence: `logs/code-seek-*`. The next packet repairs selected descriptor,
+OpenFile/source-image and fd-position frames through actual initialization.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Startup Sol | Actual reset continuation through CODE-section seek | `syo-wt/a6-gc-next2` |
+| Startup Sol | Current descriptor/file/source frames at actual CODE seek entry | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Concrete physical custom state and separate native read context | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Startup began at 17:10 UTC from `d90918a9`; log:
-`/tmp/syo-startup-code-seek-launch.log`. Its actual descriptor/file source
-must be framed through the executed initialization, not assumed at the new PC.
+Startup entry handoff from 17:10 UTC is reviewed. Next packet:
+`tasks/sol-startup-seek-frames.md`, log `/tmp/syo-startup-seek-frames-launch.log`.
+Its actual descriptor/file source must be framed through the executed
+initialization, not assumed at the new PC.
 G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
 wrapper conditions and returned representation/color for the reviewed branch.
 Its other branch/caller work stays in the ledger.

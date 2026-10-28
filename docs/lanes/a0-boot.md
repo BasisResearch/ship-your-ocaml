@@ -58,8 +58,8 @@ Validation: guarded/capped affected and focused build passes 3,533 jobs
 (`/tmp/code-seek-focused-2.log`), including `SeekCodeReset`, all generated
 seek regions, `SeekSectionData`, `SeekAudit`, `InterpreterInitAudit`,
 `BacktraceAudit` and `SkipFirstAudit`. All 354 SeekAudit declarations have
-reports; all 1,708 unique axiom-dependent reports in that build use only `propext`,
-`Classical.choice`, `Quot.sound`; one additional report is axiom-free.
+reports; all 1,702 unique axiom-dependent reports in that build use only `propext`,
+`Classical.choice`, `Quot.sound`; seven additional reports are axiom-free.
 The lead checked all 247 new public theorems are registered in the audit
 closure; focused modules intentionally overlap registrations. `OCaml.Audit`
 registers `SeekAudit`;
