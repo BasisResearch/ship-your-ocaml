@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 12:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 14:44 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,11 +18,11 @@ None currently.
 
 ## Published
 
-`origin/main` is **`026238f7fde52a9c6806e18fcd0b20dd577a2ab1`**, verified remotely.
-The full gate passed **6,086 build jobs**, **9,323 allowed-axiom reports**
-and 128 axiom-free reports, generator/ELF checks and **329 OS traces**
+`origin/main` is **`804538a50bb3f1a615a9bfe48a3779ada1b046aa`**, verified remotely.
+The full gate passed **6,090 build jobs**, **9,360 allowed-axiom reports**
+and 129 axiom-free reports, generator/ELF checks and **329 OS traces**
 (5,069 steps, 324 accepted, 5 special, zero rejected or unsupported).
-Logs: `logs/integrate-026238f7.log`, `logs/build-026238f7.log`.
+Logs: `logs/integrate-804538a5.log`, `logs/build-804538a5.log`.
 
 ## Latest landed proofs
 
@@ -42,31 +42,30 @@ Logs: `logs/integrate-026238f7.log`, `logs/build-026238f7.log`.
 - Earlier `2ee3051b`: captured allocator/`libHeap`, counted interpreter
   entry/loop and G2 bitmap-search return. Captured memory is not reset execution.
 
-## Reviewed for the next batch
+## Latest published batch
 
 `da1ab268` proves the plain signed decimal native alloc_sprintf entry-to-original-return,
 with exact byte-string representation, saved ABI, observable output and explicit
 runtime/frame conditions. Its 1,412-job affected build passed. Lead verified
 all 16 new theorem registrations and 28 allowed focused axiom reports.
-General formatting and C_CALL2 remain open. It is combined with `58740097` in the next full gate.
+General formatting and C_CALL2 remain open. It passed the full gate with `58740097` in published `804538a5`.
 
 `58740097` repairs custom-state ownership using the selected caller ledger,
 with a checked captured empty-ledger obstruction and actual startup/frame/
 opening/listing consumers. Recovery passed 3,653 affected jobs and 60 focused
 audits (59 standard, one axiom-free); all 19 new theorems are registered.
 Full physical Customs and the separate global-frame compatibility issue
-remain open. The gate cache transfer from the idle custom lane checks
-toolchain/manifests/dependency trees and holds both build locks.
+remain open. The gate cache transfer from the idle custom lane checked
+toolchain/manifests/dependency trees and held both build locks.
 
-## Reviewed behind the active gate
+## Reviewed for the next gate
 
 `9de2d983` adds the remaining ordinary control/memory/raise/halt families,
 with a complete partial row supplier and kernel-checked **122/134** census.
 Its original 3,494-job affected build and 130 focused audits passed (129
 standard, one axiom-free); lead verified all 122 new theorem registrations.
 Rebase retained both audit sets and ledger updates. Combined validation
-against the selected-ledger change is still due. The active gate candidate
-`804538a5` does not include these new rows.
+against the selected-ledger change is still due. Published `804538a5` does not include these new rows.
 
 ## Recovery work
 
@@ -75,13 +74,13 @@ are preserved in `keep/custom-ledger-recovery-20261028` (`ea24267b`) and
 `keep/decimal-native-recovery-20261028` (`7f9b7f7d`). Neither checkpoint itself is claimed landed; the reviewed decimal patch is `da1ab268`.
 The selected-ledger affected build passed 3,628 jobs; the decimal native
 composition passed 1,403. Sol availability was restored on resumption. Both recovery tasks are complete;
-the reviewed patches are committed for the full gate. Original snapshots remain preserved.
+the reviewed patches passed the full gate in `804538a5`. Original snapshots remain preserved.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Write-row Sol | Seven counted field/global write and barrier rows | `syo-wt/a6-gc-next2` |
 | Custom Sol | Conditional global-frame obstruction and local separation repair | `syo-wt/a1-prims-next` |
-| Lead | Gate selected custom ownership and decimal native return | main; `syo-wt/bprime` |
+| Lead | Review local separation/write results; gate counted control | main; `syo-wt/bprime` |
 
 ## Remaining F1 boundaries
 
@@ -129,7 +128,8 @@ other size classes/colors, complete allocator readiness and collection.
 The a2-sem uncaught-path WIP stays preserved and lower priority: GoodF1
 excludes that path.
 
-Task packets are in `tasks/sol-*.md`. Next priorities include selected custom
-ownership, counted control/console continuations, decimal formatter return,
-named reserves and G2 physical preservation. The concrete null-interpreter/debugger
+Task packets are in `tasks/sol-*.md`. Next priorities are composing local custom separation into counted writes,
+concrete custom startup/read-context suppliers, ordinary counted C_CALLs,
+console continuations, general formatting, named reserves and G2 original
+small-allocation dispatch. The concrete null-interpreter/debugger
 continuation to `0x80004e94` is queued in `sol-reset-interp-init.md`. No user-only decision blocks work.
