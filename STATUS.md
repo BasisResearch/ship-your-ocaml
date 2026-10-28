@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:37 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:47 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,15 +18,15 @@ None currently.
 
 ## Published
 
-`origin/main` is **`7c424e61884f4f8828d9a4bac45299fe2088f165`**, verified remotely
-after the full gate passed. It passed **6,157 build jobs**, **9,736 main
+`origin/main` is **`29994e71e449eb89c336180dc4e82adc0357e3ec`**, verified remotely
+after the full gate passed. It passed **6,208 build jobs**, **9,736 main
 allowed-axiom reports** (9,740 including TCB), 150 axiom-free reports in the
 gate transcript, generator/ELF checks and **329 OS traces** (5,069 steps,
 324 accepted, 5 special, zero rejected or unsupported). All build dependency
 reports also use only allowed axioms. Evidence:
-`logs/{integrate,build}-7c424e61.log`, `logs/gate-7c424e61.json`.
-The build also checks imported audit modules: 11,825 allowed-axiom reports
-across the whole build, including the 56 new G2 theorem registrations.
+`logs/{integrate,build}-29994e71.log`, `logs/gate-29994e71.json`.
+The whole build reports 12,196 allowed-axiom dependencies, including the
+imported G2 and CODE-entry audit modules. Exact totals are in the gate JSON.
 
 The preceding `34658c24` batch published:
 
@@ -105,7 +105,7 @@ Snapshot: `keep/g2-bounded-large-reviewed-20261028`;
 evidence: `logs/a6-bounded-*`. Published in `a017d2ba` after the full gate passed at 17:23 UTC;
 log `/tmp/syo-bounded-large-integrate.log`.
 
-## Reviewed CODE seek entry
+## Newly published CODE seek entry
 
 The startup prefix now reaches the actual optional-section entry at
 `0x80004bcc`, with RA `0x80004ea8`, current trailer count/pointer and selected
@@ -117,8 +117,8 @@ Snapshot: `keep/startup-code-seek-entry-reviewed-20261028`;
 evidence: `logs/code-seek-*`. The next packet repairs selected descriptor,
 OpenFile/source-image and fd-position frames through actual initialization.
 
-The CODE entry gate is active in bprime at fixed candidate `29994e71`,
-started 17:29 UTC; log `/tmp/syo-code-seek-entry-integrate.log`.
+The CODE entry gate passed and published `29994e71` at 17:47 UTC;
+log `/tmp/syo-code-seek-entry-integrate.log`.
 
 ## Reviewed physical custom state and call context
 
@@ -132,7 +132,8 @@ named `CustomMemCall`. Lead checked all 45 new unique registrations, the
 three pure). Source parameter arithmetic was also checked against custom.c.
 Only additive lane/dead-end sections conflicted on rebase; both were kept.
 Snapshot: `keep/custom-physical-reviewed-20261028`;
-evidence: `logs/custom-physical-*`. This is not in the active CODE entry gate.
+evidence: `logs/custom-physical-*`. The physical-state gate follows in bprime, started 17:48 UTC; log
+`/tmp/syo-custom-physical-integrate.log`. No active worker cache is copied.
 
 ## Active work
 
