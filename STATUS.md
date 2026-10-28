@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 12:29 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 12:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -58,6 +58,16 @@ Full physical Customs and the separate global-frame compatibility issue
 remain open. The gate cache transfer from the idle custom lane checks
 toolchain/manifests/dependency trees and holds both build locks.
 
+## Reviewed behind the active gate
+
+`9de2d983` adds the remaining ordinary control/memory/raise/halt families,
+with a complete partial row supplier and kernel-checked **122/134** census.
+Its original 3,494-job affected build and 130 focused audits passed (129
+standard, one axiom-free); lead verified all 122 new theorem registrations.
+Rebase retained both audit sets and ledger updates. Combined validation
+against the selected-ledger change is still due. The active gate candidate
+`804538a5` does not include these new rows.
+
 ## Recovery work
 
 Both Sol workers stopped on a usage limit on October 27. Their proof edits
@@ -69,15 +79,15 @@ the reviewed patches are committed for the full gate. Original snapshots remain 
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Control Sol | Remaining counted memory/control rows | `syo-wt/a6-gc-next2` |
+| Write-row Sol | Seven counted field/global write and barrier rows | `syo-wt/a6-gc-next2` |
 | Custom Sol | Conditional global-frame obstruction and local separation repair | `syo-wt/a1-prims-next` |
 | Lead | Gate selected custom ownership and decimal native return | main; `syo-wt/bprime` |
 
 ## Remaining F1 boundaries
 
 Ordinary uncounted opcode families and interpreter entry/halt composition
-exist. The counted table still needs its remaining control,
-barrier and primitive frames/rows and complete C_CALL assembly. Opening and
+exist. The reviewed counted table has 122 rows; seven write/barrier rows and five
+complete C_CALL rows remain, with primitive frames and C_CALL assembly. Opening and
 out-channel listing use checked native returns, but their concrete runtime,
 heap/record and after-call suppliers remain open. Table occupancy alone is
 not the full physical `Customs` predicate: resource words and the current
