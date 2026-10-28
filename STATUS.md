@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 12:18 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 12:24 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,13 +18,17 @@ None currently.
 
 ## Published
 
-`origin/main` is **`0c4ae2d465112de27bf0dad4519c52a177ad43ef`**, verified remotely.
+`origin/main` is **`026238f7fde52a9c6806e18fcd0b20dd577a2ab1`**, verified remotely.
 The full gate passed **6,086 build jobs**, **9,323 allowed-axiom reports**
 and 128 axiom-free reports, generator/ELF checks and **329 OS traces**
 (5,069 steps, 324 accepted, 5 special, zero rejected or unsupported).
-Logs: `logs/integrate-0c4ae2d4.log`, `logs/build-0c4ae2d4.log`.
+Logs: `logs/integrate-026238f7.log`, `logs/build-026238f7.log`.
 
 ## Latest landed proofs
+
+- `0f5ecaef`: G2 physical free-extent bounds and separation preserved through
+  actual pop/split/remnant allocation, returning combined SmallRepresentation.
+  Original dispatch/caller production and other cases remain open.
 
 - `e35aa58b`: counted allocation frames, seven opcode rows and three allocating
   primitive return contracts. The ordinary counted census is **67/134**.
@@ -40,25 +44,26 @@ Logs: `logs/integrate-0c4ae2d4.log`, `logs/build-0c4ae2d4.log`.
 
 ## Reviewed for the next batch
 
-`0f5ecaef` preserves G2 `SmallPhysical` through the actual pop/split/remnant
-route and returns the combined small-list representation. Its 1,289-job
-build and 251 focused audits passed (249 allowed, two axiom-free).
-Original caller production, dispatch and other allocator cases remain open.
+`da1ab268` proves the plain signed decimal native alloc_sprintf entry-to-original-return,
+with exact byte-string representation, saved ABI, observable output and explicit
+runtime/frame conditions. Its 1,412-job affected build passed. Lead verified
+all 16 new theorem registrations and 28 allowed focused axiom reports.
+General formatting and C_CALL2 remain open. This change awaits the next full gate.
 
 ## Recovery work
 
 Both Sol workers stopped on a usage limit on October 27. Their proof edits
 are preserved in `keep/custom-ledger-recovery-20261028` (`ea24267b`) and
-`keep/decimal-native-recovery-20261028` (`7f9b7f7d`). Neither is claimed landed.
+`keep/decimal-native-recovery-20261028` (`7f9b7f7d`). Neither checkpoint itself is claimed landed; the reviewed decimal patch is `da1ab268`.
 The selected-ledger affected build passed 3,628 jobs; the decimal native
-composition passed 1,403. Recovery tasks finish review, focused audits,
-registrations and documentation before the lead integration gate.
+composition passed 1,403. Sol availability was restored on resumption. Decimal recovery is complete;
+custom recovery is checking affected consumers and focused audits before integration.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Formatter Sol recovery | Audit decimal alloc_sprintf entry-to-return | `syo-wt/a6-gc-next2` |
+| Control Sol | Remaining counted memory/control rows | `syo-wt/a6-gc-next2` |
 | Custom Sol recovery | Audit selected-ledger ownership repair | `syo-wt/a1-prims-next` |
-| Lead | Review recovery results and prepare next full gate | main; `syo-wt/bprime` |
+| Lead | Review custom recovery; gate decimal native return | main; `syo-wt/bprime` |
 
 ## Remaining F1 boundaries
 
@@ -84,10 +89,9 @@ Named registration needs a proved node/key reserve and repeated root-cell
 removal/reuse accounting. Distinct immutable names alone do not bound all
 skiplist allocation calls. The owned named ledger is already carried.
 
-Formatting still needs the complete decimal native wrapper, general
-`d/i/u/x/X/o` flags/width/precision, large/major allocation and the C_CALL2
-return. The checked decimal vsnprintf and initialized-string splice do not
-close general formatting. Do not narrow GoodF1 to make those premises vanish.
+The complete decimal native wrapper is checked locally. Formatting still
+needs general `d/i/u/x/X/o` flags/width/precision, large/major allocation,
+reachable caller/runtime suppliers and the C_CALL2 return. Do not narrow GoodF1 to make those premises vanish.
 
 Reset still needs the continuation after backtrace through interpreter/debugger
 initialization, code/primitives/data loading, system/argv setup and `Loaded`.
