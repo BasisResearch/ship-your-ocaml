@@ -81,10 +81,10 @@ row premises are `StackCapacity B` and `RuntimeFrame L high`
 supply every one-word push. `StackGeometry.even : EvenPlace pl` serves
 ISINT/BRANCHIF/SWITCH.
 
-## `whileMin_halts_f1`: the premises still open (a1-arms audit, 2026-10-20)
+## `whileMin_halts_f1`: current ordinary-table premises
 `whileMin_halts_open (o : WhileMinOpen)` (generated `Sim/WhileMinTable.lean`)
-is `whileMin_halts_f1 heap growth pre`. Its only premises are
-`WhileMinOpen`'s four fields. Every other input is a theorem whose axioms are
+is `whileMin_halts_f1 growth pre`. Its remaining inputs are
+`WhileMinOpen`'s three fields: growth, opening and formatting. Every other input is a theorem whose axioms are
 ⊆ {propext, Classical.choice, Quot.sound}. whileMin reaches 50 opcodes
 (`whileMinOps`, one shape run). Among them, SETGLOBAL is the only barrier row,
 and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
@@ -92,7 +92,7 @@ and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
 
 | premise (where it enters) | status | owner | discharged by / waiting on |
 |---|---|---|---|
-| `heap`: `cut_heapReady_covers_Statement f1Covered [(refTable, 56)]` (`WhileMinOpen.libHeap`) | **open** | a0-boot | the reset run reaching the cut; caml_init_gc reached end to end (`9ba5a6b9`) |
+| Captured-entry `libHeap` | **proved; removed from WhileMinOpen** | a0-boot | `Gc.whileMin_libHeap` from the captured allocator certificate. Reset-to-cut execution remains separate and open. |
 | `growth.paths.empty`: the unallocated table's growth (SETGLOBAL's barrier) | **proved** | a2-sem / a6-gc | `f1_barrierGrowth (growthCallState _)` (`6305f769`) over `f1_barrierGrowth_gprs` (`076fd054`) |
 | `growth.full`: `BarrierGrowthFull Gc.f1Layout` (`F1GrowthPremises.full`) | **open**, by decision (2026-10-13) | a6-gc (G2) | G2's `CollectionEffect`. As stated it is not provable under G1, because the overflow requests a minor GC (a6-gc log, "Obstruction") |
 | SETGLOBAL barrier row: `f1_globalBarrier f1_barrierRuntime …` | **proved** | a1-arms / a6-gc | `8811ba3f` |
@@ -115,17 +115,20 @@ summaries cannot fill the weaker ordinary rows until their entry producers
 carry physical accounting. Wrong arities are still discharged by
 `PrimReturnsAtD.of_arity`; the full `GoodF1` domain is unchanged.
 
-The 2026-10-27 continuation of `dc8035a8` now proves the actual unary
-counted setup producer (`CountedCcallSetup.lean`) from the existing custom
-state separation and the exact generated log. `ChannelCountFrame` shares
-the full boundary frame. `CountedCcall1.lean` composes dispatch/setup/call/
-suffix and retains the callee's actual physical count, but does not restore
-complete returned refcount observations. These theorems do not migrate
-`Running.stack`/entry/non-custom rows or fill the five ordinary fields;
-the ordinary F1/whileMin assembly still awaits that migration. No new
-primitive-result or row-result supplier was added. Validation and the
-remaining selected-count/startup/runtime/refcount suppliers are recorded
-at the top of `a1-prims.md`.
+The counted route now carries physical/refcount witnesses through loop
+placement, entry/setup, shared frames and **132/134 complete opcode rows**.
+C_CALL3/5 are complete by the checked arity classification; C_CALL4 has actual
+console returns and all rejection cases. Counted fresh-OO-ID success and
+native unary exit are also checked. Whole C_CALL1/2 remain open.
+
+`CountedCcall1` and the channel summaries retain actual returned placement,
+physical transitions and natural refcount observations. They do not by
+themselves produce the allocating primitives' complete runtime invariant.
+Listing entry now consumes actual C_CALL setup and stack room;
+`OutListF1.f1_outList_entry` derives its selected ledger and spatial facts.
+`outList_f1_restore` reconstructs the returned runtime conditional on ordinary
+reserve at that same returned capacity. Input credit and native spending must
+be propagated on the selected heap to remove that final numeric premise.
 
 ### The custom-allocation budget (2026-10-27 continuation)
 
@@ -155,15 +158,17 @@ placement using the existing shared payload frame.
 
 Still open:
 
-1. Concrete physical `Customs`, its zero witness at the cut, and all laws and
-   the actual machine summary in `CustomMemCall` (a6-gc).
-2. Migration of ordinary `WorldRepr`/`VmPayload`/`VmReprAt`, all arm frames and
-   actual C_CALL setup producers to carry those witnesses (a1-arms/a1-prims).
-3. The out-list's represented natural refcount increments/no-wrap producer;
-   its physical batch transition is proved, but does not imply these bytes.
-4. The open call's after-runtime pins; out-list selected heap/record/named
-   entry geometry and after-runtime pins (a6-gc/a0-boot).
-5. Connection of the counted summaries to the ordinary rows after (2).
+1. Full physical `Customs` with separate native read context and their actual
+   startup/caller producers; work is in progress. `CustomMemCall` remains an
+   accepted named premise by user decision, including native transitions.
+2. Selected custom-allocation credit and returned spending through listing,
+   plus the opening call's complete after-runtime reconstruction.
+3. Whole C_CALL1 assembly from all unary successes and native exit, and
+   C_CALL2's general formatting/named-registration runtime producers.
+4. Complete counted F1 assembly, with counted `BarrierGrowthFull` supplied by
+   G2. The old ordinary table is not completed merely by weakening away counts.
+5. Reset through CODE/PRIM/DATA loading, promotion and system/argv to Loaded;
+   captured-memory certificates do not establish that execution.
 
 A blanket implication from every weak `CcallSetupPost` to counted evidence
 was removed: source reachability alone does not constrain the omitted

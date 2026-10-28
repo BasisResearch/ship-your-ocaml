@@ -45,8 +45,11 @@ and primitive bindings. A native Sail rerun checks every captured memory
 byte and register; reset-to-cut execution is not yet kernel-proved.
 
 The captured allocator certificate also supplies `libHeap` at that entry
-state. [STATUS.md](STATUS.md) tracks the remaining Layer A obligations for
-`GoodF1`, current workers and verified landings.
+state. The counted Layer A table supplies **132 of 134 F1 opcode rows**,
+relative to named `CustomMemCall` and G2's counted `BarrierGrowthFull`.
+C_CALL1/2, concrete allocating-primitive runtime suppliers and complete F1
+assembly remain open. [STATUS.md](STATUS.md) tracks these obligations,
+current workers and verified landings.
 
 ## The plan
 
