@@ -158,9 +158,10 @@ placement using the existing shared payload frame.
 
 Still open:
 
-1. Full physical `Customs` with separate native read context and their actual
-   startup/caller producers; work is in progress. `CustomMemCall` remains an
-   accepted named premise by user decision, including native transitions.
+1. Native custom transitions and selected capacity spending remain in the
+   accepted named `CustomMemCall` premise. Concrete `PhysicalCustoms`,
+   independent read context, startup/caller frames and captured counted entry
+   are reviewed in `53e93d16`; reset execution remains separate.
 2. Selected custom-allocation credit and returned spending through listing,
    plus the opening call's complete after-runtime reconstruction.
 3. Whole C_CALL1 assembly from all unary successes and native exit, and

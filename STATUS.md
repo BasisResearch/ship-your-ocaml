@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:30 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:37 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -117,12 +117,29 @@ Snapshot: `keep/startup-code-seek-entry-reviewed-20261028`;
 evidence: `logs/code-seek-*`. The next packet repairs selected descriptor,
 OpenFile/source-image and fd-position frames through actual initialization.
 
+The CODE entry gate is active in bprime at fixed candidate `29994e71`,
+started 17:29 UTC; log `/tmp/syo-code-seek-entry-integrate.log`.
+
+## Reviewed physical custom state and call context
+
+`53e93d16` supplies full mutable physical observations, separate native
+read-only pins and their actual startup/caller frames. Physical footprint,
+separation, accounting and readiness frame laws are concrete. The captured
+entry reaches the counted loop without a custom-call premise at startup.
+Later native execution, floating-point linkage and spending remain within
+named `CustomMemCall`. Lead checked all 45 new unique registrations, the
+3,679-job final consumer build and all 62 focused reports (59 allowed-axiom,
+three pure). Source parameter arithmetic was also checked against custom.c.
+Only additive lane/dead-end sections conflicted on rebase; both were kept.
+Snapshot: `keep/custom-physical-reviewed-20261028`;
+evidence: `logs/custom-physical-*`. This is not in the active CODE entry gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Startup Sol | Current descriptor/file/source frames at actual CODE seek entry | `syo-wt/a6-gc-next2` |
-| Runtime Sol | Concrete physical custom state and separate native read context | `syo-wt/a1-prims-next` |
+| Runtime Sol | Selected native custom credit through listing runtime | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
 Startup entry handoff from 17:10 UTC is reviewed. Next packet:
@@ -132,12 +149,11 @@ initialization, not assumed at the new PC.
 G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
 wrapper conditions and returned representation/color for the reviewed branch.
 Its other branch/caller work stays in the ledger.
-Physical custom work started at 16:56 UTC from `4e99ba14`, reusing the
-checked table geometry, credit and runtime components. Log:
-`/tmp/syo-custom-physical-runtime-launch.log`. Source/destination build locks and
-cache provenance were checked before copying the idle listing cache into
-bprime for the next full gate.
-No worker cache is copied while that worktree is building.
+Physical custom work is reviewed. Its slot now takes
+`tasks/sol-custom-credit-listing.md`, log
+`/tmp/syo-custom-credit-listing-launch.log`, to carry actual selected input
+credit and native returned spending through the listing walk. The physical
+worker cache is retained in that slot; no cache is copied while bprime builds.
 
 ## Remaining F1 boundaries
 
@@ -156,9 +172,9 @@ large-result allocation and actual caller/runtime suppliers.
 
 Custom allocation needs concrete input credit and returned spending on the
 same selected heap; an existential HeapReady capacity alone supplies neither.
-Full physical Customs needs actual table-shape/startup/read-context producers.
-Captured count observations are not reset execution, and current Loaded alone
-does not supply counted_entry_of_custom's initial physical-count witness.
+Reviewed PhysicalCustoms now has table-shape/startup/read-context producers
+and an actual captured counted entry. Captured memory is still not reset
+execution, and arbitrary Loaded alone supplies no initial physical witness.
 
 Reset-to-Loaded still needs CODE/PRIM/DATA loading, promotion and system/argv.
 The next actual native call is caml_seek_optional_section; retained ancestor
