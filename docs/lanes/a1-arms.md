@@ -1,5 +1,23 @@
 # Lane a1-arms
 
+## Complete counted C_CALL3/5 (2026-10-28)
+
+The counted partial table now installs `counted_c_call3_row` and
+`counted_c_call5_row` as complete OpArm terms. Shared `CcallShort` reasoning
+uses the actual implementation's proved 1/2/4 arity classification, exact
+operand/index/stack checks and `InF1.prim`; absent slots yield `.wrong`
+exactly as `opt none` does, and the complete selected primitive result is
+`.unsupported`, including the unary sys_exit alternative. These rows need
+no native-return or unreachable-site premise. All 129 previous terms are
+preserved and the exact census is 131/134, relative to existing named
+suppliers; whole C_CALL1/2/4 remain open. The primitive table and GoodF1 are
+unchanged. CustomMemCall stays named, counted BarrierGrowthFull stays G2,
+and C4 round 2 waits for F1. The final affected build passes 3,184 jobs and
+all 12 focused reports use only allowed axioms; all six new theorems are
+covered and registered once. Exact remaining primitive suppliers and
+validation commands/logs are recorded at the top of
+`a1-prims.md`. Full Audit and integration remain the lead gate.
+
 ## Counted unary caller continuation (2026-10-27)
 
 The ordinary F1/whileMin loop remains uncounted. The checked continuation of

@@ -8078,3 +8078,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_c_call2_setup
 #print axioms OCaml.Vm.Sim.counted_c_call2_arm
 #print axioms OCaml.Vm.Sim.counted_c_call2_success
+
+-- Complete counted C_CALL3/5 via the actual F1 arity classification.
+#print axioms OCaml.Bytecode.primF1Impl_wrong_arity
+#print axioms OCaml.Bytecode.primF1Impl_arity
+#print axioms OCaml.Vm.Sim.ccall_wrong_arity_step
+#print axioms OCaml.Vm.Sim.ccall_wrong_arity_row
+#print axioms OCaml.Vm.Sim.counted_c_call3_row
+#print axioms OCaml.Vm.Sim.counted_c_call5_row

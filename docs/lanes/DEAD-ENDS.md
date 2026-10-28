@@ -19,6 +19,25 @@
   the accepted named native boundary and its actual callers, rather than
   assume whole-primitive runtime or an arbitrary returned LibHeapAt.
 
+- 2026-10-28 counted C_CALL3/5: a successful-return arity contract alone
+  does not exclude `.exit`/halt. The checked `primF1Impl_exit` interface
+  identifies `caml_sys_exit` and its unary length; the shared
+  `primF1Impl_wrong_arity` proof instead classifies every implementation
+  pattern and proves the entire result is `.unsupported` outside 1/2/4.
+  Also, `stack.take k` has length k only after the real stepI depth check;
+  apply it after the combined negative-index/short-stack guard, retaining
+  malformed-operand and absent-slot rejection. Do not infer primitive
+  arities solely from names or constrain the table/GoodF1.
+  A stronger candidate claiming `.unsupported` for every operand is
+  refuted by the actual `opt none = .wrong` branch for an absent primitive
+  slot. Preserve `.wrong` there; the shared rejection theorem covers both
+  error constructors and selected wrong-arity F1 primitives stay unsupported.
+  In the shared operand helper, `split` after `rw [semantics]` can split
+  the compiler's singleton-list match even after `rcases args`, yielding
+  no stack-depth evidence. First `change` the singleton goal to the actual
+  combined conditional, then split that guard; otherwise the length proof
+  correctly fails on a short stack.
+
 - 2026-10-28 counted ordinary return adapter: the loop-entry interface gap
   recorded below is resolved by an explicit `ChannelCustomsRepr` argument to
   `CountedPrimReturnsAtR`, supplied by `CcallReady.of_counted_loop`.

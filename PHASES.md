@@ -27,7 +27,7 @@ ELF pin).
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
 | `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
-| Counted loop placement coherence, shared stack/allocation/raise/field frames, 129 ordinary rows and actual unary channel-call success | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedChannelRows}.lean` | A1 (a1-prims) | **proved helpers and 129/134 supplied ordinary rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 16 control/raise/halt, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. Five whole-row obligations remain **open**: C_CALL1–5. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
+| Counted loop placement coherence, shared stack/allocation/raise/field frames, 131 ordinary rows and actual unary channel-call success | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedChannelRows}.lean` | A1 (a1-prims) | **proved helpers and 131/134 supplied ordinary rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 18 control/raise/halt/wrong-arity, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. C_CALL3/5 are complete from the checked F1 arity classification (1, 2 or 4) and exact operand/depth rejection; three whole-row obligations remain **open**: C_CALL1/2/4. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
 | Actual custom-table zero occupancy and interpreter-entry transport | `OCaml/Vm/Gc/ChannelCustomCount.lean`, `OCaml/Vm/Sim/{EntryLoop,CountedEntry}.lean`; layout/runtime-read generators | A1 (a1-prims) | **proved count component**, selected custom-ledger startup ownership and actual prologue frame; `table_count_resources_unconstrained` checks that occupancy leaves resource words arbitrary. Full physical custom runtime/startup zero remains **open**; occupancy is not used as a quietness supplier |
 | Conditional global custom-frame obstruction; local selected spatial API and actual opening/listing frames | `OCaml/Vm/Gc/{CustomFrameObstruction,CustomLedger,CustomMem,F1Heap}.lean`, channel/listing consumers | A1 (a1-prims/a6-gc) | **proved helpers**: pinned-domain write-log obstruction, selected spatial startup/frame/fresh/growth producers and same-returned-ledger opening/listing evidence; concrete physical accounting/native `CustomMemCall` and runtime/F1 suppliers remain **open** |
 | F1 loop-head rows for the integer, comparison, constant, branch and push-constant families (`top_read_row`, `input_row`, `push_set_row`; `*_next` for 51 opcodes) | `OCaml/Vm/Sim/{IntRows,ImmediateRows,OperandRows,PushConstRows}.lean` | A1 (a2-sem) | **proved** from `LoopAt` + `DispatchCode` + operand fetches, concluding `LoopAt`; named premises: `MemoryStable`; EQ/NEQ in-range operands, BRANCHIF/NOT non-raw accumulator and BEQ/BNEQ immediates read off BcSem's use-site guards (BEQ/BNEQ on an in-range pointer or atom proved "not equal" natively, `imm_test_pointer`) |
@@ -407,6 +407,35 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
+**Counted C_CALL3/5 arity closure, 2026-10-28: checked for lead review.**
+`primF1Impl_wrong_arity` splits every actual primitive implementation pattern;
+`primF1Impl_arity` proves every defined outcome requires 1, 2 or 4 arguments,
+including the unary `caml_sys_exit` pattern. Shared `CcallShort` helpers
+follow the real operand shape, negative-index, stack-depth and primitive-slot
+checks before establishing the exact length of `accu :: stack.take k`.
+Absent primitive slots produce `.wrong` exactly as `opt none` does; other
+rejected operands produce `.unsupported`. `InF1.prim` selects the actual F1
+dispatcher, whose wrong-arity primitive result is always `.unsupported`,
+covering return/exit/raise/callback possibilities.
+Generated `counted_c_call3_row` and `counted_c_call5_row` are whole
+`OpArm P (CountedLoopAt Customs f1Layout P)` terms with no native-return
+premise. They are installed in `counted_supported_row`, preserving every
+previous row term: the exact supplied census is **131/134**, relative to the
+existing named suppliers. Whole **C_CALL1/2/4 remain open**: unary channel
+runtime suppliers, flush/fresh-id effects and exit; binary output-char,
+formatting and named registration; four-argument output/output-bytes.
+Existing named successes remain partial coverage. `GoodF1` and the primitive
+table are unchanged; `CustomMemCall` remains named, counted
+`BarrierGrowthFull` stays G2, and C4 round 2 waits for F1. Focused validation
+and remaining native suppliers are recorded at the top of `a1-prims.md`.
+The affected `CountedControlRows` build passes **3,184 jobs**; the focused
+`CountedArityAudit` passes **12 allowed-axiom reports**, covering all six new
+theorems and uniquely registered regressions. Ten generator checks,
+129-term preservation, holes/discipline/abstraction and whitespace checks
+pass. Each Lean launch checks available memory ≥25 GB and runs alone under
+the guarded 12 GiB/two-thread cap. Checked edits remain for lead review;
+full Audit and integration remain the lead gate.
+
 **Counted named primitive success, 2026-10-28: checked for lead review.**
 `CountedPrimReturnsAtR` now explicitly receives the original entry's
 `ChannelCustomsRepr` from `CcallReady.of_counted_loop`; channel suppliers
@@ -430,8 +459,8 @@ stack-depth/read guards and actual argument pop. Existing channel successes
 still check. Exact names/arities and the eleven names outside this adapter
 are recorded in `CountedPrimRows` and the current A1 lane log.
 
-This leaves **129/134 whole ordinary opcode rows**; C_CALL1–5 remain open as
-whole rows. Console effects, concrete channel runtime suppliers, formatter,
+With the arity closure above, there are **131/134 whole ordinary opcode
+rows**; C_CALL1/2/4 remain open as whole rows. Console effects, concrete channel runtime suppliers, formatter,
 named registration, fresh_oo_id effects, exits, other arities and complete
 counted F1 assembly remain separate. CustomMemCall remains named;
 BarrierGrowthFull stays G2 and C4 round 2 waits for F1. All original
@@ -458,7 +487,8 @@ premise. Initially-unallocated growth still uses the actual `GrowDone.kept` and
 selected ownership for physical Customs, refcounts and list links. Counts and
 placement pass forward through that same native run. Generated SETGLOBAL,
 SETFIELD/0/1/2/3 and OFFSETREF contracts now have all local runtime suppliers;
-the exact partial table/census contains 129/134 rows, with C_CALL1–5 remaining.
+the current partial table/census, including the arity closure above, contains
+131/134 rows, with C_CALL1/2/4 remaining.
 Six barrier rows and the partial table explicitly retain
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
 The full-growth producer stays open with G2; no base-layout lift or arbitrary

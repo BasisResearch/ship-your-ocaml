@@ -28,7 +28,8 @@ CONTROL = {
        for op in ['RAISE', 'RERAISE', 'RAISE_NOTRACE']},
 }
 DIVISION = ['DIVINT', 'MODINT']
-REMAINING = ['C_CALL1', 'C_CALL2', 'C_CALL3', 'C_CALL4', 'C_CALL5']
+WRONG_ARITY = {'C_CALL3': 2, 'C_CALL5': 4}
+REMAINING = ['C_CALL1', 'C_CALL2', 'C_CALL4']
 OPERATIONS = {}
 for operation, ops in {
     'enter': ['APPLY', 'APPLY1', 'APPLY2', 'APPLY3', 'APPTERM', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'RETURN'],
@@ -85,10 +86,10 @@ theorem counted_{op.lower()}_row {{L : OCaml.Layout}} {{P : Prog}}
 
 def control_output():
     out = header(['CountedMemoryRows', 'CountedStackRows', 'CountedAllocRows',
-                  'CountedFieldRows', 'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow'],
+                  'CountedFieldRows', 'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow', 'CcallShort'],
                  'Counted control rows and exact remaining F1 opcode census.')
     out += '\n/-- Exactly the ordinary control rows generated here. -/\ndef countedControlOpcode : Opcode → Bool\n'
-    out += ''.join(f'  | .{op} => true\n' for op in [*CONTROL, *DIVISION, 'STOP']) + '  | _ => false\n'
+    out += ''.join(f'  | .{op} => true\n' for op in [*CONTROL, *DIVISION, 'STOP', *WRONG_ARITY]) + '  | _ => false\n'
     for op in [*CONTROL, *DIVISION, 'STOP']:
         out += certificate(op)
     for op, row in CONTROL.items():
@@ -117,6 +118,18 @@ theorem counted_{op.lower()}_row {{P : Prog}}
     (fun _ i _ opcode effect => counted_{op.lower()}_channels (P := P) (args := i.args)
       (by cases i; cases opcode; exact effect))
 '''
+    for op, k in WRONG_ARITY.items():
+        out += f'''
+/-- Complete counted {op}: the actual F1 primitive model rejects this
+arity in every outcome, including exit. GoodF1 therefore cannot reach it;
+the row needs no native return, exit or custom-allocation premise. -/
+theorem counted_{op.lower()}_row {{P : Prog}} {{Customs : Config → Nat → Prop}} :
+    OCaml.OpArm P (CountedLoopAt Customs Gc.f1Layout P) .{op} :=
+  ccall_wrong_arity_row (k := {k}) (by decide) (by decide) (by decide)
+    (fun s args => by
+      rcases args with _ | ⟨p, _ | ⟨q, rest⟩⟩ <;> rfl)
+    (fun _ => rfl)
+'''
     out += '''
 /-- STOP retains the entry's actual exit globals and HTIF idleness. A halt
 has no successor count obligation in counted_row. -/
@@ -144,6 +157,7 @@ def countedOrdinaryOpcode (op : Opcode) : Bool :=
     calls.update({op: f'counted_{op.lower()}_row custom' + (' fits' if 'fits' in row else '') +
                   (' good' if 'good' in row else '') for op, row in CONTROL.items()})
     calls.update({op: f'counted_{op.lower()}_row custom fits good' for op in DIVISION})
+    calls.update({op: f'counted_{op.lower()}_row' for op in WRONG_ARITY})
     calls['STOP'] = 'counted_stop_row good'
     calls['OFFSETREF'] = 'counted_offsetref_row custom fits'
     calls.update({op: f'counted_{op.lower()}_row custom fits full' for op in BARRIERS})
@@ -163,7 +177,9 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
     out += ''.join(f'  | {op} => ' + (f'exact {calls[op]}' if op in calls else 'cases supported') + '\n'
                    for op in opcodes())
     out += '''
-/-- Complete primitive-call rows stay open; supported barriers retain counted G2 full growth. -/
+/-- C_CALL1/2/4 still need complete success/effect suppliers. The unary
+row includes caml_sys_exit; C_CALL4 includes both output primitives.
+Supported barriers retain counted G2 full growth. -/
 def countedRemainingOpcodes : List Opcode :=
 '''
     out += '  [' + ', '.join('.' + op for op in REMAINING) + ']\n'
@@ -174,10 +190,10 @@ theorem counted_opcode_census (op : Opcode) :
   cases op <;> decide
 
 /-- Number of supported complete counted ordinary opcode rows. -/
-theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 129 := by decide +kernel
+theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 131 := by decide +kernel
 
-/-- The remaining list has exactly five distinct opcode obligations. -/
-theorem counted_remaining_count : countedRemainingOpcodes.length = 5 ∧ countedRemainingOpcodes.Nodup := by decide
+/-- The remaining list has exactly three distinct opcode obligations. -/
+theorem counted_remaining_count : countedRemainingOpcodes.length = 3 ∧ countedRemainingOpcodes.Nodup := by decide
 
 end OCaml.Vm.Sim
 '''
@@ -185,12 +201,28 @@ end OCaml.Vm.Sim
 
 
 def outputs():
-    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP', 'OFFSETREF'] + BARRIERS
-    assert len(supported) == len(set(supported)) == 129
+    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP', 'OFFSETREF'] + BARRIERS + list(WRONG_ARITY)
+    assert len(supported) == len(set(supported)) == 131
     assert set(supported).isdisjoint(REMAINING)
     assert set(supported) | set(REMAINING) == set(opcodes()) - set(NON_F1)
     return {ROOT / 'OCaml/Vm/Sim/CountedMemoryRows.lean': memory_output(),
-            ROOT / 'OCaml/Vm/Sim/CountedControlRows.lean': control_output()}
+            ROOT / 'OCaml/Vm/Sim/CountedControlRows.lean': control_output(),
+            ROOT / 'OCaml/Vm/Sim/CountedArityAudit.lean': arity_audits()}
+
+
+def arity_audits():
+    names = ['OCaml.Bytecode.primF1Impl_wrong_arity', 'OCaml.Bytecode.primF1Impl_arity',
+             'OCaml.Bytecode.primF1Impl_exit',
+             'OCaml.Vm.Sim.PrimReturnsAtD.of_arity',
+             'OCaml.Vm.Sim.ccall_wrong_arity_step', 'OCaml.Vm.Sim.ccall_wrong_arity_row']
+    names += [f'OCaml.Vm.Sim.counted_{op.lower()}_row' for op in WRONG_ARITY]
+    names += ['OCaml.Vm.Sim.' + name for name in [
+        'counted_supported_row', 'counted_opcode_census', 'counted_opcode_count', 'counted_remaining_count']]
+    return '''import OCaml.Vm.Sim.CountedControlRows
+
+/-! GENERATED by scripts/gen_counted_control_rows.py. Focused F1 arity audit.
+Full OCaml.Audit remains the lead gate. -/
+''' + ''.join(f'#print axioms {name}\n' for name in names)
 
 
 if __name__ == '__main__':
@@ -203,4 +235,4 @@ if __name__ == '__main__':
                 raise SystemExit(f'counted control row drift: {target.relative_to(ROOT)}')
         else:
             target.write_text(content)
-    print('Counted ordinary rows current (129/134 F1 opcodes relative to counted G2 full growth; 5 remaining)')
+    print('Counted ordinary rows current (131/134 F1 opcodes relative to counted G2 full growth; 3 remaining)')

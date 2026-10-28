@@ -1,6 +1,97 @@
 # A1 F1 primitive summaries
 
-## Current status
+
+## Complete counted C_CALL3/5 by F1 arity (2026-10-28)
+
+Checked edits are ready for lead review; no landing was attempted.
+The initial worktree at `19b964fd` was clean. Read the binding briefs,
+relevant lane/dead-end entries and abstraction inventory before proof work;
+no workers, Git metadata writes or proof-budget changes were used.
+
+Inspected all thirty `primsF1` names and every `primF1Impl` pattern.
+`primF1Impl_wrong_arity` proves directly from those implementation patterns
+that every argument count except 1, 2 or 4 evaluates to `.unsupported`.
+`primF1Impl_arity` exposes the classification for any defined outcome;
+it does not enumerate names or assume a successful return. In particular,
+`caml_sys_exit` has the unary pattern and cannot halt at C_CALL3/5.
+The primitive result equality rules out `.ok`, `.exit`, `.raise` and
+`.callback` together, retaining `.unsupported` as the actual result. Existing
+`PrimReturnsAtD.of_arity`/`prim_arity` cover successful returns; they stay
+unchanged, with the theorem audited as a regression. The all-outcome lemma
+supplies the required exit exclusion.
+
+Shared `ccall_wrong_arity_step` handles all operand lists before either row
+is instantiated. It follows stepI's combined negative-index/short-stack
+guard and optional primitive lookup exactly. Out-of-range indices yield
+`.wrong` via `opt none`; malformed operands, negative indices and short
+stacks yield `.unsupported`. In the accepted-guard branch the real depth
+fact proves `accu :: stack.take 2` has length 3 and
+`accu :: stack.take 4` has length 5. `InF1.prim` supplies membership for
+the selected name, so the real dispatcher reduces to `primF1Impl`.
+`ccall_wrong_arity_row` uses the resulting `.unsupported`/`.wrong`
+classification through `ArmOutcome` for any loop relation. GoodF1's
+unchanged Good condition excludes both error constructors; no new
+unreachability or native-return premise is used.
+
+Generated `counted_c_call3_row` and `counted_c_call5_row` supply complete
+`OpArm P (CountedLoopAt Customs f1Layout P)` terms without extra premises.
+The generator installs those actual terms in `counted_supported_row` and
+preserves all 129 previous terms. `counted_opcode_census`,
+`counted_opcode_count` and `counted_remaining_count` now certify exactly
+**131/134 supplied rows** and **three distinct open rows: C_CALL1/2/4**,
+relative to the existing named custom and counted G2 suppliers.
+
+Remaining complete-row obligations:
+
+- C_CALL1: retain the existing nineteen-name adapter's unary successes and
+  separate three channel successes; supply concrete opening/listing runtime
+  producers, flush/fresh-oo-id effects and the actual unary sys_exit halt.
+- C_CALL2: retain the three binary named successes; compose output-char,
+  general format-int and named registration, including real semantic guards
+  and native/runtime frames. Formatting includes the existing large-result
+  allocation boundary.
+- C_CALL4: compose both `caml_ml_output` and `caml_ml_output_bytes` with their
+  four actual arguments, slice/channel/console guards and native effects.
+
+Full counted F1 assembly and concrete runtime producers remain open.
+`CustomMemCall` stays named and full remembered-table growth stays exactly
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`
+with G2. GoodF1, the primitive table, custom physical meaning and capacity
+are unchanged; C4 round 2 waits for F1.
+
+Validation:
+
+- Shared affected build: `lake build OCaml.Vm.Sim.CcallShort` passes
+  **1,738 jobs**, `/tmp/ccall35-shared-final.log`; includes the shared
+  semantic classification and operand helpers, with no new warnings.
+- Final table build: `lake build OCaml.Vm.Sim.CountedControlRows` passes
+  **3,184 jobs**, `/tmp/ccall35-rows-final.log`; checks both new whole rows,
+  all 129 preserved supplied terms and the exact 131/3 census. No new warnings
+  in the changed modules.
+- `lake env lean -M 6000 -j 1 OCaml/Vm/Sim/CountedArityAudit.lean` passes
+  **12 reports**, `/tmp/ccall35-focused-audit.log`. All use only
+  `{propext, Classical.choice, Quot.sound}` or no axioms.
+  `/tmp/ccall35-check-audit.py` verifies exact report membership/count,
+  all six new theorem declarations and unique `OCaml/Audit.lean`
+  registrations; the generated focus also covers the existing exit/arity
+  helpers and all four census/table theorems.
+- Ten relevant generator checks pass: native C_CALL setups/returns/arms/
+  exits, counted stack/allocation/field/control/C_CALL2/primitive rows and
+  their focused audit outputs. A read-only comparison with HEAD confirms
+  every one of the 129 previous `counted_supported_row` terms is unchanged;
+  exactly C_CALL3/5 are added. Hole, discipline, abstraction and whitespace
+  checks pass. The refuted all-operands-unsupported candidate and list-match
+  tactic route are recorded in `DEAD-ENDS.md`.
+- Before every Lean launch, `free -g` showed available memory ≥25 GB.
+  All builds/audits ran serially via `python3 scripts/lean-guarded.py --log
+  /tmp/<task>.log -- scripts/lean-capped.sh lake ...`, retaining the inherited
+  12 GiB/two-thread cap and the guard's 10 GiB stop. No virtual-memory limit,
+  proof-budget change or generated-output hand edit was used.
+
+Full Audit and landing via `scripts/integrate.sh` remain the lead gate.
+Git metadata and the landing queue were left untouched.
+
+## Previous named-success status
 
 **2026-10-28 counted ordinary/allocating C_CALL continuation (base
 `dfbaf165`): checked edits for lead review; no landing attempted.**
