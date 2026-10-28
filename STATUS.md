@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:04 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:15 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -77,20 +77,31 @@ The combined full gate is active in `syo-wt/bprime` at fixed candidate
 `004b521cc338bcf6d93fbaf13b265e3644f7d3c2`, started 16:03 UTC. Log:
 `/tmp/syo-startup-arity-integrate.log`. Neither reviewed proof is published yet.
 
+## Reviewed for the following gate
+
+`e99a7397` completes original-entry exact/next-size small-success dispatch for
+positive requests <=16 when a suitable represented small list exists.
+All four exact branches reuse the actual native run and return the popped
+SmallRepresentation, original header/size, allocated separation, ABI/stack,
+code/output and exact log. Shared dispatch selects the real branch; no
+intermediate or final state is assumed. Natural counter credit remains an
+explicit separate duty. Lead checked the 1,291-job build, all 287 focused
+reports (285 standard, two pure) and all 27 new unique registrations.
+Snapshot: `keep/g2-exact-small-reviewed-20261028`; logs: `logs/a6-exact-entry-*`.
+The proof rebase was clean. This result is not in the active `004b521c` gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
-| G2 Sol | Exact-size representation and shared original small-success dispatch | `syo-wt/a1-prims-next` |
+| Next runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Two Sol CLI workers are active. G2 started at 15:58 UTC from `10c5e3c6`
-in `a1-prims-next`; log `/tmp/syo-gc-small-success-launch.log`.
-The idle startup cache was transferred to the integration worktree under
-source/destination build locks, with matching toolchain/manifests and
-tracked dependency trees, before the G2 launch. All four build roots were
-copied coherently, without deletion.
+Console is active; G2's exact/next-size task completed and was reviewed.
+The freed slot is being prepared for `sol-outlist-runtime-local.md`. G2's
+large-tree/remaining dispatch, caller production and full collection remain
+in its ledger for the next rotation.
 
 Counted console/C_CALL4 started at 16:03 UTC from `004b521c` in
 `a6-gc-next2`; log `/tmp/syo-counted-console-launch.log`. The idle integration
