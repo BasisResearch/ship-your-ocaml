@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:23 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:35 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -90,11 +90,20 @@ reports (285 standard, two pure) and all 27 new unique registrations.
 Snapshot: `keep/g2-exact-small-reviewed-20261028`; logs: `logs/a6-exact-entry-*`.
 The proof rebase was clean. This result is not in the active `004b521c` gate.
 
+`319f74d2` closes complete C_CALL4 and the four counted console returns,
+bringing the generated table to **132/134**. C_CALL1/2 remain. Lead reviewed
+actual ref/link/physical-count frames and every arity-four outcome, checked
+all 36 new unique registrations, the 2,372/3,713-job affected builds and
+47 focused reports (46 standard, one axiom-free). All 131 prior complete row
+terms remain unchanged. Snapshot: `keep/counted-console-reviewed-20261028`;
+evidence: `logs/console-counts-*`. Rebase conflicts were adjacent lane and
+dead-end notes; both sides were retained. It is not in the active gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
+| C_CALL Sol | Counted fresh-OO-ID success and actual sys_exit halt | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
