@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:35 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,13 +18,18 @@ None currently.
 
 ## Published
 
-`origin/main` is **`51c9653c02784a3b83742eb176524659305553ab`**, verified remotely
-after the full gate exited at 15:49 UTC. It passed **6,098 build jobs**,
-**9,592 main audit reports** (9,596 including TCB) and 133 axiom-free reports,
-generator/ELF checks, and **329 OS traces** (5,069 steps, 324 accepted,
-5 special, zero rejected or unsupported). Every stage marker and the complete
-log header/tail are intact. Evidence: `logs/{integrate,build}-51c9653c.log`.
+`origin/main` is **`004b521cc338bcf6d93fbaf13b265e3644f7d3c2`**, verified remotely
+after the full gate exited at 16:34 UTC. It passed **6,141 build jobs**,
+**9,598 main audit reports** (9,602 including TCB) and 133 axiom-free reports
+in the gate transcript, generator/ELF checks, and **329 OS traces** (5,069
+steps, 324 accepted, 5 special, zero rejected or unsupported). All stages
+passed. Evidence: `logs/{integrate,build}-004b521c.log`.
+This publishes the reset-through-debugger and complete C_CALL3/5 work below.
+The counted published census is **131/134**. All build-log dependency reports,
+including focused audits replayed during builds, also use only allowed axioms.
 
+The previous `51c9653c` gate passed 6,098 jobs, 9,596 allowed reports including
+TCB, 133 pure reports and the same 329 traces; evidence remains archived.
 This adds `19b964fd`: original-entry counted C_CALL1/2 success for **19 ordinary
 primitive names** (16 unary, three binary), using actual native returns.
 Entry counts come from the counted loop, and returned counts use the actual
@@ -48,7 +53,7 @@ A capped targeted check and the subsequent full gate verify the fix.
 Earlier published `804538a5` contains the plain signed decimal native wrapper
 and selected custom ownership. General formatting remains open.
 
-## Reviewed for the next gate
+## Newly published proofs
 
 `66a597af` executes universal parsed-ELF reset through interpreter/debugger
 initialization to `0x80004e94`. It retains the actual backtrace/descriptor
@@ -61,7 +66,7 @@ The sole rebase conflict was adjacent dead-end notes; both were retained.
 Snapshot: `keep/interpreter-init-reviewed-20261028`; evidence:
 `logs/interpreter-init-*`. `10c5e3c6` removes the duplicate GC-call witness
 from the generated backtrace audit (now 79 declarations); initialization
-still audits it. The full gate will check the combined result.
+still audits it. The full gate checked the combined result.
 
 `607536da` closes C_CALL3/5, with a reviewed **131/134** census. The worker's
 3,184-job table build and 12 focused reports (11 standard, one axiom-free)
@@ -70,14 +75,13 @@ absent-slot branch remains `.wrong`; selected F1 primitives at these arities
 are `.unsupported`. Neither can occur on a GoodF1 run. No guard changed.
 Snapshot: `keep/counted-arity-reviewed-20261028`; logs: `logs/ccall35-*`.
 `b83bf39e` moves the two proof bodies unchanged to `Bytecode/PrimArity.lean`;
-Semantics.lean is byte-identical to the published baseline. The full gate
-will validate the import change and combined 131-row/startup result.
+Semantics.lean is byte-identical to the preceding published baseline. The full
+gate validated the import change and combined 131-row/startup result.
 
-The combined full gate is active in `syo-wt/bprime` at fixed candidate
-`004b521cc338bcf6d93fbaf13b265e3644f7d3c2`, started 16:03 UTC. Log:
-`/tmp/syo-startup-arity-integrate.log`. Neither reviewed proof is published yet.
+Both proof batches landed through `scripts/integrate.sh`; worker logs now
+end with the actual landed commit. The review snapshots remain preserved.
 
-## Reviewed for the following gate
+## Reviewed for the next gate
 
 `e99a7397` completes original-entry exact/next-size small-success dispatch for
 positive requests <=16 when a suitable represented small list exists.
@@ -88,7 +92,7 @@ intermediate or final state is assumed. Natural counter credit remains an
 explicit separate duty. Lead checked the 1,291-job build, all 287 focused
 reports (285 standard, two pure) and all 27 new unique registrations.
 Snapshot: `keep/g2-exact-small-reviewed-20261028`; logs: `logs/a6-exact-entry-*`.
-The proof rebase was clean. This result is not in the active `004b521c` gate.
+The proof rebase was clean. This result is not yet published.
 
 `319f74d2` closes complete C_CALL4 and the four counted console returns,
 bringing the generated table to **132/134**. C_CALL1/2 remain. Lead reviewed
@@ -97,7 +101,7 @@ all 36 new unique registrations, the 2,372/3,713-job affected builds and
 47 focused reports (46 standard, one axiom-free). All 131 prior complete row
 terms remain unchanged. Snapshot: `keep/counted-console-reviewed-20261028`;
 evidence: `logs/console-counts-*`. Rebase conflicts were adjacent lane and
-dead-end notes; both sides were retained. It is not in the active gate.
+dead-end notes; both sides were retained. It is not yet published.
 
 ## Active work
 
@@ -107,28 +111,24 @@ dead-end notes; both sides were retained. It is not in the active gate.
 | Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Console and listing-runtime Sol workers are active. Listing started at
-16:15 UTC from `a1be6936` in `a1-prims-next`; its log is
-`/tmp/syo-outlist-runtime-local-launch.log`. G2's exact/next-size task is
-reviewed for the following gate. G2's
-large-tree/remaining dispatch, caller production and full collection remain
-in its ledger for the next rotation.
-
-Counted console/C_CALL4 started at 16:03 UTC from `004b521c` in
-`a6-gc-next2`; log `/tmp/syo-counted-console-launch.log`. The idle integration
-cache was copied into that slot under the same provenance/build-lock checks
-before launch, avoiding stale foundational build outputs. Other ready packets cover
-counter/exit, listing runtime repair, full physical custom startup/read
-context, general formatting, named reserve and the actual CODE-section seek.
+Counter/exit started at 16:35 UTC from `319f74d2`; log:
+`/tmp/syo-counted-counter-exit-launch.log`. Listing started at 16:15 UTC from
+`a1be6936`; log: `/tmp/syo-outlist-runtime-local-launch.log`.
+G2's exact/next-size task is reviewed for the next gate; the original-entry
+least-large split/return packet is ready for its next rotation. Other ready
+packets cover physical custom startup/read context, general formatting,
+named reserve and actual CODE-section seek. No worker cache is copied while
+that worktree is building.
 
 ## Remaining F1 boundaries
 
-The published counted table supplies **129/134** rows relative to named
+The published counted table supplies **131/134** rows relative to named
 `CustomMemCall` and counted full growth. The G2 boundary is genuinely
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`;
 a base-layout boundary cannot supply the extra returned count facts.
 
-C_CALL1–5 remain whole-row obligations in the published table. Opening and
+C_CALL1/2/4 remain whole-row obligations in the published table; reviewed
+C_CALL4 will reduce that to C_CALL1/2 at the next gate. Opening and
 listing have native returns, but concrete entry/runtime suppliers remain.
 Inspection found that `OutListRuntime.entry` quantifies over an unconstrained
 stack pointer and its return law permits arbitrary allocator writes. The
