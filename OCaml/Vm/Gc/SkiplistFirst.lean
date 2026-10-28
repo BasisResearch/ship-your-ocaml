@@ -960,6 +960,29 @@ theorem NativeFirst.seed {H capacity sp ra s0 s1 key before after}
   rw [F.terminal.memory, bytesT_writeLog_out _ outside, Reloc.bytesT_congr copied, F.prepared.memory]
   exact prefix_seed_word _ sp ra s0 s1 short
 
+/-- The real insertion keeps the caller's bytes above its entry stack. -/
+theorem NativeFirst.caller_frame {H capacity sp ra s0 s1 key before after}
+    (F : NativeFirst H capacity sp ra s0 s1 key before after)
+    (frame : NativeFrame sp Skiplist.opStack) : CallerFrame sp before after := by
+  have short := frame.resize (small := 192) (by decide) (by decide)
+  have nested := call_frame frame
+  have cell := F.cell
+  have lower := short.lower
+  have upper := cell.high
+  have roots : Skiplist.globalRoots + 8 ≤ heapEnd := by decide
+  have seed : Skiplist.randomSeed + 4 ≤ heapEnd := by decide
+  constructor
+  intro x hx
+  have front : OutW (prefixWindows sp) x := by
+    simp only [prefixWindows, OutW, and_true]
+    exact ⟨Or.inr hx, Or.inr (by omega)⟩
+  have back : OutW (finishWindows F.p) x := by
+    simp only [finishWindows, OutW, and_true]
+    exact ⟨Or.inr (by omega), Or.inr (by omega)⟩
+  rw [F.terminal.memory, frameOn_writeLog _ _ _ (finish_inside F.p key) x back,
+    (F.allocation.caller_frame nested).byte x (by rw [short.stack_nat]; unfold nativeFrameBase; omega),
+    F.prepared.memory, frameOn_writeLog _ _ _ (prefix_inside short) x front]
+
 /-- Low runtime globals outside the seed, published root pointer and allocator
 metadata retain their entry values through the complete first insertion. -/
 theorem NativeFirst.low_kept {H capacity sp ra s0 s1 key before after}

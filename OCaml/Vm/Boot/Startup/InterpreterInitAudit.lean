@@ -45,6 +45,11 @@ import OCaml.Vm.Boot.Startup.CamlInterpreterInitNormalized
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.next_pc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.from_sections
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.load_caller
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.caller_frame
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.table_pointer
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.num_sections
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.descriptors_owned
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.descriptors_live
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.last_exn
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.page_table
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_interpreter_init
@@ -58,6 +63,7 @@ import OCaml.Vm.Boot.Startup.CamlInterpreterInitNormalized
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_atom_table_returned_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.next_pc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.domain_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.caller_frame
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.page_table
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.last_exn
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_backtrace_returned_exists

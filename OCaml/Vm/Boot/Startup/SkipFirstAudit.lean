@@ -310,6 +310,7 @@ import OCaml.Vm.Gc.SkiplistFirst
 #print axioms OCaml.Vm.Gc.SkiplistFirst.NativeFirst.chain
 #print axioms OCaml.Vm.Gc.SkiplistFirst.prefix_seed_word
 #print axioms OCaml.Vm.Gc.SkiplistFirst.NativeFirst.seed
+#print axioms OCaml.Vm.Gc.SkiplistFirst.NativeFirst.caller_frame
 #print axioms OCaml.Vm.Gc.SkiplistFirst.NativeFirst.low_kept
 #print axioms OCaml.Vm.Gc.SkiplistFirst.first_insert
 #print axioms OCaml.Vm.Gc.SkiplistFirst.first_insert_startup

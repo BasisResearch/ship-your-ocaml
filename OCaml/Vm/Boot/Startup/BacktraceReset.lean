@@ -15,6 +15,7 @@ structure ResetBacktrace (initial after : Config) where
   source_run : Steps atoms after
   loadCaller : LoadCaller after
   H : List (Nat × Nat)
+  sourceOwned : ∀ e ∈ source.source.source.blocks, e ∈ H
   ent : BitVec 64
   raw : BitVec 64
   beforeAtoms : Config
@@ -35,6 +36,12 @@ theorem ResetBacktrace.next_pc {initial after} (B : ResetBacktrace initial after
 theorem ResetBacktrace.domain_live {initial after} (B : ResetBacktrace initial after) :
     LiveFrame Gc.SkiplistFirst.startupBlocks B.atoms after :=
   (LiveFrame.of_memory B.call.memory).trans B.done.live
+
+/-- Trailer bytes survive the actual backtrace tail calls and root insertion. -/
+theorem ResetBacktrace.caller_frame {initial after} (B : ResetBacktrace initial after) :
+    CallerFrame (parameterStack + 16#64) B.source.source.sections after :=
+  B.source.caller.trans (((CallerFrame.of_memory B.call.memory).trans
+    (B.done.caller_frame (by constructor <;> decide))).weaken (by decide))
 
 /-- The first insertion preserves both the native page-table header and its
 selected owned entry block; the allocator ledger also retains the new cell. -/
@@ -113,6 +120,7 @@ theorem reset_init_backtrace_returned_exists :
     source_run := step.trans steps
     loadCaller := atoms.loadCaller.frame (g.trans (GprsSame.of_saved B.saved)) (by decide) (by decide)
     H := H
+    sourceOwned := atoms.sourceOwned
     ent := ent
     raw := raw
     beforeAtoms := atoms.before

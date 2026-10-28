@@ -13,6 +13,11 @@ theorem CallerFrame.trans {sp before middle after} (first : CallerFrame sp befor
 theorem CallerFrame.of_memory {sp before after} (same : after.σ.mem = before.σ.mem) :
     CallerFrame sp before after := ⟨fun _ _ => by rw [same]⟩
 
+/-- A caller frame also protects every higher boundary. -/
+theorem CallerFrame.weaken {sp higher before after} (frame : CallerFrame sp before after)
+    (bound : sp.toNat ≤ higher.toNat) : CallerFrame higher before after :=
+  ⟨fun a ha => frame.byte a (Nat.le_trans bound ha)⟩
+
 theorem StatCheckedReturnedL.caller_frame {live : Nat → Prop} {H capacity sp ra s0 n before after}
     (w : StatCheckedReturnedL live H capacity sp ra s0 n before after)
     (frame : NativeFrame sp 544) : CallerFrame sp before after := by

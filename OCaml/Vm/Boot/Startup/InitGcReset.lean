@@ -32,6 +32,8 @@ abbrev ResetReadSections.blocks {initial after} (w : ResetReadSections initial a
 structure ResetGcCalled {initial sections : Config} (w : ResetReadSections initial sections)
     (t1 t2 t3 : BitVec 64) (after : Config) : Prop where
   run : Steps sections after
+  /-- The two argument stores use only the first sixteen caller bytes. -/
+  caller : CallerFrame (parameterStack + 16#64) sections after
   call : InitGcCall w.blocks (startupAllocatorCredits - 656 - initGcCredits) 32 32768 1019968 2101248 16384
     parameterStack jal_80004e6c_call.link 3#64 argvPtr (vsaReg w.attempt.opened.call.atRetry 18)
     (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
@@ -72,7 +74,10 @@ theorem reset_init_gc_call_witness {initial sections : Config} (w : ResetReadSec
   have bss (a : Nat) (lo hi : Nat) (inside : lo ≤ a ∧ a + 8 ≤ hi) (window : ∀ x, lo ≤ x → x < hi → GcBssByte x) :
       bytesT after.σ.mem a 8 = 0#64 :=
     gc.word a fun i _ => window _ (by omega) (by omega)
-  refine ⟨after, run, ?_, gc⟩
+  refine ⟨after, run, ?_, ?_, gc⟩
+  · constructor
+    intro x hx
+    rw [post.memory, frameOn_writeLog _ _ _ inside x ⟨Or.inr hx, trivial⟩]
   exact {
     pc := by have := post.pc; rwa [jal_80004e6c_call_target] at this
     regs := ⟨gholds_lookup (n := 2) _ post.regs rfl,

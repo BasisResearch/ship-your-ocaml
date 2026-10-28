@@ -81,4 +81,10 @@ theorem BacktraceDone.selected_live {H capacity sp ra before after kept}
     LiveFrame kept before after :=
   (LiveFrame.of_memory B.memory).trans (B.inserted.native.live selection frame)
 
+/-- The tail calls and insertion retain the original caller's memory. -/
+theorem BacktraceDone.caller_frame {H capacity sp ra before after}
+    (B : BacktraceDone H capacity sp ra before after)
+    (frame : NativeFrame sp Gc.Skiplist.opStack) : CallerFrame sp before after :=
+  (CallerFrame.of_memory B.memory).trans (B.inserted.native.caller_frame frame)
+
 end OCaml.Vm.Boot.Startup

@@ -72,8 +72,11 @@ structure ResetInitStack (initial after : Config) where
   sections : Config
   source : ResetReadSections initial sections
   source_run : Steps sections after
+  caller : CallerFrame (parameterStack + 16#64) sections after
   loadCaller : LoadCaller after
   H : List (Nat × Nat)
+  /-- The GC prepends blocks to the descriptor caller's actual ledger. -/
+  sourceOwned : ∀ e ∈ source.blocks, e ∈ H
   s0 : BitVec 64
   s1 : BitVec 64
   s2 : BitVec 64
@@ -146,8 +149,11 @@ theorem reset_init_stack_witness_exists :
     sections := sections
     source := w
     source_run := G.run.trans (run2.trans (run3.trans run4))
+    caller := G.caller.trans ((D.caller.trans
+      ((CallerFrame.of_memory P.memory).trans S.caller)).weaken (by decide))
     loadCaller := ⟨gholds_lookup (n := 8) _ S.regs rfl, gholds_lookup (n := 9) _ S.regs rfl⟩
     H := Hfinal
+    sourceOwned := fun e he => by rw [hpre]; exact List.mem_append_right _ he
     s0 := 3#64
     s1 := argvPtr
     s2 := vsaReg w.attempt.opened.call.atRetry 18

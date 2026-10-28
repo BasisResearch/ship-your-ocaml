@@ -1,5 +1,84 @@
 # Lane a0-boot
 
+## CODE seek entry and trailer frame (2026-10-28; checked partial)
+
+Status: the requested reset-to-CODE-seek theorem at `0x80004eb0` remains
+open. Checked edits are left for lead review; no commit or landing metadata
+was written.
+
+`SeekCodeReset.whileMin_reset_code_seek_entry` universally extends the
+parsed/matching-ELF reset prefix through the actual JAL at `0x80004ea4` to
+`caml_seek_optional_section` at `0x80004bcc`, with RA `0x80004ea8`. The named
+`CodeSeekCallInput`/`CodeSeekCallDone` use the real debugger return,
+`FnSummary`/`block_then_call` and ELF-generated rows. The post retains the
+selected heap and capacity, fd=3/argv bank, initial reset/source witnesses,
+actual Steps and unchanged memory across argument setup. No separate
+`caml_seek_section` wrapper is introduced.
+
+The bounded source-frame component is now proved: `InitGcTabled`,
+`InitGcMinored`, `InitGcMajored` and `InitGcDone` carry `CallerFrame` from
+their actual execution. `ResetGcCalled` frames bytes above the two GC
+argument words. Stack/atom source adapters carry that frame;
+`SkiplistFirst.NativeFirst.caller_frame` proves the allocator/root-insertion
+caller frame; backtrace and interpreter compose it. The current trailer
+count and descriptor pointer at debugger return and optional-section entry
+therefore follow from `ReadSectionsDone`, rather than Steps alone. The GC's
+existing `extends_` ledger evidence is retained as `sourceOwned` through
+stack/atom/backtrace, proving current descriptor ownership.
+`ResetInterpreterInit.descriptors_live` frames the selected descriptor block
+through the interpreter's actual stores from the backtrace return only.
+
+`gen_startup_rows.py` now owns the bounded optional-seek regions, the
+actual main call/test regions, `CodeSectionName` and `SeekSectionData`.
+The literal pointer is extracted from caml_main's a2 AUIPC/ADDI pair and its
+bytes checked against pinned ELF rodata. The chosen initial loader image
+supplies seven descriptors with lengths `[764,0,0,7858,302,284,51]`;
+all 56 raw bytes, swapped names, unsigned loads and signed return loads
+are checked. Reverse offsets are `[72,123,407,709,8567,8567,8567,9331]`,
+with natural/modular step laws, bounds below the signed 32-bit boundary,
+lseek guards and `9388 - 9331 = 57`. These are initial-source/arithmetic
+certificates; no actual updated fd position is claimed yet. CRCS shares
+CODE's first byte and differs at byte one; `seek_crcs_common_prefix`
+checks that case. `code_seek_present` executes the actual `0x80004ea8`
+length test to `0x80004eb0` when its input register contains 764; the
+pending scan must produce that register observation.
+
+Remaining first: prove selected current descriptor, OpenFile, embedded
+source-image and fd-position observations through the GC/minor/major/stack/
+atom/root summaries. Their low-global and caller contracts alone do not
+cover all those bytes. Then compose the bounded reverse scan using
+`indexedLoop`, existing strncmp and lseek/HTIF summaries, with exact offsets,
+return length and fd-position update. The missing-section edge has not
+been ruled out on the full reset path. No arbitrary final-memory matching
+premise was added. CODE allocation/read, code-fragment/MD5, primitives,
+DATA, promotion, sys/argv and Loaded remain later work. GoodF1 is unchanged;
+BarrierGrowthFull stays G2, CustomMemCall stays named, C4 round 2 waits for F1.
+
+Validation: guarded/capped affected and focused build passes 3,533 jobs
+(`/tmp/code-seek-focused-2.log`), including `SeekCodeReset`, all generated
+seek regions, `SeekSectionData`, `SeekAudit`, `InterpreterInitAudit`,
+`BacktraceAudit` and `SkipFirstAudit`. All 354 SeekAudit declarations have
+reports; all 1,708 unique axiom-dependent reports in that build use only `propext`,
+`Classical.choice`, `Quot.sound`; one additional report is axiom-free.
+The lead checked all 247 new public theorems are registered in the audit
+closure; focused modules intentionally overlap registrations. `OCaml.Audit`
+registers `SeekAudit`;
+full OCaml.Audit and integration remain the lead gate. Every build followed
+`free -g` (available >=25 GB), used lean-guarded/lean-capped and inherited
+the 12 GB cgroup/two threads. Hole, discipline, abstraction and ELF pin
+checks pass (114,928 pinned bytes, zero mismatches); logs are
+`/tmp/code-seek-{holes,discipline,abstraction,pins}.log`. Generator drift
+passes for all 2132 outputs (`/tmp/code-seek-generator-final-check.log`);
+whitespace checks pass.
+
+Reproduction:
+
+```sh
+free -g
+python3 scripts/lean-guarded.py --log /tmp/code-seek-focused-2.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.SeekAudit OCaml.Vm.Boot.Startup.InterpreterInitAudit OCaml.Vm.Boot.Startup.BacktraceAudit OCaml.Vm.Boot.Startup.SkipFirstAudit
+python3 scripts/gen_startup_rows.py --check
+```
+
 ## Interpreter/debugger initialization (2026-10-28; published)
 
 The new reset-facing target is `whileMin_reset_interpreter_init` in

@@ -7,6 +7,7 @@ import OCaml.Vm.Boot.Startup.StatAligned
 import OCaml.Vm.Boot.Startup.PolicySteps
 import Vsa.Sim.FrameComposition
 import OCaml.Vm.Boot.Startup.MemSame
+import OCaml.Vm.Boot.Startup.CallerFrame
 
 /-! caml_init_gc, composed with its callees, at the default parameters. -/
 namespace OCaml.Vm.Boot.Startup
@@ -70,6 +71,7 @@ structure InitGcCall (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
 /-- caml_page_table_initialize returned into caml_init_gc. -/
 structure InitGcTabled (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk : BitVec 64)
     (before after : Config) : Prop where
+  caller : CallerFrame sp before after
   pc : PCAt jal_8001f344_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (10, 0#64), (9, 262144#64), (18, 8192#64), (19, 2#64), (20, 15#64),
     (21, 120#64), (22, 500#64), (23, 1#64), (24, 44#64), (25, 100#64), (8, 0xf8000#64)]
@@ -152,6 +154,10 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
     exact gC.get (by simp [abiSaved] at member; omega) (by simp [abiSaved] at member; omega)
       (by simp [abiSaved] at member; simp; omega) h
   refine ⟨blk, d4, run1.trans (run2.trans (run3.trans run4)), {
+    caller := ⟨fun x hx => by
+      rw [PT.caller x (by rw [frame96.stack_nat]; unfold nativeFrameBase; omega), C.memory, p2.memory,
+        show writeLog d1.σ.mem [] = d1.σ.mem from rfl]
+      exact above x hx⟩
     pc := PT.pc
     regs := ⟨PT.ready.stack, gholds_lookup (n := 10) _ PT.regs rfl,
       saved 9 (by decide) (gholds_lookup (n := 9) _ p2.regs rfl), saved 18 (by decide) (gholds_lookup (n := 18) _ p2.regs rfl),
@@ -181,6 +187,7 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
 /-- caml_set_minor_heap_size returned into caml_init_gc. -/
 structure InitGcMinored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (before after : Config) : Prop where
+  caller : CallerFrame sp before after
   pc : PCAt jal_8001f36c_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (10, 0#64), (8, 0xf8000#64), (9, 262144#64), (18, 8192#64),
     (19, 2#64), (20, 15#64), (21, 120#64), (22, 500#64), (23, 1#64), (24, 44#64), (25, 100#64)]
@@ -297,6 +304,9 @@ theorem init_gc_to_minor (c d4 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     rw [M.saved k lo hi]; exact g46.get (by omega) (by omega) (by simp; omega) h
   have stackNat : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
   refine ⟨raw, d7, run5.trans (run6.trans run7), {
+    caller := ⟨fun x hx => by
+      rw [M.caller x (by rw [stackNat]; omega), mem6]
+      exact T.caller.byte x hx⟩
     pc := M.pc
     regs := ⟨gholds_lookup (n := 2) _ M.regs rfl, gholds_lookup (n := 10) _ M.regs rfl,
       gholds_lookup (n := 8) _ M.regs rfl, gholds_lookup (n := 9) _ M.regs rfl, gholds_lookup (n := 18) _ M.regs rfl,
@@ -402,6 +412,7 @@ theorem GcLowKeep.of_range {x : Nat} (h : (0x800647f0 ≤ x ∧ x < 0x80064848) 
 /-- caml_init_major_heap returned into caml_init_gc. -/
 structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (mem stack entries cur : BitVec 64) (before after : Config) : Prop where
+  caller : CallerFrame sp before after
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jal_8001f3a4_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (8, 0xf8000#64), (9, BitVec.ofNat 64 percentFreeAddr), (18, 8192#64),
@@ -645,6 +656,15 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     rw [MH.saved k lo hi]; exact g713.get (by omega) (by omega) (by simp [abiClobbered]; omega) h
   refine ⟨mem, stack, entries, d14,
     run8.trans (run9.trans (run10.trans (run11.trans (run12.trans (run13.trans run14))))), {
+    caller := ⟨fun x hx => by
+      rw [MH.caller x (by rw [stack96]; omega)]
+      have high := frame96.lower
+      rw [hE] at high
+      rw [back13 x
+        (by simp only [OutL, policyLog, and_true]; omega)
+        (by simp only [OutL, percentFreeAddr, percentMaxAddr, and_true]; omega)
+        (by simp only [OutL, majorIncrementAddr, and_true]; omega)]
+      exact Mi.caller.byte x hx⟩
     lastExn := MH.lastExn
     pc := MH.pc
     regs := ⟨gholds_lookup (n := 2) _ MH.regs rfl, gholds_lookup (n := 8) _ MH.regs rfl,
@@ -721,6 +741,7 @@ theorem GcTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8
 /-- caml_init_gc returned. -/
 structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
     (Hfinal : List (Nat × Nat)) (before after : Config) : Prop where
+  caller : CallerFrame sp before after
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (1, ra), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (21, s5), (22, s6),
@@ -966,6 +987,10 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
   refine ⟨fin, run1.trans (run2.trans (run3.trans (run4.trans (runm1.trans (run5.trans (runm2.trans (run6.trans
     (runm3.trans (run7.trans (runm4.trans (run8.trans (runm5.trans (run9.trans (runm6.trans (run10.trans
     runf))))))))))))))), {
+    caller := ⟨fun x hx => by
+      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inr hx, trivial⟩,
+        k15.same x (Or.inr (by rw [stack96]; omega))]
+      exact Mj.caller.byte x hx⟩
     lastExn := by
       rw [Q.word frameTail _ (by decide), wordAt k15 _ (by decide)]
       exact Mj.lastExn

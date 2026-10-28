@@ -42,6 +42,42 @@ theorem ResetInterpreterInit.from_sections {initial after} (I : ResetInterpreter
 theorem ResetInterpreterInit.load_caller {initial after} (I : ResetInterpreterInit initial after) :
     LoadCaller after := I.source.loadCaller.frame I.done.abi (by decide) (by decide)
 
+/-- The GC argument words are excluded; the later trailer is framed by execution. -/
+theorem ResetInterpreterInit.caller_frame {initial after} (I : ResetInterpreterInit initial after) :
+    CallerFrame (parameterStack + 16#64) I.source.source.source.sections after :=
+  I.source.caller_frame.trans (I.done.caller.weaken (by decide))
+
+/-- Current trailer pointer, obtained from the actual descriptor return and frames. -/
+theorem ResetInterpreterInit.table_pointer {initial after} (I : ResetInterpreterInit initial after) :
+    bytesT after.σ.mem (trailSlot + 16#64).toNat 8 = I.sections.blk := by
+  rw [word_observed (m := I.source.source.source.sections.σ.mem) _ fun i hi =>
+    I.caller_frame.byte _ (by
+      have : (parameterStack + 16#64).toNat ≤ (trailSlot + 16#64).toNat := by decide
+      omega)]
+  exact I.sections.done.blkWord
+
+/-- Current section count, obtained from the same executed caller frame. -/
+theorem ResetInterpreterInit.num_sections {initial after} (I : ResetInterpreterInit initial after) :
+    read4 after.σ.mem trailSlot.toNat = sectionsWord := by
+  rw [read4_observed (m := I.source.source.source.sections.σ.mem) _ fun i hi =>
+    I.caller_frame.byte _ (by
+      have : (parameterStack + 16#64).toNat ≤ trailSlot.toNat := by decide
+      omega)]
+  exact I.sections.done.numWord
+
+/-- The selected descriptor allocation remains owned by the current heap ledger. -/
+theorem ResetInterpreterInit.descriptors_owned {initial after} (I : ResetInterpreterInit initial after) :
+    (I.sections.blk.toNat, 56) ∈ I.source.blocks :=
+  List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (I.source.sourceOwned _ (List.mem_cons_self ..)))
+
+/-- Interpreter stores preserve the owned descriptors from the backtrace return.
+The earlier GC/atom descriptor frame is still a separate obligation. -/
+theorem ResetInterpreterInit.descriptors_live {initial after} (I : ResetInterpreterInit initial after) :
+    LiveFrame [(I.sections.blk.toNat, 56)] I.atBacktrace after :=
+  I.done.live.mono fun e he => by
+    rw [List.mem_singleton.mp he]
+    exact I.descriptors_owned
+
 /-- The registered domain root still contains the actually initialized tagged unit. -/
 theorem ResetInterpreterInit.last_exn {initial after} (I : ResetInterpreterInit initial after) :
     bytesT after.σ.mem Gc.SkiplistFirst.startupKey.toNat 8 = 1#64 := by

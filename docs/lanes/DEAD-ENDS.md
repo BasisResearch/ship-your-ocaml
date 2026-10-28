@@ -1,5 +1,32 @@
 # Routes not to repeat
 
+- 2026-10-28 CODE seek source selection: the pinned runtime ELF's stock
+  `.embed` contains CODE length 11836. The selected `WhileMinImage` loader
+  pieces contain CODE length 764, file length 9388, and seven descriptors.
+  Reading the stock ELF payload gives the wrong scan and fd position for
+  this reset theorem. Native instructions and the literal CODE pointer still
+  come from the pinned ELF; file observations must use the actual reset's
+  initial source image. `SeekSectionData` checks those bounded loader reads,
+  not a captured execution or a current-memory frame.
+
+- 2026-10-28 CODE scan comparison: assuming every non-CODE descriptor differs
+  in its first byte fails on CRCS. The generator's first-byte-only guard
+  rejected the actual table; `seek_crcs_common_prefix` now checks equality
+  at byte zero and inequality at byte one. Use the existing bounded strncmp
+  path for this prefix, with comparison count exactly four.
+
+- 2026-10-28 CODE source frames (interface inspection): `InitGcDone.low`
+  requires `x < heapStart`; it cannot transport owned descriptor bytes or
+  the embedded file image. `MinorHeapSet.lowKept` and `MajorHeapInit.lowKept`
+  have the same low-address restriction, and their caller frames start
+  above the embedded image. The bounded caller component is now proved
+  through GC/stack/atom/root/interpreter execution and supplies the current
+  trailer pointer/count. It does not supply the descriptor, OpenFile,
+  embedded source or fd-position observations. Preserve these through
+  selected LiveFrame/static/domain windows and actual heap-ledger inclusion
+  before composing reset with the reverse scan. Steps alone supplies no
+  such memory frame. This is a contract gap, not an impossibility theorem.
+
 - 2026-10-28 listing interface repair (checked):
   `VmPoint.arbitrary_stack` and `unrestricted_entry_obstruction` in
   `Sim/OutListObstruction.lean` check the old entry defect at

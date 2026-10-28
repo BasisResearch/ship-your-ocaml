@@ -19,8 +19,10 @@ structure ResetAtomTable (initial after : Config) where
   stackReturned : Config
   source : ResetInitStack initial stackReturned
   source_run : Steps stackReturned after
+  caller : CallerFrame (parameterStack + 16#64) source.sections after
   loadCaller : LoadCaller after
   H : List (Nat × Nat)
+  sourceOwned : ∀ e ∈ source.source.blocks, e ∈ H
   ent : BitVec 64
   raw : BitVec 64
   before : Config
@@ -68,8 +70,10 @@ theorem reset_init_atom_table_witness_exists :
     stackReturned := d
     source := S
     source_run := step.trans steps
+    caller := S.caller.trans (((CallerFrame.of_memory mem).trans A.caller).weaken (by decide))
     loadCaller := S.loadCaller.frame (g.trans (GprsSame.of_saved A.saved)) (by decide) (by decide)
     H := (p.toNat, 32768) :: H
+    sourceOwned := fun e he => List.mem_cons_of_mem _ (S.sourceOwned e he)
     ent := ent
     raw := raw
     before := e
