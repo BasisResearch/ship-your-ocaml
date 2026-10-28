@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 15:17 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 15:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -9,137 +9,111 @@ None currently.
 ## Standing decisions
 
 - `BarrierGrowthFull` remains G2; `CustomMemCall` remains a named premise.
-- C4 abstraction-discovery round 2 waits until F1 closes. Its draft is preserved.
-- Separate Sol CLI workers, high reasoning, at most two. Worker/build scopes
-  have a 12 GB cap; check available memory before launch. Use the build guard.
-- The lead reviews, commits and lands through `scripts/integrate.sh`, using
-  normal pushes to `origin/main`. Preserved work is on `keep/*` branches.
+- C4 abstraction-discovery round 2 waits until F1 closes.
+- Separate Sol CLI workers, high reasoning, at most two. Each worker/build
+  scope is capped at 12 GB; check 25 GB available before launch. Use the guard.
+- Lead reviews, commits, and lands through `scripts/integrate.sh`, with normal
+  pushes to `origin/main`. Preserve reviewed snapshots on `keep/*` branches.
 - Read `docs/lanes/DEAD-ENDS.md` before assigning a route again.
 
 ## Published
 
-`origin/main` is **`804538a50bb3f1a615a9bfe48a3779ada1b046aa`**, verified remotely.
-The full gate passed **6,090 build jobs**, **9,360 allowed-axiom reports**
-and 129 axiom-free reports, generator/ELF checks and **329 OS traces**
-(5,069 steps, 324 accepted, 5 special, zero rejected or unsupported).
-Logs: `logs/integrate-804538a5.log`, `logs/build-804538a5.log`.
+`origin/main` is **`dfbaf16567d49618803d7cd6be32c4e51bfb3c20`**, independently
+verified remotely after the full gate exited successfully at 15:39 UTC.
+The gate passed **6,095 build jobs**, **9,542 main axiom reports**, generated
+and ELF checks, and **329 OS traces** (5,069 steps, 324 accepted, 5 special,
+zero rejected or unsupported). C4 remains below its discovery threshold.
 
-## Latest landed proofs
+This batch contains:
 
-- `0f5ecaef`: G2 physical free-extent bounds and separation preserved through
-  actual pop/split/remnant allocation, returning combined SmallRepresentation.
-  Original dispatch/caller production and other cases remain open.
+- `9de2d983`: 122 counted opcode rows, with actual native/count frames.
+- `2e47e2fc`: local custom-space repair, selected ownership and physical
+  allocation footprint; removes the old universal record-separation law.
+- `9549edb8`: field and empty-growth frames.
+- `4f827ee5`: actual insertion separation from `LibHeapAt.refCustomApart`,
+  completing all seven field rows and the **129/134** counted table.
+- `d1314b91`: original best-fit entry through next-size allocation and return,
+  retaining SmallRepresentation and actual allocated-block separation.
 
-- `e35aa58b`: counted allocation frames, seven opcode rows and three allocating
-  primitive return contracts. The ordinary counted census is **67/134**.
-  Complete C_CALL composition remains open.
-- `b49f9173`: actual ELF-reset witnesses retained through stack, atom and
-  backtrace producers, with universal reset-to-backtrace reachability.
-  The continuation from backtrace to `Loaded` remains open.
-- Previous batch `e12e1731`: counted stack RuntimeFrame and 58 wrappers,
-  native backtrace/root registration, G2 returned list/header/bitmap
-  representation and allocated-block separation.
-- Earlier `2ee3051b`: captured allocator/`libHeap`, counted interpreter
-  entry/loop and G2 bitmap-search return. Captured memory is not reset execution.
+Evidence: `logs/integrate-dfbaf165.log`, `logs/build-dfbaf165.log`,
+`logs/integrate-dfbaf165-notes.txt`, and `logs/{counted-spatial,a6-entry-next}-*`.
+The OS driver's inherited fd 2 seek overwrote the start of the raw gate log;
+its exit, final success, full build and remote push were verified separately.
+The raw archive is preserved. `7047b3cd` isolates driver stderr; a capped
+329-trace check retained leading/trailing log markers. That fix is reviewed
+for the next gate, not yet published.
 
-## Latest published batch
-
-`da1ab268` proves the plain signed decimal native alloc_sprintf entry-to-original-return,
-with exact byte-string representation, saved ABI, observable output and explicit
-runtime/frame conditions. Its 1,412-job affected build passed. Lead verified
-all 16 new theorem registrations and 28 allowed focused axiom reports.
-General formatting and C_CALL2 remain open. It passed the full gate with `58740097` in published `804538a5`.
-
-`58740097` repairs custom-state ownership using the selected caller ledger,
-with a checked captured empty-ledger obstruction and actual startup/frame/
-opening/listing consumers. Recovery passed 3,653 affected jobs and 60 focused
-audits (59 standard, one axiom-free); all 19 new theorems are registered.
-Full physical Customs and the separate global-frame compatibility issue
-remain open. The gate cache transfer from the idle custom lane checked
-toolchain/manifests/dependency trees and held both build locks.
+Previous published `804538a5` includes `da1ab268` (plain signed decimal native
+entry-to-return) and `58740097` (selected custom ownership/ledger). Their
+6,090-job full gate and review evidence remain in `logs/*804538a5*`,
+`logs/counted-prim-*` and the lane logs. General formatting remains open.
 
 ## Reviewed for the next gate
 
-The next batch includes `9de2d983` (122 counted rows), `2e47e2fc`
-(local custom-space repair), `9549edb8` (field and empty-growth frames),
-`4f827ee5` (actual counted insertion separation; 129-row table) and
-`d1314b91` (original best-fit entry through next-size allocation return).
-
-The combined spatial/custom/count consumers passed 3,664 affected jobs and
-57 focused audits, covering both new and all 15 changed declarations.
-G2 passed 1,290 jobs and 260 audits (258 standard, two axiom-free), including
-all nine new theorems. Lead independently checked coverage and allowed sets;
-proof rebases were clean, and both adjacent lane-log entries were retained.
-Evidence is archived in `logs/counted-spatial-*` and `logs/a6-entry-next-*`.
-Reviewed snapshots remain on `keep/*` branches. The full gate is active in `syo-wt/bprime` at candidate
-`dfbaf16567d49618803d7cd6be32c4e51bfb3c20` (started 15:03 UTC);
-none of these five proof commits is yet published. Log:
-`/tmp/syo-counted-spatial-integrate.log`. The candidate stays fixed.
-
-## Reviewed for the following gate
-
 `19b964fd` supplies original-entry counted C_CALL1/2 success for 19 ordinary
-primitive names (16 unary, three binary), using the existing native returns.
-The explicit entry count witness comes from the real counted loop; return
-counts use the actual returned placement. Existing channel consumers check.
-The 3,698-job downstream build and 63 focused reports passed; lead checked
-all 52 new registrations and allowed axioms independently. Evidence:
-`logs/counted-prim-*`; preserved snapshot:
-`keep/counted-ordinary-reviewed-20261028`. Whole C_CALL rows remain open.
-This commit is not in the active `dfbaf165` gate.
+primitive names (16 unary, three binary), reusing actual native returns.
+The original count witness comes from the counted loop and returned counts
+use the actual placement. Existing channel consumers still check.
+Its 3,698-job downstream build and 63 focused reports passed; lead checked
+all 52 new registrations and allowed axioms. Evidence: `logs/counted-prim-*`;
+preserved snapshot: `keep/counted-ordinary-reviewed-20261028`.
+Whole C_CALL rows remain open. The next full gate will include this result,
+the validation-log fix and the current task/status packets.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| C_CALL Sol | Complete C_CALL3/5 rows from checked F1 arity classification | `syo-wt/a6-gc-next2` |
+| C_CALL Sol | Complete C_CALL3/5 from checked F1 arity classification | `syo-wt/a6-gc-next2` |
 | Startup Sol | Universal reset through null-interpreter/debugger initialization | `syo-wt/a1-prims-next` |
-| Lead | Full combined gate, then concrete custom runtime supplier review | main; `syo-wt/bprime` |
+| Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Two Sol CLI workers are active under the same 12 GB caps and memory checks.
-The first ordinary-call attempt stopped on transient Sol capacity before edits;
-a same-model retry completed successfully. No model/workflow change was needed. G2's next-size entry result is in the gate batch;
-remaining allocator routes and full growth continue in subsequent slots.
-`sol-gc-small-success.md` queues exact-size representation and shared small
-dispatch. `sol-format-parse-all.md` queues the full l/n/L parser branch and
-actual formatting caller prefix; neither is reported as closed.
-No user-only decision blocks work.
+C_CALL3/5 source review covers all primitive outcomes and malformed operands;
+its shared helper now builds, and downstream table checks are running. The
+proposed **131/134** census is not yet a reviewed/published result.
+Startup is repairing a default-budget kernel recursion failure in the new
+save-bank proof; no budget increase or reset-to-Loaded claim is authorized.
+
+G2's next-size entry result has landed. `sol-gc-small-success.md` is the next
+G2 rotation: exact-size representation and shared original small dispatch.
+Other ready packets: counted console/C_CALL4, counted counter/exit, listing
+runtime repair, full physical custom startup/read context, general format
+parser, named reserve, and the actual startup CODE-section seek.
 
 ## Remaining F1 boundaries
 
-The reviewed counted table has **129/134** supplied rows relative to named
-`CustomMemCall` and G2 full growth. `LibHeapAt.refCustomApart` derives the
-remembered-storage/custom separation from actual selected `CustomSpace`;
-no extra arbitrary spatial supplier remains. Full growth still requires
+The published counted table supplies **129/134** rows relative to named
+`CustomMemCall` and counted full growth. The G2 boundary is genuinely
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`;
-the base-layout boundary cannot silently supply counted return facts.
+a base-layout boundary cannot supply the extra returned count facts.
 
-C_CALL1–5 remain whole-row obligations. Native opening/listing returns exist,
-but their concrete runtime, heap/record and after-call suppliers remain open.
-Physical custom accounting also needs concrete startup/read-context producers;
-table occupancy alone is insufficient. Selected ownership and local spatial
-invariants replace the old universal ledger/global record laws. Their checked
-obstructions are conditional memory-contract results, not reachable executions
-or claims of global inconsistency. Combined affected consumers have passed;
-the full gate is pending.
+C_CALL1–5 remain whole-row obligations in the published table. Opening and
+listing have native returns, but concrete entry/runtime suppliers remain.
+Inspection found that `OutListRuntime.entry` quantifies over an unconstrained
+stack pointer and its return law permits arbitrary allocator writes. The
+queued repair must use the actual setup and returned selected heap. This is
+not yet a checked obstruction or a reachable counterexample.
+`CustomMemReturned.heap` alone gives no returned-capacity spending bound;
+future C-allocation reserves need a concrete native charge/credit contract.
 
-Named registration needs a proved node/key reserve and repeated root-cell
-removal/reuse accounting. Distinct immutable names alone do not bound all
-skiplist allocation calls. The owned named ledger is already carried.
+Physical Customs needs actual startup and call-read-context producers, not
+just occupancy or the abstract refcount sum. Captured-memory count producers
+are not reset execution. `counted_entry_of_custom` explicitly needs an
+initial physical-count witness; existing `Loaded` alone does not supply it.
+Do not silently drop that boundary in final theorem assembly.
 
-The complete decimal native wrapper is checked locally. Formatting still
-needs general `d/i/u/x/X/o` flags/width/precision, large/major allocation,
-reachable caller/runtime suppliers and the C_CALL2 return. Do not narrow GoodF1 to make those premises vanish.
+Named registration needs node/key reserve and repeated root-cell removal/
+reuse accounting. Distinct names alone do not bound all allocation calls.
+Formatting needs general d/i/u/x/X/o flags/width/precision, large/major
+allocation, actual caller/runtime suppliers and its C_CALL2 return.
 
-Reset still needs the continuation after backtrace through interpreter/debugger
-initialization, code/primitives/data loading, system/argv setup and `Loaded`.
-G2 still needs original physical-invariant production and remaining dispatch,
-other size classes/colors, complete allocator readiness and collection.
-The a2-sem uncaught-path WIP stays preserved and lower priority: GoodF1
-excludes that path.
+Reset needs the continuation after backtrace through interpreter/debugger,
+CODE/primitive/DATA loading, promotion, system/argv setup and `Loaded`.
+The next ELF call after debugger initialization is directly to
+`caml_seek_optional_section`, not a separate seek wrapper. Its input must
+frame the retained executed descriptor/file history, not assume a snapshot.
+G2 still needs original invariant production, remaining size classes/colors,
+complete allocator readiness and collection. The uncaught-path WIP stays
+preserved at lower priority because GoodF1 excludes that path.
 
-Task packets are in `tasks/sol-*.md`. Next priorities are
-concrete custom startup/read-context suppliers, ordinary counted C_CALLs,
-console continuations, general formatting, named reserves and G2 original
-small-allocation dispatch. The concrete null-interpreter/debugger
-continuation to `0x80004e94` is queued in `sol-reset-interp-init.md`. No user-only decision blocks work.
+No user-only decision currently blocks work.
