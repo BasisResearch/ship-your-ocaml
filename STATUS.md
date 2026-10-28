@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 20:12 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 20:23 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -29,8 +29,13 @@ C_CALL1, concrete channel runtimes, CODE source frames and the bounded G2
 wrapper in `92be3a3e`. Physical custom state/read context was published in
 `4c4209ea`; all preceding gate evidence remains archived.
 
-No integration gate is currently running. The formatter is under final
-lead validation; the next gate will be fixed at its reviewed candidate.
+The next integration batch contains the reviewed full native format parser/caller
+prefix (`f6e44dc9`) and original-caller bounded small G2 wrapper.
+The formatter passes 1,420 affected jobs and 52 focused reports (49 new
+theorems); the G2 wrapper passes 1,422 jobs and 53 focused reports (43 new).
+All new declarations are uniquely registered and use only permitted axioms.
+Source review, generator/static checks and unchanged-source/cache provenance
+are archived in `logs/format-native-*` and `logs/a6-small-*`.
 
 All publication goes through `scripts/integrate.sh` and normal fast-forward
 pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
@@ -76,23 +81,22 @@ No active worker cache is copied into bprime.
 
 | Slot | Current task | Log |
 | --- | --- | --- |
-| `syo-wt/a6-gc-next2` | Original-caller exact/next-size small G2 wrapper | `/tmp/syo-g2-small-wrapper-launch.log` |
-| `syo-wt/a1-prims-next` | Lead validation of full parser/caller, worker stopped after completed core/focused checks | `/tmp/syo-format-lead-affected-launch.log` |
+| `syo-wt/a6-gc-next2` | Next: actual CODE allocation/read to fragment-registration entry | `/tmp/syo-code-load-launch.log` |
+| `syo-wt/a1-prims-next` | Reachable-state named node/key storage bound | `/tmp/syo-named-reserve-launch.log` |
 | Lead | Gate, independent review, next-task contracts and integration | main and bprime |
 
-The parser/caller modules and 52 focused reports pass (49 new theorems).
-Cold rebuilding unchanged SnpSvf hit the 10 GiB early guard. Lead verified
-all 551 repository sources in SvfLong's import closure are unchanged, stopped
-the worker with no active command, and copied the verified idle gate cache
-to the idle lane after provenance/lock checks. New semantic facts were moved
-unchanged to IntegerFormatFacts, restoring Data.lean byte-for-byte. Lead is
-rebuilding changed modules plus AllocSprintfNative under the same cap.
-Evidence: `logs/format-native-*`, `logs/format-svflong-source-comparison.json`.
-The CODE task is reviewed and committed. Current G2 task:
-`tasks/sol-g2-small-wrapper.md`, then `tasks/sol-code-load.md` (actual CODE
-allocation/read to code-fragment registration entry). Current primitive task:
-`tasks/sol-format-parse-all.md`, then `tasks/sol-named-reserve.md` and
-`tasks/sol-format-decoder.md`. Read `docs/lanes/DEAD-ENDS.md` before reassignment.
+The full parser/caller prefix and the original-small G2 handoff are reviewed
+and committed, including exact focused lists and unchanged source hashes after
+rebase. The small wrapper preserves actual exact/next-size representation,
+phase-selected color, original bank and branch-dependent free accounting;
+initial representation producers and general G2 remain open.
+The formatter's final compatibility build includes AllocSprintfNative. Its
+new pure facts live in IntegerFormatFacts; Data.lean is unchanged. The earlier
+cold SnpSvf guard failure and verified 551-source cache recovery are recorded
+in the lane log and `logs/format-svflong-source-comparison.json`.
+Current packets: `tasks/sol-code-load.md` and `tasks/sol-named-reserve.md`;
+next primitive packet: `tasks/sol-format-decoder.md`. Read
+`docs/lanes/DEAD-ENDS.md` before reassignment.
 All task packets start with binding rules and stay under 40 lines.
 
 ## Remaining F1 and G2 boundaries
