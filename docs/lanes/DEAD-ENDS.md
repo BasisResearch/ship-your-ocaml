@@ -1,5 +1,24 @@
 # Routes not to repeat
 
+- 2026-10-28 lead listing-supplier inspection (not yet a checked obstruction):
+  `OutListRuntime.entry` quantifies over `sp` but receives only runtime and
+  `LoopGeometry ... high`, which does not index that stack pointer. Its
+  `VmPoint` includes `[sp - 16, sp + 8 * stack.length)` while its output
+  requires every point below heapEnd. Taking sp = heapEnd + 16 exposes the
+  missing actual stack/setup hypothesis even when the semantic stack is empty.
+  Prove the conditional interface obstruction before claiming impossibility;
+  no reachable-state counterexample or global inconsistency is established.
+  `OutListRuntime.runtime` also quantifies over arbitrary H and memory writes
+  in `vsaFoot H`, without selected input/returned heap evidence. Such byte
+  framing cannot supply allocator validity by itself. Use the actual native
+  post's selected heap, ledgers and frames, not unrestricted allocator writes.
+  Finally `CustomMemReturned.heap` returns an existential capacity with no
+  spending bound; `LibHeapAt.room` reserves future C allocations. Selected
+  ownership/spatial preservation alone does not establish this reserve.
+  Any repair must track a concrete custom-table allocation charge/reserve at
+  the accepted named native boundary and its actual callers, rather than
+  assume whole-primitive runtime or an arbitrary returned LibHeapAt.
+
 - 2026-10-28 counted ordinary return adapter: the loop-entry interface gap
   recorded below is resolved by an explicit `ChannelCustomsRepr` argument to
   `CountedPrimReturnsAtR`, supplied by `CcallReady.of_counted_loop`.
