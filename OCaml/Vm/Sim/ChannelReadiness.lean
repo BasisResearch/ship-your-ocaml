@@ -54,11 +54,13 @@ structure CountedCcallCallee (Customs : Config → Nat → Prop) (ra : BitVec 64
         pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env)
 
 /-- Returning primitive contract for the counted invariant, over the full
-successful F1 domain. Its actual return retains complete channel counts. -/
+successful F1 domain. The original loop-entry counts are supplied explicitly;
+its actual return retains complete counts at the returned placement. -/
 def CountedPrimReturnsAtR (L : OCaml.Layout) (P : Prog) (Customs : Config → Nat → Prop)
     (op : Opcode) (ra : BitVec 64) (k : Nat) (name : String) : Prop :=
   ∀ s c pl cp sp high table entry value env index v heap world, Reach P s →
     CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
+    ChannelCustomsRepr Customs c cp s.world →
     primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
     heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
     ∃ result, CountedCcallCallee Customs ra (s.accu :: s.stack.take k) L P s pl cp sp high

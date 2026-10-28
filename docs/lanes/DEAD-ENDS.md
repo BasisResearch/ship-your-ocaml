@@ -1,5 +1,26 @@
 # Routes not to repeat
 
+- 2026-10-28 counted ordinary return adapter: the loop-entry interface gap
+  recorded below is resolved by an explicit `ChannelCustomsRepr` argument to
+  `CountedPrimReturnsAtR`, supplied by `CcallReady.of_counted_loop`.
+  `CcallReady.retarget` lifts original readiness with that witness;
+  `CountedCcallSetupPost.local` separately uses the actual callee-entry
+  counts. No backward physical-count transport or count inference from
+  ordinary runtime facts is valid. Return transport uses unchanged model
+  channels and `ChannelCustomsRepr.at_geometry` at the actual returned cp.
+- 2026-10-28 counted C_CALL2 elaboration: its native bytecode guard is the
+  combined disjunction `index < 0 ∨ stack.length < 1`; simplifying as two
+  nested conditionals leaves `if False ∨ False`. Reduce the actual combined
+  guard (`or_self` after both facts), and project `ready.stackFits` explicitly
+  before `stack_space`/`omega` supplies the argument-read window. Both routes
+  now check without changing guards or budgets.
+- 2026-10-28 primitive model certificates: `simp only [primF1Impl]` leaves
+  string-name dispatch tests unresolved; blindly splitting that result
+  explores unrelated opening/listing branches, with failed dependent
+  elimination and invalid arity goals. Reduce the concrete name using
+  `simp [primF1Impl]` before splitting its remaining semantic options. All
+  nineteen arity/channel certificates then check at the existing limits.
+
 - 2026-10-28 counted growth capacity frame: using one implicit capacity for
   both entry `LibHeapAt H cap` and returned `GrowDone H capacity` forces the
   real call's `cap - tableCharge` to unify with cap. Lean then unfolds the

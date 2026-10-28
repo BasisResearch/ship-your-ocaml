@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Counted named C_CALL continuation (2026-10-28)
+
+- The A1 continuation explicitly carries original entry counts into
+  `CountedPrimReturnsAtR`, then reuses the checked native contracts at the
+  local counted layout. Actual returned-placement counts follow from model
+  channel equality and linked-list/geometry coherence; no backward count
+  inference or new physical supplier is introduced.
+- Nineteen named successes (16 unary, three binary) now compose actual
+  C_CALL1/2 runs, including three Sys allocations and int64_float_of_bits
+  through their existing counted allocation frames. Existing channel successes
+  still check. The complete-row census stays 129/134, with C_CALL1–5 open;
+  physical custom/channel suppliers, effects and full F1 assembly stay separate.
+- `CustomMemCall` remains named, the counted full-growth supplier remains G2,
+  and C4 round 2 waits for F1. The affected build passes 3,698 jobs and all
+  63 focused reports use only allowed axioms (52 new declarations covered,
+  all registrations unique). Ten generator checks and discipline/hole/gate/
+  whitespace checks pass. Exact names, arities, remaining scope and guarded
+  build/audit evidence are at the top of `a1-prims.md`. Full Audit and landing
+  via `scripts/integrate.sh` remain the lead gate; no Git metadata writes.
+
 ## Counted write-row spatial supplier (2026-10-28)
 
 - `LibHeapAt.refCustomApart` now consumes the selected `CustomSpace` repair

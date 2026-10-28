@@ -2,6 +2,127 @@
 
 ## Current status
 
+**2026-10-28 counted ordinary/allocating C_CALL continuation (base
+`dfbaf165`): checked edits for lead review; no landing attempted.**
+
+`CountedPrimReturnsAtR` now takes the original entry's complete
+`ChannelCustomsRepr` explicitly, supplied by `CcallReady.of_counted_loop`.
+Existing opening/listing return suppliers forget that additional input and
+retain their existing successful-domain/native-runtime premises. The shared
+`CountedPrimAdapter` transports readiness, setup and return layouts with equal
+budgets, retaining every fetch, Fits/heap, reach/successor, geometry, argument,
+allocation-placement and native-frame guard. It instantiates the ordinary
+native summary at `countedLayout`; the actual callee post retains the frozen
+counts, actual model channel equality retargets their world, and linked-list
+uniqueness/total placement (`ChannelCustomsRepr.at_geometry`) recovers them at
+the actual returned channel placement. Counts are never inferred from the
+ordinary runtime or transported backwards from a callee post.
+
+`counted_runtimeFrame` now frames the actual setup stores for both arities.
+`counted_memoryStable` frames ordinary/read-only returns;
+`counted_native_stable` uses the existing native window and selected count
+frame for string inequality; `counted_primAllocFrame` handles the three Sys
+allocations and `counted_allocFrame` handles int64-to-double. All reuse the
+existing primitive return contracts without redoing instruction runs.
+`gen_counted_ccall2.py` derives the binary counted setup/arm/success adapters
+from the unary composition and consumes the existing native C_CALL2 prefix,
+its actual `ccall1Log` and the existing suffix's memory equality. The binary
+path retains the real combined index/stack guard, reads one existing stack
+argument and drops it only in the suffix. `counted_c_call1_success` is reused
+for unary cases. No arbitrary poststate or complete counted OpArm supplier is
+introduced.
+
+`CountedPrimRows` supplies **19 names: 16 unary, 3 binary**. Each generated
+`counted_<name>_model` proves the exact successful arity and unchanged channels
+from `primF1Impl`, including its real heap/argument guards. The names and
+arities in `countedPrimCases` are:
+
+| Native name | Arity |
+|---|---:|
+| `caml_sys_const_naked_pointers_checked` | 1 |
+| `caml_sys_const_big_endian` | 1 |
+| `caml_sys_const_word_size` | 1 |
+| `caml_sys_const_int_size` | 1 |
+| `caml_sys_const_max_wosize` | 1 |
+| `caml_sys_const_ostype_unix` | 1 |
+| `caml_sys_const_ostype_win32` | 1 |
+| `caml_sys_const_ostype_cygwin` | 1 |
+| `caml_sys_const_backend_type` | 1 |
+| `caml_ml_string_length` | 1 |
+| `caml_ml_bytes_length` | 1 |
+| `caml_string_equal` | 2 |
+| `caml_string_notequal` | 2 |
+| `caml_sys_argv` | 1 |
+| `caml_int_compare` | 2 |
+| `caml_sys_get_config` | 1 |
+| `caml_sys_executable_name` | 1 |
+| `caml_sys_get_argv` | 1 |
+| `caml_int64_float_of_bits` | 1 |
+
+`counted_supported_c_call1_next` and `counted_supported_c_call2_next` conclude
+`CountedLoopAt` through actual dispatch/setup/callee/suffix execution for
+these names at their listed arities. `counted_prim_remaining_exact` checks
+exactly **11/30 F1 names outside this new adapter**: the three unary channel
+suppliers (`caml_ml_open_descriptor_out`, `caml_ml_open_descriptor_in`,
+`caml_ml_out_channels_list`) retain their separately checked counted success
+path and named runtime suppliers. The other eight remain outside the new
+counted composition: `caml_ml_flush` (1), `caml_ml_output_char` (2),
+`caml_ml_output` (4), `caml_ml_output_bytes` (4), `caml_format_int` (2),
+`caml_register_named_value` (2), `caml_fresh_oo_id` (1), `caml_sys_exit` (1).
+Those remaining arities describe the current model patterns, not new native
+proofs. Successful return coverage does not cover exit behavior.
+
+The opcode census remains **129/134 complete ordinary rows**, with exactly
+**C_CALL1, C_CALL2, C_CALL3, C_CALL4, C_CALL5** still open as whole rows.
+Nineteen new named success cases plus the three existing channel cases are
+not a whole opcode table. Console effects, concrete channel opening/listing
+runtime suppliers, formatter, named registration, fresh object-id counter
+updates, exits, other arities and full counted F1 assembly remain separate.
+`CustomMemCall` remains named; `BarrierGrowthFull` stays with G2 (including the
+existing frozen counted-layout supplier); C4 round 2 waits for F1. GoodF1,
+physical custom meaning, nursery capacity and semantic guards are unchanged.
+
+Verification:
+
+- `lake build OCaml.Vm.Sim.CountedPrimAdapter
+  OCaml.Vm.Sim.CountedCcall1`: **2,344 jobs passed**,
+  `/tmp/counted-prim-adapter.log` (initial entry/layout adapter).
+- Final named-path build: **2,921 jobs passed**,
+  `/tmp/counted-prim-rows4.log`, targets `CountedPrimRows` and
+  `CountedChannelRows`; includes all nineteen model certificates, native
+  adapters, both actual arities and existing channel successes.
+- Final downstream affected build: **3,698 jobs passed**,
+  `/tmp/counted-prim-affected-final.log`, explicit targets under
+  `OCaml.Vm.Sim`: `ChannelReadiness`, `CountedCcall1`, `CountedCcallSetup`,
+  `CountedChannelRows`, `CountedPrimAllocRows`, `PrimConstReturns`,
+  `PrimStringEqualReturns`, `PrimStringNotequalReturns`, `CountedPrimRows`,
+  `CountedEntry`, `F1Table`, `WhileMinTable`.
+- `lake env lean -M 6000 -j 1 OCaml/Vm/Sim/CountedPrimAudit.lean`:
+  **63 reports passed**, `/tmp/counted-prim-focused-audit.log`. Every one of
+  the **52 new theorem declarations** is covered, together with changed
+  channel/setup/success contracts and mandatory frame regressions. All
+  reports use only `{propext, Classical.choice, Quot.sound}` or no axioms;
+  all are registered exactly once in `OCaml/Audit.lean`.
+  `/tmp/counted-prim-check-audit.py` checks exact report membership/count,
+  declaration coverage, registrations and allowed sets. Full `OCaml.Audit`
+  remains the lead gate.
+- Ten generator drift checks pass: native C_CALL setup/return/arms, counted
+  C_CALL2 and primitive rows/audit, counted allocation/control/field/stack,
+  and F1 table. The two new checks are registered in check_all.sh stage a5.
+  Holes (4,755 files), discipline (27 rules), abstraction gate (C4 stays 3)
+  and `git diff --check` pass. Resolved interface/elaboration dead ends are
+  recorded in `DEAD-ENDS.md`.
+
+Every Lean launch ran alone through `python3 scripts/lean-guarded.py --log
+/tmp/counted-prim-....log -- scripts/lean-capped.sh lake ...`, under the
+inherited 12 GiB/two-thread policy (focused audit one thread), with `free -g`
+checked first: available 89, 83, 88, 87, 87, 86 and 88 GB, all ≥25 GB. Early
+binary/model elaboration failures were stopped by the guard and resolved at
+unchanged limits. No heartbeat/recursion increase, virtual limit, generated
+output hand edit, subagent, Git metadata write or landing-queue write was
+used. All source changes stay in this worktree for lead review and landing
+via `scripts/integrate.sh`.
+
 **2026-10-28 counted write-row spatial supplier (base `9549edb8`):
 checked for lead review; all affected builds and focused audits pass.**
 

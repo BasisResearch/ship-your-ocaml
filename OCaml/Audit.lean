@@ -15,6 +15,7 @@ import OCaml.Vm.Sim.CountedFieldRows
 import OCaml.Vm.Sim.CountedStackRows
 import OCaml.Vm.Sim.CountedAllocRows
 import OCaml.Vm.Sim.CountedPrimAllocRows
+import OCaml.Vm.Sim.CountedPrimRows
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
@@ -8022,3 +8023,57 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Counted write-row spatial suppliers from the selected custom-space invariant.
 #print axioms OCaml.Vm.Gc.LibHeapAt.refCustomApart
 #print axioms OCaml.Vm.Gc.f1_refCustomApart
+
+-- Counted ordinary/read-only and allocating primitive success paths.
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_naked_pointers_checked_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_naked_pointers_checked_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_big_endian_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_big_endian_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_word_size_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_word_size_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_int_size_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_int_size_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_max_wosize_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_max_wosize_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_unix_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_unix_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_win32_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_win32_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_cygwin_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_ostype_cygwin_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_backend_type_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_const_backend_type_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_string_length_model
+#print axioms OCaml.Vm.Sim.counted_caml_ml_string_length_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_bytes_length_model
+#print axioms OCaml.Vm.Sim.counted_caml_ml_bytes_length_returns
+#print axioms OCaml.Vm.Sim.counted_caml_string_equal_model
+#print axioms OCaml.Vm.Sim.counted_caml_string_equal_returns
+#print axioms OCaml.Vm.Sim.counted_caml_string_notequal_model
+#print axioms OCaml.Vm.Sim.counted_caml_string_notequal_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_argv_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_argv_returns
+#print axioms OCaml.Vm.Sim.counted_caml_int_compare_model
+#print axioms OCaml.Vm.Sim.counted_caml_int_compare_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_get_config_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_get_config_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_executable_name_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_executable_name_returns
+#print axioms OCaml.Vm.Sim.counted_caml_sys_get_argv_model
+#print axioms OCaml.Vm.Sim.counted_caml_sys_get_argv_returns
+#print axioms OCaml.Vm.Sim.counted_caml_int64_float_of_bits_model
+#print axioms OCaml.Vm.Sim.counted_caml_int64_float_of_bits_returns
+#print axioms OCaml.Vm.Sim.counted_supported_prim_returns
+#print axioms OCaml.Vm.Sim.counted_supported_c_call1_next
+#print axioms OCaml.Vm.Sim.counted_supported_c_call2_next
+#print axioms OCaml.Vm.Sim.counted_prim_remaining_exact
+#print axioms OCaml.Vm.Sim.counted_prim_census
+#print axioms OCaml.Vm.Sim.CcallReady.retarget
+#print axioms OCaml.Vm.Sim.CcallSetupPost.retarget
+#print axioms OCaml.Vm.Sim.CountedCcallSetupPost.local
+#print axioms OCaml.Vm.Sim.CcallReturnAt.of_countedLayout
+#print axioms OCaml.Vm.Sim.counted_prim_returns_of_local
+#print axioms OCaml.Vm.Sim.counted_native_stable
+#print axioms OCaml.Vm.Sim.counted_c_call2_setup
+#print axioms OCaml.Vm.Sim.counted_c_call2_arm
+#print axioms OCaml.Vm.Sim.counted_c_call2_success

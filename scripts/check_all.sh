@@ -142,6 +142,8 @@ python3 scripts/gen_counted_stack_rows.py --check || fail "stage a5: counted sta
 python3 scripts/gen_counted_control_rows.py --check || fail "stage a5: counted control row drift"
 python3 scripts/gen_counted_field_rows.py --check || fail "stage a5: counted field row/audit drift"
 python3 scripts/gen_counted_alloc_rows.py --check || fail "stage a5: counted allocation row drift"
+python3 scripts/gen_counted_ccall2.py --check || fail "stage a5: counted C_CALL2 drift"
+python3 scripts/gen_counted_prim_rows.py --check || fail "stage a5: counted primitive row/audit drift"
 python3 scripts/gen_a2_rows.py --check || fail "stage a5: a2 table row drift"
 python3 scripts/gen_field_rows.py --check || fail "stage a5: field row drift"
 python3 scripts/gen_offset_rows.py --check || fail "stage a5: closure-offset row drift"

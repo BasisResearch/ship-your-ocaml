@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.ChannelCountFrame
 import OCaml.Vm.Sim.ChannelReadiness
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.CountedPrimAdapter
 
 /-! Physical accounting at the actual generated C_CALL setup execution. -/
 
@@ -74,8 +75,11 @@ theorem counted_c_call1_setup {P : Prog} {s : St} {c d : Config}
     have small : domain < 2 ^ 64 := by have := h.space.domainNat; omega
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt small] at eq
     exact eq.symm.trans (Gc.f1_domain h.runtime)
-  have stable : WindowStable Gc.f1Layout.runtimeOk (ccall1Windows sp domain) := by
-    apply f1_runtimeFrame.windows
+  have localReady := h.retarget (L' := countedLayout Gc.f1Layout Customs cp s.world)
+    ⟨h.runtime, counts⟩ rfl
+  have stable : WindowStable (countedLayout Gc.f1Layout Customs cp s.world).runtimeOk
+      (ccall1Windows sp domain) := by
+    apply (counted_runtimeFrame custom).windows
     intro w hw
     simp only [ccall1Windows, List.mem_cons, List.not_mem_nil, or_false] at hw
     rcases hw with rfl | rfl
@@ -83,11 +87,12 @@ theorem counted_c_call1_setup {P : Prog} {s : St} {c d : Config}
         by have := h.stack.1; rw [height] at this; dsimp only; omega⟩
     · rw [dom]
       exact Or.inr ⟨Layout.off_extern_sp, by decide, rfl⟩
-  obtain ⟨n, after, run, setup, young, memory⟩ := c_call1_setup_framed stable h.toArmInput
+  obtain ⟨n, after, run, setup, young, memory⟩ := c_call1_setup_framed stable localReady.toArmInput
     h.operand h.nonnegative h.primitive h.entryName h.aligned h.domainWord h.tableWord
     h.targetRead h.value h.environment h.space dp
-  have frame := h.space.customCountFrame custom h.stack h.stackFits h.runtime height dom memory
-  exact ⟨n, after, run, { setup with counts := frame.repr counts }, young⟩
+  exact ⟨n, after, run,
+    { toCcallSetupPost := setup.retarget setup.input.runtime.1 rfl
+      counts := setup.input.runtime.2 }, young⟩
 
 /-- Successful-state `Fits` supplies readiness at the actual generated call
 entry. Opening instantiates `charge` with `openChan_customs`; listing uses

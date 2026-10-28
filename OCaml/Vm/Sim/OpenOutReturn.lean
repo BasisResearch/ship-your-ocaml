@@ -207,7 +207,7 @@ theorem counted_caml_ml_open_descriptor_out_returns {L : OCaml.Layout} {P : Prog
     {ra : BitVec 64} {k : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     (rt : OpenOutRuntimeAt L Ready state Customs) (fits : OCaml.Fits L.budget P) (consoles : OCaml.ConsoleChannels P) :
     CountedPrimReturnsAtR L P Customs op ra k "caml_ml_open_descriptor_out" := by
-  intro s c0 pl cp sp high table entry value env index res heap world reach ready sem words succ
+  intro s c0 pl cp sp high table entry value env index res heap world reach ready _entryCounts sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl
@@ -262,7 +262,7 @@ theorem counted_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog}
     (rt : OpenOutRuntimeAt L Ready state Customs) (fits : OCaml.Fits L.budget P) (stdins : OCaml.StdinChannels P)
     (stdinSeek : ∀ c, L.runtimeOk c → Channel.SeekFd 0#64 c) :
     CountedPrimReturnsAtR L P Customs op ra k "caml_ml_open_descriptor_in" := by
-  intro s c0 pl cp sp high table entry value env index res heap world reach ready sem words succ
+  intro s c0 pl cp sp high table entry value env index res heap world reach ready _entryCounts sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl

@@ -406,6 +406,43 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
+**Counted named primitive success, 2026-10-28: checked for lead review.**
+`CountedPrimReturnsAtR` now explicitly receives the original entry's
+`ChannelCustomsRepr` from `CcallReady.of_counted_loop`; channel suppliers
+forget the added input. Shared readiness/setup/return layout adapters reuse
+ordinary native primitive contracts at `countedLayout`, retarget unchanged
+model channels and recover complete counts at the actual returned placement
+through linked-list/geometry coherence. No original count witness is inferred
+from ordinary runtime facts or from a later callee post. Setup reuses
+`counted_runtimeFrame`; native/read-only/allocation frames reuse
+`counted_memoryStable`, `counted_allocFrame` and `counted_primAllocFrame`.
+
+Generated named rows supply **19 primitives (16 unary, 3 binary)**: nine
+`caml_sys_const_*` names, `caml_ml_string_length`, `caml_ml_bytes_length`,
+`caml_string_equal`, `caml_string_notequal`, `caml_sys_argv`,
+`caml_int_compare`, `caml_sys_get_config`, `caml_sys_executable_name`,
+`caml_sys_get_argv`, `caml_int64_float_of_bits` (existing AllocFrame contract).
+Per-name model certificates establish successful arity and unchanged channels.
+Actual unary success reuses `counted_c_call1_success`; generated binary
+setup/arm/success composes existing native rows and real logs, retaining the
+stack-depth/read guards and actual argument pop. Existing channel successes
+still check. Exact names/arities and the eleven names outside this adapter
+are recorded in `CountedPrimRows` and the current A1 lane log.
+
+This leaves **129/134 whole ordinary opcode rows**; C_CALL1–5 remain open as
+whole rows. Console effects, concrete channel runtime suppliers, formatter,
+named registration, fresh_oo_id effects, exits, other arities and complete
+counted F1 assembly remain separate. CustomMemCall remains named;
+BarrierGrowthFull stays G2 and C4 round 2 waits for F1. All original
+reach/Fits/successor/heap/arity guards and GoodF1 are unchanged. The final
+affected build passes **3,698 jobs**, including CountedEntry/F1Table/WhileMinTable;
+**63 focused allowed-axiom reports** cover all 52 new theorem declarations
+and regressions, with unique Audit registrations. Ten generator checks,
+holes/discipline/abstraction and whitespace checks pass. Every Lean launch
+checks available memory ≥25 GB and uses the inherited guarded/capped
+12 GiB/two-thread policy. Full Audit and integration stay with the lead;
+checked edits remain in this worktree. Details: top of `docs/lanes/a1-prims.md`.
+
 **Counted write-row spatial supplier, 2026-10-28: checked for lead review.**
 `LibHeapAt.refCustomApart` derives separation from the actual selected state:
 unallocated base is immediate; allocated storage uses its arena bound for the

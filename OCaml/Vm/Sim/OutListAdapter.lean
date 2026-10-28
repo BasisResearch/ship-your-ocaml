@@ -899,7 +899,7 @@ theorem counted_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} 
     {k : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     (rt : OutListRuntime L Ready state Customs) (fits : OCaml.Fits L.budget P) :
     CountedPrimReturnsAtR L P Customs op ra k "caml_ml_out_channels_list" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem words succ
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready _entryCounts sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl

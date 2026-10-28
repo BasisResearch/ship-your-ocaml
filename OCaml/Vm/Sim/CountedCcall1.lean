@@ -93,7 +93,7 @@ theorem counted_c_call1_success {P : Prog} {s : St} {c : Config}
     CcallReady.of_counted_loop h code fetch nonnegative primitive
       (stack_fits fits g1_capacity reach (k := 2)) (allocPlaces_ok name s)
   obtain ⟨result, callee⟩ := returns s c pl cp sp high _ entry value env index v heap world
-    reach ready sem (fits _ successor).heap ⟨_, successor, rfl, rfl⟩
+    reach ready counts sem (fits _ successor).heap ⟨_, successor, rfl, rfl⟩
   obtain ⟨after, run, running⟩ := counted_c_call1_arm custom ready counts callee
   exact ⟨after, run, h.of_plus run running⟩
 
