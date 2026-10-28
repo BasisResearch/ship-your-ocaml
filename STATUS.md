@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:47 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:57 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -135,12 +135,25 @@ Snapshot: `keep/custom-physical-reviewed-20261028`;
 evidence: `logs/custom-physical-*`. The physical-state gate follows in bprime, started 17:48 UTC; log
 `/tmp/syo-custom-physical-integrate.log`. No active worker cache is copied.
 
+## Reviewed concrete listing runtime
+
+The selected-credit continuation now supplies `f1_outList_runtime` relative
+only to named `CustomMemCall`. Actual startup/ordinary frames retain the
+extra custom reserve; each native call returns spending on one selected
+heap/capacity. Listing retains that credit through its real walk and return,
+and the counted listing adapter no longer takes a separate runtime supplier.
+Opening's spatial return retains the same spending evidence for its next
+runtime task. Lead checked six new unique registrations, the 3,682-job final
+build and all 144 focused reports (126 allowed-axiom, 18 pure). Rebase clean.
+Snapshot: `keep/custom-credit-listing-reviewed-20261028`;
+evidence: `logs/custom-credit-*`. This follows the active physical-state gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Startup Sol | Current descriptor/file/source frames at actual CODE seek entry | `syo-wt/a6-gc-next2` |
-| Runtime Sol | Selected native custom credit through listing runtime | `syo-wt/a1-prims-next` |
+| Runtime Sol | Concrete opening after-runtime supplier | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
 Startup entry handoff from 17:10 UTC is reviewed. Next packet:
@@ -150,11 +163,10 @@ initialization, not assumed at the new PC.
 G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
 wrapper conditions and returned representation/color for the reviewed branch.
 Its other branch/caller work stays in the ledger.
-Physical custom work is reviewed. Its slot now takes
-`tasks/sol-custom-credit-listing.md`, log
-`/tmp/syo-custom-credit-listing-launch.log`, to carry actual selected input
-credit and native returned spending through the listing walk. The physical
-worker cache is retained in that slot; no cache is copied while bprime builds.
+Physical custom and listing credit work are reviewed. That slot now takes
+`tasks/sol-opening-runtime-local.md`, log
+`/tmp/syo-opening-runtime-launch.log`, using the selected returned spending
+already proved. No active worker cache is copied into bprime.
 
 ## Remaining F1 boundaries
 
@@ -162,8 +174,9 @@ The published **132/134** table is relative to named `CustomMemCall` and
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
 The base-layout G2 contract cannot supply the extra returned counts.
 
-C_CALL1 needs concrete opening/listing runtime producers and composition of
-all unary successes; reviewed counter and exit cover those branches.
+C_CALL1 needs the concrete opening runtime producer and composition of
+all unary successes. Listing runtime is reviewed; counter and exit are checked.
+The subsequent assembly packet is tasks/sol-counted-unary-complete.md.
 C_CALL2 needs named registration and general formatting. Named registration
 must derive node/key reserve from immutable source provenance, including
 fully initialized partialBytes, and account separately for repeated root-cell
@@ -173,8 +186,8 @@ large-result allocation and actual caller/runtime suppliers. Major-heap
 expansion must generalize the fixed free-list, heap-size pin and resource
 target specialization; it cannot preserve those captured constants by fiat.
 
-Custom allocation needs concrete input credit and returned spending on the
-same selected heap; an existential HeapReady capacity alone supplies neither.
+Reviewed custom input credit and returned spending now use the same selected
+heap throughout listing; native execution/spending remain named duties.
 Reviewed PhysicalCustoms now has table-shape/startup/read-context producers
 and an actual captured counted entry. Captured memory is still not reset
 execution, and arbitrary Loaded alone supplies no initial physical witness.
