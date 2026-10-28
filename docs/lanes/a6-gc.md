@@ -1,5 +1,92 @@
 # Lane a6-gc
 
+
+## Bounded bitmap repair and original-entry least-large split/return (2026-10-28)
+
+- **Checked edits complete; lead review/integration pending.** This repairs
+  the earlier interface obstruction while keeping the old `SmallRepresentation`,
+  `MapConsistent` and `highBitmapMemory_obstruction` meaningful. In `BfShape`,
+  `BoundedBitmap` separately requires `mapBits.toNat < 2^16`; `high_iff`
+  characterizes the clear high bits. `BoundedSmallRepresentation` explicitly
+  extends the old representation. `highBitmapMemory_not_bounded` checks why
+  the old witness is excluded. No `GoodF1` change is involved.
+- `BestFitBitmapStartup.bounded_of_singleton` and
+  `boundedSmall_of_singleton` consume the existing `BestFitSingletonAt` zero
+  map/empty-slot observations. `bounded_of_observed` uses the actual generated
+  `WhileMinRuntime.read_bf_small_map` certificate under its exact `MemEqv`
+  captured-memory witness. This certifies that memory observation only; it
+  does not execute reset or initialize an allocator caller. Native/caller
+  production of the strengthened invariant remains open.
+- `BestFitPreservation` now factors `BestFitExact.Post.bitmap` from the actual
+  exact branch log and preserves boundedness through clear/unchanged branches.
+  `PopPost.boundedBitmap` uses the actual next-size saved-word truncation and
+  clear/unchanged readbacks. `BestFitRemnant.insert_boundedBitmap` and
+  `effect_boundedBitmap` use actual OR/set stores for insertion and unchanged
+  zero-size/sweep-deferred logs. `RoutePost` and `SearchReturned` preserve
+  the refinement through their existing pick/pop/split/remnant stage witnesses.
+  Original-entry `EntryNextReturned` and `EntrySmallReturned` return the
+  explicit bounded representation when supplied that original refinement.
+- `BestFitEntryLarge.filtered_of_noSuitable` derives the native filtered zero
+  from the refined representation, positive request <=16 and no nonempty
+  class at/above request. Lower classes stay arbitrary. The proof uses the
+  actual 32-bit SLLW mask (including request sixteen), signed LW extension
+  and 64-bit AND, without an intermediate zero observation.
+- `BestFitEntryLargeReturn.EntryLargeInput` observes only original entry
+  registers/code/representation and an `EntryLargeSource`: the actual original
+  least pointer/header/size, header write window, nonwrapping full physical
+  extent, strict `request+17 < sourceSize`, native-frame separation and
+  separation from every represented small extent. Original scalar frames and
+  the actual `SaveBank` log derive `LargeConditions` on `searched R c`,
+  `headerOutside` and `ReturnOutside`. `allocate_entry_large` reuses
+  `BestFitFallback.allocate_large` for missing-entry/filter/ffs/least-tests/
+  bf_split/original-return execution. No run was regenerated or reproved;
+  no arbitrary intermediate/final memory is a premise.
+- `EntryLargeReturned` carries unchanged bounded small representation, the
+  framed actual least-pointer cell, the original-header-derived result,
+  shortened still-large nonwrapping source extent and actual blue/tag-zero
+  remnant header. The actual allocated extent is apart from every small
+  extent, and begins exactly at the retained source's end. Remaining source
+  and small extents are separated as well. Exact `completeEffect`, code/output,
+  original return PC, restored SP/x1 and shared `GprsSame` are returned.
+  `EntryLargeReturned.live` frames a selected caller ledger with `LiveFrame`
+  under explicit exact-log separation. `BestFitLargeReturn.Post.ra` exposes
+  the restored x1 from the existing generated register bank; `Allocated.ra`
+  carries it through the existing complete summary.
+- `split_readbacks` and `entry_counter` derive the exact native final counter
+  `old - 1 - request`, including cancellation of the temporary whole-source
+  debit. `entry_counter_nat` requires explicit original credit `request+1 <=
+  old.toNat`. Neither representation nor the physical source implies a
+  natural total-free-space accounting invariant. No singleton-tree
+  specialization or arbitrary tree topology preservation is claimed; only
+  the observed least-pointer cell is framed.
+- Validation: initial combined affected build passes **1,310 jobs** in
+  `/tmp/a6-bounded-affected.log`; the final affected/audit plus existing
+  `AllocLargeWrapper` consumer build passes **1,337 jobs** in
+  `/tmp/a6-bounded-final-affected.log`. Standalone guarded/capped
+  `lake env lean -M 6000 -j 1 OCaml/Vm/Gc/BestFitNextAudit.lean` passes in
+  `/tmp/a6-bounded-final-focused-axioms.log`: **352 unique reports**, all
+  **56 new theorems covered once**, only `propext`, `Classical.choice`,
+  `Quot.sound`. The changed existing complete-run theorem is also audited.
+  Registrations stay in `BestFitNextAudit`, already imported by `OCaml.Audit`;
+  full `OCaml.Audit` is left to the lead gate. Hole, discipline (27 rules),
+  abstraction-gate and whitespace checks pass; logs are
+  `/tmp/a6-bounded-{holes,discipline,abstraction}.log`.
+- Every Lean launch checked available RAM >=25 GB with `free -g`, ran alone
+  via `lean-guarded.py` / `lean-capped.sh` in the inherited 12 GiB/two-thread
+  scope, with unchanged proof budgets and no virtual-memory ulimit. The
+  worktree started clean; no generated output or Git metadata was edited,
+  and no subagents were used. The old dead-end entry now points to this
+  repaired interface; no additional runtime obstruction was found.
+- Remaining: other large-tree branches, requests >16, allocated colors and
+  wrapper integration with this new input invariant, caller/native startup
+  production, global free-space accounting, full readiness and collection.
+  This is an internal representation repair, not a `GoodF1` restriction.
+  `CustomMemCall` remains named; full `BarrierGrowthFull` stays G2 and C4
+  round 2 waits for F1. The lead must review, run full Audit and commit/land
+  through `scripts/integrate.sh`; Git metadata/landing queue stay read-only
+  in this worker. There is no remaining original-entry derivation seam for
+  the stated positive <=16, sufficiently-large branch.
+
 ## Original-entry least-large bitmap prerequisite obstruction (2026-10-28)
 
 - **Stuck at the requested zero-bitmap derivation.** The current shared

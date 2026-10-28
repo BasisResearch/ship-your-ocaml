@@ -55,6 +55,28 @@ theorem selected_first {lists s b bs c} (shape : BfShape.SmallShape c.σ.mem lis
   rw [selected] at linked
   exact linked.1
 
+/-- Actual exact-size log readback, including both clear and unchanged branches. -/
+theorem Post.bitmap {ra s before after}
+    (post : Post ra (BitVec.ofNat 64 s) before after)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) :
+    BfShape.mapBits after.σ.mem =
+      if BestFitSmall.next (BitVec.ofNat 64 s) before = 0 then
+        BfShape.mapBits before.σ.mem &&& ~~~(1#32 <<< (s-1)) else BfShape.mapBits before.σ.mem := by
+  have size : (BitVec.ofNat 64 s).toNat = s := by
+    have : s < 2^64 := by change s ≤ 16 at hi; omega
+    simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt this]
+  rw [BfShape.mapBits,post.memory,effect_bitmap (by omega) (by omega) (BfShape.exact_prefix_bitmap hi),size]
+  rfl
+
+theorem Post.boundedBitmap {ra s before after}
+    (post : Post ra (BitVec.ofNat 64 s) before after)
+    (bounded : BfShape.BoundedBitmap before.σ.mem)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) : BfShape.BoundedBitmap after.σ.mem := by
+  have bits := post.bitmap lo hi
+  split at bits
+  · exact bounded.clear bits
+  · exact bounded.congr bits
+
 /-- Every exact-size native branch returns the actual popped representation. -/
 theorem Post.smallRepresentation {ra lists s b bs before after}
     (post : Post ra (BitVec.ofNat 64 s) before after)
@@ -102,6 +124,14 @@ theorem Post.smallRepresentation {ra lists s b bs before after}
       simpa only [empty,ite_true] using bits
     · apply repr.map.pop_nonempty selected (fun h => empty (tail.zero_iff.mpr h))
       simpa only [empty,ite_false] using bits
+
+theorem Post.boundedSmallRepresentation {ra lists s b bs before after}
+    (post : Post ra (BitVec.ofNat 64 s) before after)
+    (repr : BfShape.BoundedSmallRepresentation before.σ.mem lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    BfShape.BoundedSmallRepresentation after.σ.mem (BfShape.popped lists s bs) :=
+  ⟨post.smallRepresentation repr.toSmallRepresentation lo hi selected,
+    post.boundedBitmap repr.bounded lo hi⟩
 
 /-- The selected physical header is unchanged by the static branch stores. -/
 theorem Post.selected_header {ra lists s b bs before after}
@@ -457,4 +487,106 @@ theorem SearchReturned.allocated_apart {R lists s b bs before after}
   have snapshot : searchMemory R before = searched.σ.mem := path.search.memory.symm
   simpa only [searchLists,snapshot,header] using result
 
+end OCaml.Vm.Gc.BestFitFallback
+
+namespace OCaml.Vm.Gc.BestFitRemnant
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+/-- The actual insertion log sets only the decoded remnant's small-class bit. -/
+theorem insert_boundedBitmap {v w m} (bounded : BfShape.BoundedBitmap m)
+    (lo : 1 ≤ w.toNat) (hi : w.toNat ≤ 16) (heap : DlHeap.heapStart ≤ v.toNat) :
+    BfShape.BoundedBitmap (writeLog m (insertLog v w m)) :=
+  bounded.set (by omega) (insert_readbacks lo hi heap).bits
+
+/-- Zero-size and sweep-deferral branches have no stores; insertion uses its
+native four-byte OR readback. -/
+theorem effect_boundedBitmap {v m} (bounded : BfShape.BoundedBitmap m)
+    (small : (size v m).toNat ≤ 16) (heap : DlHeap.heapStart ≤ v.toNat) :
+    BfShape.BoundedBitmap (writeLog m (effect v m)) := by
+  unfold effect
+  split
+  next ins =>
+    have lo : 1 ≤ (size v m).toNat := by
+      have nz : (size v m).toNat ≠ 0 := by
+        intro h
+        exact ins.1 (BitVec.eq_of_toNat_eq (by simpa using h))
+      omega
+    exact insert_boundedBitmap bounded lo small heap
+  next => exact bounded
+end OCaml.Vm.Gc.BestFitRemnant
+
+namespace OCaml.Vm.Gc.BestFitNext
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+/-- The next-size pop consumes the actual saved bitmap, truncates to 32 bits,
+and either clears the selected bit or leaves the bitmap unchanged. -/
+theorem PopPost.boundedBitmap {sp s b bits request before after}
+    (post : PopPost sp s b bits request before after)
+    (bounded : BfShape.BoundedBitmap before.σ.mem) (lo : 1 ≤ s.toNat) (hi : s.toNat ≤ 16)
+    (bitsRead : bits.setWidth 32 = BfShape.mapBits before.σ.mem) :
+    BfShape.BoundedBitmap after.σ.mem := by
+  by_cases empty : nextOf b before.σ.mem = 0#64
+  · exact bounded.clear (post.bitmap_empty lo hi empty bitsRead)
+  · apply bounded.congr
+    rw [BfShape.mapBits,post.memory,popLog,if_neg empty]
+    apply bytesT_writeLog_out
+    have hs := BestFitRemnant.slot_nat hi
+    exact ⟨Or.inl (by
+      change Layout.sym_bf_small_map+4 ≤ (BestFitRemnant.slot s).toNat
+      rw [hs]; simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]; omega),True.intro⟩
+
+/-- Boundedness follows the real pick/pop/split/remnant snapshots. -/
+theorem RoutePost.boundedBitmap {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (bounded : BfShape.BoundedBitmap before.σ.mem) : BfShape.BoundedBitmap after.σ.mem := by
+  obtain ⟨picked,popped,path⟩ := post.path_spec
+  have bits : BfShape.mapBits picked.σ.mem = BfShape.mapBits before.σ.mem := by
+    apply path.pick.read
+    have hm := BestFitRemnant.merge_nat input.small
+    change (BestFitRemnant.slot s+8#64).toNat = _ at hm
+    change _ ≤ (BestFitRemnant.slot s+8#64).toNat ∨ _
+    rw [hm]
+    exact Or.inl (by simp only [Layout.sym_bf_small_fl,Layout.sym_bf_small_map]; omega)
+  have popBound := path.pop.boundedBitmap (bounded.congr bits) input.positive input.small
+    (input.savedBitmap.trans bits.symm)
+  have splitBound : BfShape.BoundedBitmap (splitMemory sp b request popped.σ.mem) :=
+    popBound.congr (splitMemory_read (splitOutside_static input.geometry (by decide) (by decide)))
+  have splitInput := input.split_input path.pick path.pop
+  have small : (BestFitRemnant.size b (splitMemory sp b request popped.σ.mem)).toNat ≤ 16 := by
+    change (sourceSize (sourceHeader b (splitMemory sp b request popped.σ.mem))).toNat ≤ 16
+    rw [splitMemory_header input.geometry,
+      smallHeader_size input.requestPositive splitInput.larger splitInput.small]
+    have := splitInput.small
+    omega
+  rw [path.complete.memory,completeLog,writeLog_append]
+  exact BestFitRemnant.effect_boundedBitmap splitBound small (by have := input.geometry.blockHeap; omega)
+
+theorem RoutePost.boundedSmallRepresentation {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (repr : BfShape.BoundedSmallRepresentation before.σ.mem lists)
+    (stack : BfShape.StackApart sp lists) :
+    BfShape.BoundedSmallRepresentation after.σ.mem (routeLists sp s b request lists bs before.σ.mem) :=
+  ⟨post.smallRepresentation input repr.physical stack,post.boundedBitmap input repr.bounded⟩
+end OCaml.Vm.Gc.BestFitNext
+
+namespace OCaml.Vm.Gc.BestFitFallback
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+theorem SearchReturned.boundedBitmap {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before) (bounded : BfShape.BoundedBitmap before.σ.mem) :
+    BfShape.BoundedBitmap after.σ.mem := by
+  obtain ⟨searched,path⟩ := post.path_spec
+  have bits : BfShape.mapBits searched.σ.mem = BfShape.mapBits before.σ.mem :=
+    path.search.read input.toStackConditions (input.static_out (by decide))
+  exact path.allocation.boundedBitmap (input.route_input path.choice path.search) (bounded.congr bits)
+
+theorem SearchReturned.boundedSmallRepresentation {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before)
+    (repr : BfShape.BoundedSmallRepresentation before.σ.mem lists) :
+    BfShape.BoundedSmallRepresentation after.σ.mem (searchLists R s b lists bs before) :=
+  ⟨post.smallRepresentation input repr.physical,post.boundedBitmap input repr.bounded⟩
 end OCaml.Vm.Gc.BestFitFallback

@@ -204,6 +204,43 @@ def mapBits (m : Std.ExtHashMap Nat (BitVec 8)) : BitVec 32 := bytesT m Layout.s
 def MapConsistent (m : Std.ExtHashMap Nat (BitVec 8)) (lists : Nat → List (BitVec 64)) : Prop :=
   ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ((mapBits m).getLsbD (s - 1) = true ↔ lists s ≠ [])
 
+/-- The unused high half of the stored 32-bit bitmap is clear. This is a
+separate refinement: `MapConsistent` describes only the sixteen list bits. -/
+def BoundedBitmap (m : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
+  (mapBits m).toNat < 2^16
+
+theorem BoundedBitmap.high_iff {m} : BoundedBitmap m ↔
+    ∀ k, (mapBits m).getLsbD (16+k) = false :=
+  BitVec.toNat_lt_iff_getLsbD_eq_false 16 (by decide)
+
+theorem BoundedBitmap.of_zero {m} (zero : mapBits m = 0#32) : BoundedBitmap m := by
+  unfold BoundedBitmap
+  rw [zero]
+  decide
+
+theorem BoundedBitmap.congr {m m'} (bounded : BoundedBitmap m)
+    (bits : mapBits m' = mapBits m) : BoundedBitmap m' := by
+  simpa only [BoundedBitmap,bits] using bounded
+
+/-- Clearing any bit cannot introduce a high bit. -/
+theorem BoundedBitmap.clear {m m'} {s : Nat} (bounded : BoundedBitmap m)
+    (bits : mapBits m' = mapBits m &&& ~~~(1#32 <<< s)) : BoundedBitmap m' := by
+  apply BoundedBitmap.high_iff.mpr
+  intro k
+  rw [bits,BitVec.getLsbD_and,BoundedBitmap.high_iff.mp bounded k]
+
+/-- Only an actual small-class insertion is allowed to set a bit. -/
+theorem BoundedBitmap.set {m m' s} (bounded : BoundedBitmap m) (small : s < 16)
+    (bits : mapBits m' = mapBits m ||| (1#32 <<< s)) : BoundedBitmap m' := by
+  apply BoundedBitmap.high_iff.mpr
+  intro k
+  rw [bits,BitVec.getLsbD_or,BoundedBitmap.high_iff.mp bounded k]
+  have low : (1#32 <<< s).getLsbD (16+k) = false := by
+    simp only [BitVec.getLsbD_shiftLeft,BitVec.getLsbD_one]
+    have : 16+k-s ≠ 0 := by omega
+    simp [this]
+  simp only [low,Bool.or_false]
+
 /-- Clearing bit `s - 1` when list `s` empties keeps the bitmap consistent. -/
 theorem MapConsistent.clear {m m' : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → List (BitVec 64)} {s : Nat}
     {bs : List (BitVec 64)} (map : MapConsistent m lists) (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count)
@@ -456,6 +493,12 @@ structure SmallRepresentation (m : Std.ExtHashMap Nat (BitVec 8))
   headers : SmallHeaders m lists
   map : MapConsistent m lists
   physical : SmallPhysical lists
+
+/-- Explicit bounded representation used by native zero-filter dispatch.
+The old representation remains useful and does not imply this refinement. -/
+structure BoundedSmallRepresentation (m : Std.ExtHashMap Nat (BitVec 8))
+    (lists : Nat → List (BitVec 64)) : Prop extends SmallRepresentation m lists where
+  bounded : BoundedBitmap m
 
 /-- Setting the inserted size's bit preserves bitmap/list agreement. -/
 theorem MapConsistent.set {m m' lists s b} (map : MapConsistent m lists)

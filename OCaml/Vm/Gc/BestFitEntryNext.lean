@@ -185,6 +185,16 @@ theorem allocate_entry_next {R lists c} (input : EntryNextInput R lists c) :
     exact ⟨after,run,⟨s,b,bs,EntryNextReturned.of_stages input probe returned⟩⟩
   exact (missing input.missing_input).seq fallback (fun _ probe => ⟨probe.pc,probe⟩)
 
+/-- The refined bitmap follows the read-only original-entry probe and the
+actual search/pop/split/reinsert execution. -/
+theorem EntryNextReturned.boundedSmallRepresentation {R lists s b bs before after}
+    (post : EntryNextReturned R lists s b bs before after)
+    (input : EntryNextInput R lists before) (bounded : BfShape.BoundedBitmap before.σ.mem) :
+    BfShape.BoundedSmallRepresentation after.σ.mem (searchLists R s b lists bs before) := by
+  obtain ⟨middle,path⟩ := post.path_spec
+  have middleBound : BfShape.BoundedBitmap middle.σ.mem := path.probe.memory ▸ bounded
+  exact ⟨post.representation,path.search.boundedBitmap (input.search_input path.probe) middleBound⟩
+
 /-- Original selected owned blocks use the existing search log frame and
 the memory-free probe's LiveFrame, composed by the shared law. -/
 theorem EntryNextReturned.live {R lists s b bs before after H}

@@ -53,9 +53,15 @@
   empty, or add a zero-bitmap premise and call it a producer. Continuing
   requires a stronger bitmap invariant with unused bits zero, preserved by
   the real exact/next-size writes; its native/caller production stays open.
-  The existing `allocate_large` run is unchanged. Source/stack ownership,
-  returned large extents and natural accounting have not been discharged
-  by this obstruction. Checked build/audit evidence is in `a6-gc.md`.
+  The obstruction remains valid for the old predicate. The separate bounded
+  refinement now repairs this interface: `BoundedBitmap.high_iff` excludes
+  high bits, and `filtered_of_noSuitable` proves the actual native zero
+  filter. `BestFitEntryLargeReturn.allocate_entry_large` now derives the
+  original source/stack setup and returns the physical split facts by reusing
+  unchanged `allocate_large`. Its natural counter theorem keeps explicit
+  credit. Neither the zero-map captured-memory certificate nor the pure
+  singleton observation is a native initialization/caller producer. There is
+  no new runtime obstruction; checked build/audit evidence is in `a6-gc.md`.
 
 - 2026-10-28 counted fresh-id/exit boundaries: stack-window count framing
   does not cover `counterWindows`, whose actual store is the low static

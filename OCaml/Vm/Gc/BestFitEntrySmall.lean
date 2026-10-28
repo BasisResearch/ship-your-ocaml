@@ -157,6 +157,25 @@ theorem allocate_entry_small {R lists c} (input : EntrySmallInput R lists c) :
     obtain ⟨b,bs,returned⟩ := post.selected_spec
     exact ⟨_,b,bs,_,_,_,EntrySmallReturned.of_exact returned⟩
 
+/-- Every checked small-success dispatch preserves the bounded refinement. -/
+theorem EntrySmallReturned.boundedBitmap {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before) (bounded : BfShape.BoundedBitmap before.σ.mem) :
+    BfShape.BoundedBitmap after.σ.mem := by
+  cases post.path with
+  | exactSize exact =>
+    have run : BestFitExact.Post (R 1) (BitVec.ofNat 64 (R 10).toNat) before after := by
+      simpa only [BitVec.ofNat_toNat,BitVec.setWidth_eq] using exact.execution
+    exact run.boundedBitmap bounded input.requestPositive input.request_small
+  | nextSize empty next =>
+    exact (next.boundedSmallRepresentation (input.next_input empty) bounded).bounded
+
+theorem EntrySmallReturned.boundedSmallRepresentation {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before) (bounded : BfShape.BoundedBitmap before.σ.mem) :
+    BfShape.BoundedSmallRepresentation after.σ.mem family :=
+  ⟨post.representation,post.boundedBitmap input bounded⟩
+
 /-- The selected actual log supplies the shared owned-block frame. -/
 theorem EntrySmallReturned.live {R lists s b bs family a writes before after H}
     (post : EntrySmallReturned R lists s b bs family a writes before after)

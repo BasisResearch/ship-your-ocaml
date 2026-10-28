@@ -2,6 +2,8 @@ import OCaml.Vm.Gc.BestFitPreservation
 import OCaml.Vm.Gc.BestFitEntryNext
 import OCaml.Vm.Gc.BestFitEntrySmall
 import OCaml.Vm.Gc.BestFitEntryLarge
+import OCaml.Vm.Gc.BestFitBitmapStartup
+import OCaml.Vm.Gc.BestFitEntryLargeReturn
 
 /-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
@@ -312,3 +314,63 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_filtered
 #print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_obstruction
 #print axioms OCaml.Vm.Gc.BestFitFallback.no_representation_only_zero_bitmap
+
+/-! Bounded-bitmap production/preservation and original-entry least-large return. -/
+#print axioms OCaml.Vm.Gc.BfShape.BoundedBitmap.high_iff
+#print axioms OCaml.Vm.Gc.BfShape.BoundedBitmap.of_zero
+#print axioms OCaml.Vm.Gc.BfShape.BoundedBitmap.congr
+#print axioms OCaml.Vm.Gc.BfShape.BoundedBitmap.clear
+#print axioms OCaml.Vm.Gc.BfShape.BoundedBitmap.set
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.bitmap
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insert_boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitRemnant.effect_boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitNext.PopPost.boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextReturned.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.boundedBitmap
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.mask_small_bit
+#print axioms OCaml.Vm.Gc.BestFitFallback.bounded_bitmap_high
+#print axioms OCaml.Vm.Gc.BestFitFallback.filtered_of_noSuitable
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_not_bounded
+#print axioms OCaml.Vm.Gc.BfShape.bounded_of_singleton
+#print axioms OCaml.Vm.Gc.BfShape.boundedSmall_of_singleton
+#print axioms OCaml.Vm.Gc.BfShape.bounded_of_observed
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeSource.header_nat
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.searched_read
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.searched_least
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.searched_header
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.large_conditions
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.return_outside
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.filtered_zero
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.complete_inside
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_read
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.static_out
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.small_out
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.boundedSmallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.largeHeader_nat
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_allocated_apart
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.prepared_header
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.prepared_counter
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.largeEffect_eq
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_header
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_remaining
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.split_large
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_remaining_blue
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_remaining_apart
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeInput.split_readbacks
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_counter
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_counter_nat
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.gprsSame
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeReturned.of_allocated
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_large
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryLargeReturned.live
+
+#print axioms OCaml.Vm.Gc.BestFitLargeReturn.Post.ra
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_large
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.entry_least

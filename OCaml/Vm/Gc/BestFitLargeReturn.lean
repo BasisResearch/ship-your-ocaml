@@ -64,6 +64,16 @@ structure Post (sp hp : BitVec 64) (before after : Config) : Prop where
   counter : word after Layout.sym_caml_fl_cur_wsz = counted sp before
   code : Code.Bf_allocateLoaded after.σ.mem
 
+/-- The generated final register bank restores the actual caller link,
+in addition to the returned program counter. -/
+theorem Post.ra {sp hp before after} (post : Post sp hp before after) :
+    gprGet after.σ 1 = some (returnWord sp before) := by
+  have pins := post.machine.regs
+  change GHolds after.σ (runGM block.body (regs sp hp) (loads sp before)) at pins
+  apply gholds_lookup _ pins
+  rw [loads,registers]
+  simp [finish_piece2_output,lookupG,read8_value,returnWord,word]
+
 /-- Large-block allocation restores its native caller and accounts for only
 the requested words, after the split helper temporarily removed the old block. -/
 theorem finish {sp hp c} (input : Input sp hp c) :

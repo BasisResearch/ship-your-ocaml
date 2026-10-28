@@ -66,6 +66,7 @@ structure Allocated (R : Nat → BitVec 64) (before after : Config) : Prop where
   pc : PCAt (R 1) after
   result : gprGet after.σ 10 = some (largeHeader R before)
   stack : gprGet after.σ 2 = some (R 2)
+  ra : gprGet after.σ 1 = some (R 1)
   memory : after.σ.mem = writeLog before.σ.mem (completeEffect R before)
   counter : word after Layout.sym_caml_fl_cur_wsz = BestFitLargeReturn.counted (frameSp R) (splitSnapshot R before)
   code : Code.Bf_allocateLoaded after.σ.mem
@@ -99,9 +100,10 @@ theorem allocate_large {R c} (input : MissingInput R c)
     change (R 2 - frameSize) + frameSize = R 2
     exact BitVec.sub_add_cancel _ _
   refine ⟨after,run,⟨finished.machine.good,finished.machine.tick,finished.machine.minstret,?_,finished.result,
-    ?_,?_,?_,finished.code,finished.machine.output.trans splitPost.output,?_⟩⟩
+    ?_,?_,?_,?_,finished.code,finished.machine.output.trans splitPost.output,?_⟩⟩
   · simpa only [ra] using finished.pc
   · simpa only [stackSame] using finished.stack
+  · simpa only [ra] using finished.ra
   · rw [finished.memory,countSame,splitPost.memory,completeEffect,writeLog_append]
   · simpa only [countSame] using finished.counter
   · intro r noise untouched
