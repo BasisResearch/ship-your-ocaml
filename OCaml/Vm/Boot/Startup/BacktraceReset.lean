@@ -11,6 +11,9 @@ def backtraceCapacity : Nat := startupAllocatorCredits - 656 - initGcCredits - 3
 structure ResetBacktrace (initial after : Config) where
   reset : ElfResetReady elf initial
   atoms : Config
+  source : ResetAtomTable initial atoms
+  source_run : Steps atoms after
+  loadCaller : LoadCaller after
   H : List (Nat × Nat)
   ent : BitVec 64
   raw : BitVec 64
@@ -106,6 +109,9 @@ theorem reset_init_backtrace_returned_exists :
   exact ⟨initial, f, ⟨{
     reset := atoms.reset
     atoms := d
+    source := atoms
+    source_run := step.trans steps
+    loadCaller := atoms.loadCaller.frame (g.trans (GprsSame.of_saved B.saved)) (by decide) (by decide)
     H := H
     ent := ent
     raw := raw

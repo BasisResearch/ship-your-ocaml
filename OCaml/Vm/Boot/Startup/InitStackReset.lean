@@ -3,6 +3,7 @@ import OCaml.Vm.Boot.Startup.InitGcReset
 import OCaml.Vm.Boot.Startup.CamlInitStackNormalized
 import OCaml.Vm.Boot.Startup.CamlInitStackImage
 import OCaml.Vm.Boot.Startup.CamlInitStackCallInterface
+import OCaml.Vm.Boot.Startup.LoadCaller
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   LeanRV64DExecutable
@@ -67,6 +68,11 @@ structure InitStackReset (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 m
 /-- Stack return with the actual parsed ELF reset retained alongside its native run. -/
 structure ResetInitStack (initial after : Config) where
   reset : ElfResetReady elf initial
+  /-- Actual descriptor/fd/argv ancestor, retained for subsequent CODE loading. -/
+  sections : Config
+  source : ResetReadSections initial sections
+  source_run : Steps sections after
+  loadCaller : LoadCaller after
   H : List (Nat × Nat)
   s0 : BitVec 64
   s1 : BitVec 64
@@ -84,7 +90,9 @@ theorem reset_init_stack_witness_exists :
     ∃ initial after, Nonempty (ResetInitStack initial after) := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
   obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
-  obtain ⟨a, run1, A, gcA⟩ := reset_init_gc_call w dom
+  obtain ⟨a, G⟩ := reset_init_gc_call_witness w dom
+  have A := G.call
+  have gcA := G.gc
   obtain ⟨Hfinal, d, run2, D⟩ := caml_init_gc a _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ A
   have data : ∀ x, GcDataByte x → (d.σ.mem[x]?).getD 0 = (WhileMinImage.initialMem[x]?).getD 0 :=
     fun x hx => (D.low x (GcLowKeep.of_range (Or.inl hx))).trans (gcA.data x hx)
@@ -135,6 +143,10 @@ theorem reset_init_stack_witness_exists :
         · omega), show e.σ.mem = d.σ.mem from P.memory]).cons _
   refine ⟨initial, f, ⟨{
     reset := w.reset
+    sections := sections
+    source := w
+    source_run := G.run.trans (run2.trans (run3.trans run4))
+    loadCaller := ⟨gholds_lookup (n := 8) _ S.regs rfl, gholds_lookup (n := 9) _ S.regs rfl⟩
     H := Hfinal
     s0 := 3#64
     s1 := argvPtr
@@ -142,7 +154,7 @@ theorem reset_init_stack_witness_exists :
     mx := gcParamWord 5
     p := p
     before := e
-    run := run1.trans (run2.trans (run3.trans run4))
+    run := w.run.trans (G.run.trans (run2.trans (run3.trans run4)))
     post := ?_ }⟩⟩
   exact {
     done := S

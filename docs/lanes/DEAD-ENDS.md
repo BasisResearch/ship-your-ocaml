@@ -39,6 +39,36 @@
   elimination and invalid arity goals. Reduce the concrete name using
   `simp [primF1Impl]` before splitting its remaining semantic options. All
   nineteen arity/channel certificates then check at the existing limits.
+- 2026-10-28 NULL-interpreter saving region: packaging all thirteen stores
+  in a single startup `BlockInput`/`registers_of_blocks'` proof reaches the
+  kernel's default recursion limit even after the generated instruction
+  normalizations remove symbolic address checks. This is a checked
+  elaboration failure (`/tmp/interpreter-init-steps-6.log`), not a native
+  obstruction. Split the ELF region at `0x80001e14` (six then seven stores),
+  compose their summaries and logs, and keep the default proof limits.
+  The mixed frame-adjustment/six-store prefix also hits that limit
+  (`/tmp/interpreter-init-steps-7.log`); keep the generated `addi sp,-528`
+  region separate at `0x80001dfc` from both store-only regions.
+
+- 2026-10-28 interpreter initialization / descriptor ancestry: the old
+  `ResetInitStack` retained reset identity and a global run but discarded its
+  actual `ResetReadSections` witness. The subsequent atom/backtrace interfaces
+  therefore could not supply descriptor/fd/argv provenance for later CODE
+  loading. This is interface inspection, not a reachable-state counterexample.
+  The real GC-call producer now returns `ResetGcCalled` with local `Steps`;
+  its old existential API is a projection. Stack, atom and backtrace producers
+  retain their source witnesses and local runs. Do not add arbitrary facts
+  about the original state to the initialization input or infer a memory
+  frame from `Steps` alone. Earlier descriptor/file/argv memory frames still
+  need the actual GC/stack/atom/root-store effects.
+
+- 2026-10-28 interpreter initialization / entry route: `entry_save` requires
+  a nonzero program argument and takes the branch to `0x80001e38`. The real
+  startup call sets both arguments to zero, falls through `0x80001e34` to
+  the unit block at `0x800035e0`, then uses `interp_return` at `0x8000331c`.
+  Do not instantiate the nonzero theorem or assume threaded-code setup in
+  this ELF. The two bounded interpreter regions are generated from the ELF
+  by `gen_startup_rows.py` through `gen_fn`; no captured execution supplies them.
 
 - 2026-10-28 counted growth capacity frame: using one implicit capacity for
   both entry `LibHeapAt H cap` and returned `GrowDone H capacity` forces the

@@ -28,17 +28,20 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 abbrev ResetReadSections.blocks {initial after} (w : ResetReadSections initial after) : List (Nat × Nat) :=
   (w.blk.toNat, 56) :: attemptBlocks w.attempt.opened
 
-/-- caml_main from the section table to caml_init_gc's entry, with the
-default parameters. `dom` is caml_init_domain's record, which every step
-since keeps (`reset_domain_kept`). -/
-theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections initial sections)
+/-- The actual local GC-call prefix, anchored at the descriptor-reading ancestor. -/
+structure ResetGcCalled {initial sections : Config} (w : ResetReadSections initial sections)
+    (t1 t2 t3 : BitVec 64) (after : Config) : Prop where
+  run : Steps sections after
+  call : InitGcCall w.blocks (startupAllocatorCredits - 656 - initGcCredits) 32 32768 1019968 2101248 16384
+    parameterStack jal_80004e6c_call.link 3#64 argvPtr (vsaReg w.attempt.opened.call.atRetry 18)
+    (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
+    (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after
+  gc : GcInitImage after
+
+/-- Execute the real argument stores and GC JAL, retaining its local Steps. -/
+theorem reset_init_gc_call_witness {initial sections : Config} (w : ResetReadSections initial sections)
     {t1 t2 t3 : BitVec 64} (dom : DomainKept w.blocks sections.σ.mem t1 t2 t3) :
-    ∃ after, Steps (Vsa.Densify.fillZero initial) after ∧
-      InitGcCall w.blocks (startupAllocatorCredits - 656 - initGcCredits) 32 32768 1019968 2101248 16384
-        parameterStack jal_80004e6c_call.link 3#64 argvPtr (vsaReg w.attempt.opened.call.atRetry 18)
-        (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
-        (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after ∧
-      GcInitImage after := by
+    ∃ after, ResetGcCalled w t1 t2 t3 after := by
   have D := w.done
   obtain ⟨after, run, post⟩ := (caml_init_gc_call sections jal_80004e10_call.link D.ready.toLeafInput
     ⟨gholds_lookup (n := 2) _ D.regs rfl, trivial⟩ w.gc).run sections ⟨D.pc, rfl⟩
@@ -69,7 +72,7 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
   have bss (a : Nat) (lo hi : Nat) (inside : lo ≤ a ∧ a + 8 ≤ hi) (window : ∀ x, lo ≤ x → x < hi → GcBssByte x) :
       bytesT after.σ.mem a 8 = 0#64 :=
     gc.word a fun i _ => window _ (by omega) (by omega)
-  refine ⟨after, w.run.trans run, ?_, gc⟩
+  refine ⟨after, run, ?_, gc⟩
   exact {
     pc := by have := post.pc; rwa [jal_80004e6c_call_target] at this
     regs := ⟨gholds_lookup (n := 2) _ post.regs rfl,
@@ -126,6 +129,18 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
         gc.bss _ (by unfold GcBssByte Layout.sym_caml_verb_gc; omega)
       exact ⟨by simpa using b 0 (by decide), b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide),
         b 5 (by decide), b 6 (by decide), b 7 (by decide)⟩ }
+
+/-- Compatibility projection retaining the previous reset-facing existential API. -/
+theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections initial sections)
+    {t1 t2 t3 : BitVec 64} (dom : DomainKept w.blocks sections.σ.mem t1 t2 t3) :
+    ∃ after, Steps (Vsa.Densify.fillZero initial) after ∧
+      InitGcCall w.blocks (startupAllocatorCredits - 656 - initGcCredits) 32 32768 1019968 2101248 16384
+        parameterStack jal_80004e6c_call.link 3#64 argvPtr (vsaReg w.attempt.opened.call.atRetry 18)
+        (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
+        (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after ∧
+      GcInitImage after := by
+  obtain ⟨after, C⟩ := reset_init_gc_call_witness w dom
+  exact ⟨after, w.run.trans C.run, C.call, C.gc⟩
 
 /-- caml_init_domain's record and the minor ref tables (`DomainKept`) hold when
 the section table is read. -/

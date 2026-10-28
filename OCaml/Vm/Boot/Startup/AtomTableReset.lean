@@ -16,6 +16,10 @@ structure AtomTableReset (H : List (Nat × Nat)) (capacity : Nat)
 /-- Atom return retains the same source reset, ownership and page-table observations. -/
 structure ResetAtomTable (initial after : Config) where
   reset : ElfResetReady elf initial
+  stackReturned : Config
+  source : ResetInitStack initial stackReturned
+  source_run : Steps stackReturned after
+  loadCaller : LoadCaller after
   H : List (Nat × Nat)
   ent : BitVec 64
   raw : BitVec 64
@@ -61,6 +65,10 @@ theorem reset_init_atom_table_witness_exists :
       room := by rw [mem, T.count]; decide }
   refine ⟨initial, f, ⟨{
     reset := S.reset
+    stackReturned := d
+    source := S
+    source_run := step.trans steps
+    loadCaller := S.loadCaller.frame (g.trans (GprsSame.of_saved A.saved)) (by decide) (by decide)
     H := (p.toNat, 32768) :: H
     ent := ent
     raw := raw

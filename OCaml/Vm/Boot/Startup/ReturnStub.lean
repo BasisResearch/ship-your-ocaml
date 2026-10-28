@@ -4,6 +4,8 @@ import OCaml.Vm.Boot.Startup.LocaleRows
 import OCaml.Vm.Boot.Startup.LockAcquireImage
 import OCaml.Vm.Boot.Startup.LockReleaseImage
 import OCaml.Vm.Boot.Startup.LocaleImage
+import OCaml.Vm.Boot.Startup.DebuggerInitRows
+import OCaml.Vm.Boot.Startup.DebuggerInitImage
 import OCaml.Vm.Boot.Startup.LeafCall
 import OCaml.Vm.Primitives.Control
 import Vsa.Sim.ChainFactsTac
@@ -12,17 +14,19 @@ open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
 /-- The linked bare-metal lock and locale hooks are identical return-only stubs. -/
 inductive ReturnStub where
-  | acquire | release | locale
+  | acquire | release | locale | debugger
 
 def ReturnStub.entry : ReturnStub → BitVec 64
   | .acquire => 0x80042538#64
   | .release => 0x80042550#64
   | .locale => 0x800121ec#64
+  | .debugger => 0x80021614#64
 
 def ReturnStub.blocks : ReturnStub → List BBlock
   | .acquire => retarget_lock_acquire_recursiveX2538Seg
   | .release => retarget_lock_release_recursiveX2550Seg
   | .locale => caml_init_localeX21ecSeg
+  | .debugger => caml_debugger_initX1614Seg
 
 theorem returnStub_input (kind : ReturnStub) {ra value c} (h : LeafInput ra c)
     (valueReg : gprGet c.σ 10 = some value) :
@@ -48,6 +52,10 @@ theorem returnStub_input (kind : ReturnStub) {ra value c} (h : LeafInput ra c)
     | locale =>
       have code := locale_code h.image
       chain_facts code with "Vsa.Sim.Code.caml_init_locale_at_"
+      exact ret
+    | debugger =>
+      have code := debuggerInit_code h.image
+      chain_facts code with "Vsa.Sim.Code.caml_debugger_init_at_"
       exact ret
 
 /-- All return-only runtime hooks preserve memory and every ordinary register. -/

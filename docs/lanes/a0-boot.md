@@ -1,6 +1,80 @@
 # Lane a0-boot
 
-## Current status (2026-10-27)
+## Interpreter/debugger initialization (2026-10-28; checked, awaiting lead integration)
+
+The new reset-facing target is `whileMin_reset_interpreter_init` in
+`Boot/Startup/InterpreterInitReset.lean`, with exactly the image/reset
+arguments of `whileMin_reset_backtrace`. Its `ResetInterpreterInit` post
+retains `ElfResetReady`, `ResetBacktrace`, actual reset and local `Steps`,
+and the descriptor/fd/argv ancestor through the real source chain.
+`ResetGcCalled` strengthens the actual GC argument/JAL producer with local
+steps; `reset_init_gc_call` remains its old existential projection. Stack,
+atom and backtrace producers retain sources, local runs and `LoadCaller`
+(`s0 = 3`, `s1 = argvPtr`) from actual restoring returns.
+
+`InterpreterInitInput` consumes only the backtrace return's PC and
+`RuntimeReady`. `InterpreterInitDone` retains the exact thirteen-store
+`interpreterInitLog` tied to the actual saved bank and RA `0x80004e90`,
+complete runtime/heap readiness at the unchanged capacity, ABI registers,
+`LiveFrame` on the actual ledger, `CallerFrame`, tick/HTIF and output.
+The native caller sets a1/a0 to zero at `0x80004e84`/`0x80004e88`, calls
+`caml_interprete` at `0x80004e8c`, saves its 528-byte frame, takes the zero
+branch through `0x80001e34`, sets unit at `0x800035e0`, and reuses
+`OCaml.Vm.Sim.interp_return` at `0x8000331c`. The real debugger JAL is
+`0x80004e90`; `ReturnStub.debugger` executes its single ret to `0x80004e94`.
+There is no threaded-code initialization on this ELF path.
+
+`gen_startup_rows.py` owns every new row, normalization, call/image/code
+certificate and the focused `InterpreterInitAudit`. The prologue separates
+the frame adjustment at `0x80001df8` from the stores at `0x80001dfc`, then
+splits those stores at `0x80001e14` to stay within the default kernel
+recursion limit. Its six- and seven-store logs concatenate to the real
+complete saving log.
+`GprsSame`, `LiveFrame`, `NativeFrame.word_log_read` and the existing
+`FnSummary` block/call interfaces supply the frames and readback.
+
+Validation: the guarded/capped affected and focused build passes (3,481
+jobs; `/tmp/interpreter-init-final-build.log`), including `InterpreterInitReset`,
+`InterpreterInitAudit` and the expanded `BacktraceAudit`. All 117 initialization
+and 80 backtrace audit declarations have reports; every one of the 1,129
+unique reports in that build uses only `propext`, `Classical.choice`,
+`Quot.sound`. The audit also checks the exact universal reset theorem type.
+`OCaml.Audit` registers the new focused audit; its full build remains the
+lead gate. Hole, discipline (27 rules), abstraction, ELF pins (114,424 bytes,
+zero mismatches) and whitespace checks pass. Static logs are
+`/tmp/interpreter-init-{holes,discipline,abstraction,pins}-final.log`.
+Generator drift passes for all 2,083 outputs
+(`/tmp/interpreter-init-generated-final-3.log`).
+All Lean invocations use the guarded launcher, inherited 12 GB cgroup and
+two threads, after `free -g` confirms at least 25 GB available. No proof
+budget or virtual-address cap was added. The lead reviews, commits and
+lands via `scripts/integrate.sh`; these edits remain uncommitted in this
+worktree, with no Git metadata or landing-queue writes.
+
+Reproduction:
+
+```sh
+free -g
+python3 scripts/lean-guarded.py --log /tmp/interpreter-init-final-build.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.InterpreterInitReset OCaml.Vm.Boot.Startup.InterpreterInitAudit OCaml.Vm.Boot.Startup.BacktraceAudit
+python3 scripts/gen_startup_rows.py --check
+```
+
+Next: execute the CODE seek beginning at `0x80004e94` (first call at
+`0x80004ea4`, `caml_seek_optional_section`), then CODE allocation/read and
+debug-info initialization; DLPT/DLLS/PRIM reads, primitive lookup/table
+construction and frees; DATA channel/lock/unmarshal/unlock/close and
+descriptor free; global promotion, system/argv initialization and the later
+represented interpreter call. The retained `ResetReadSections` includes the
+actual descriptor table, open-file/fd-position and argv producer. Derive
+its current memory observations through the earlier GC/stack/atom/root
+effects; local `Steps` alone is not a memory frame. The new interpreter
+stores preserve the owned heap, low globals and caller bytes, but supply
+no arbitrary original-state facts. `interpreter_init_loaded_Statement`
+remains open; its adapter suffices for the original full reset target.
+This work does not close reset-to-Loaded, `BarrierGrowthFull` (G2),
+`CustomMemCall`, or C4 round 2 (waiting for F1).
+
+## Backtrace/reset identity (2026-10-27)
 
 `ResetBacktrace.reset` now retains `ElfResetReady WhileMinElfParse.elf initial`
 from the parsed ELF's actual setup. `ResetReadSections.reset` follows the
