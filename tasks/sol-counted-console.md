@@ -24,4 +24,5 @@ Reuse generic native console return proofs and actual C_CALL setup/return adapte
 No presumed counted successor, matching placement, stronger WindowStable, or new global runtime fact. Recover actual returned placement through existing opened-list coherence and physical observation frame.
 Done: checked complete counted console primitive returns/consumers at supported arities, focused affected build and allowed-axiom audit, precise remaining complete-C_CALL obligations.
 CustomMemCall remains named. Opening/listing, named registration, general formatting and full table assembly remain separate. Do not claim whole C_CALL opcode closure until all of its real branches compose.
+After the actual four-argument output returns compose, close the complete C_CALL4 row by checking every real primitive/outcome/operand case; reuse the arity helper and generated C_CALL2 setup pattern. Update the exact generated opcode census only for a complete OpArm.
 Leave checked edits for lead review/integration; record failed contract routes in DEAD-ENDS.
