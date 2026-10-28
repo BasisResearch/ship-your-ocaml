@@ -1,6 +1,6 @@
 # Lane a0-boot
 
-## Interpreter/debugger initialization (2026-10-28; checked, awaiting lead integration)
+## Interpreter/debugger initialization (2026-10-28; published)
 
 The new reset-facing target is `whileMin_reset_interpreter_init` in
 `Boot/Startup/InterpreterInitReset.lean`, with exactly the image/reset
@@ -48,8 +48,11 @@ Generator drift passes for all 2,083 outputs
 All Lean invocations use the guarded launcher, inherited 12 GB cgroup and
 two threads, after `free -g` confirms at least 25 GB available. No proof
 budget or virtual-address cap was added. The lead reviews, commits and
-lands via `scripts/integrate.sh`; these edits remain uncommitted in this
-worktree, with no Git metadata or landing-queue writes.
+lands via `scripts/integrate.sh`; the worker left checked edits without
+Git metadata or landing-queue writes. The lead reviewed and committed them
+as `66a597af`, then published the combined `004b521c` gate at 16:34 UTC.
+The full 6,141-job build and all gate stages passed; evidence is archived
+in `logs/{integrate,build}-004b521c.log`. Reset-to-Loaded remains open.
 
 Reproduction:
 

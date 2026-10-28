@@ -115,6 +115,11 @@ gate. Git metadata and the landing queue are untouched.
 
 ## Previous arity milestone: counted C_CALL3/5 by F1 arity (2026-10-28)
 
+Lead landing: `607536da` and the unchanged-proof module split `b83bf39e`
+published in gate `004b521c` at 16:34 UTC, after the full 6,141-job build
+and every integration stage passed. The 131-row census below is historical;
+reviewed C_CALL4 above raises it to 132 at the next gate.
+
 Checked edits are ready for lead review; no landing was attempted.
 The initial worktree at `19b964fd` was clean. Read the binding briefs,
 relevant lane/dead-end entries and abstraction inventory before proof work;
