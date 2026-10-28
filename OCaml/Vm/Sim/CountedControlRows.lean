@@ -370,14 +370,16 @@ theorem counted_stop_row {P : Prog} {Customs : Config → Nat → Prop}
 /-- The union records supported OpArm families, relative to their named
 suppliers. It does not assert full F1 table closure. -/
 def countedOrdinaryOpcode (op : Opcode) : Bool :=
-  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op || op == .OFFSETREF
+  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op || op == .OFFSETREF || decide (op ∈ countedBarrierOpcodes)
 
 /-- Every opcode counted by the census has its actual complete row. This
-partial table retains the named custom supplier and real GoodF1/Fits guards. -/
+partial table retains the named custom supplier, counted G2 full growth and
+real GoodF1/Fits guards. The six write rows have actual spatial suppliers. -/
 theorem counted_supported_row {P : Prog} {op : Opcode}
     {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
     (custom : Gc.CustomMemCall Ready state Customs)
     (fits : OCaml.Fits Gc.f1Layout.budget P) (good : OCaml.GoodF1 P)
+    (full : ∀ cp world, BarrierGrowthFull (countedLayout Gc.f1Layout Customs cp world))
     (supported : countedOrdinaryOpcode op = true) :
     OCaml.OpArm P (CountedLoopAt Customs Gc.f1Layout P) op := by
   cases op with
@@ -438,7 +440,7 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
   | PUSHGETGLOBAL => exact counted_pushgetglobal_row custom fits
   | GETGLOBALFIELD => exact counted_getglobalfield_row custom
   | PUSHGETGLOBALFIELD => exact counted_pushgetglobalfield_row custom fits
-  | SETGLOBAL => cases supported
+  | SETGLOBAL => exact counted_setglobal_row custom fits full
   | ATOM0 => exact counted_atom0_row f1_memoryStable custom.accounting
   | ATOM => exact counted_atom_row f1_memoryStable custom.accounting
   | PUSHATOM0 => exact counted_pushatom0_row custom fits
@@ -454,11 +456,11 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
   | GETFIELD3 => exact counted_getfield3_row custom
   | GETFIELD => exact counted_getfield_row custom
   | GETFLOATFIELD => cases supported
-  | SETFIELD0 => cases supported
-  | SETFIELD1 => cases supported
-  | SETFIELD2 => cases supported
-  | SETFIELD3 => cases supported
-  | SETFIELD => cases supported
+  | SETFIELD0 => exact counted_setfield0_row custom fits full
+  | SETFIELD1 => exact counted_setfield1_row custom fits full
+  | SETFIELD2 => exact counted_setfield2_row custom fits full
+  | SETFIELD3 => exact counted_setfield3_row custom fits full
+  | SETFIELD => exact counted_setfield_row custom fits full
   | SETFLOATFIELD => cases supported
   | VECTLENGTH => cases supported
   | GETVECTITEM => cases supported
@@ -531,9 +533,9 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
   | RAISE_NOTRACE => exact counted_raise_notrace_row custom fits good
   | GETSTRINGCHAR => cases supported
 
-/-- Six barrier rows still need the spatial supplier and counted G2; complete primitive-call rows stay open. -/
+/-- Complete primitive-call rows stay open; supported barriers retain counted G2 full growth. -/
 def countedRemainingOpcodes : List Opcode :=
-  [.SETGLOBAL, .SETFIELD0, .SETFIELD1, .SETFIELD2, .SETFIELD3, .SETFIELD, .C_CALL1, .C_CALL2, .C_CALL3, .C_CALL4, .C_CALL5]
+  [.C_CALL1, .C_CALL2, .C_CALL3, .C_CALL4, .C_CALL5]
 
 /-- Exact complement against the authoritative F1 opcode classification. -/
 theorem counted_opcode_census (op : Opcode) :
@@ -541,9 +543,9 @@ theorem counted_opcode_census (op : Opcode) :
   cases op <;> decide
 
 /-- Number of supported complete counted ordinary opcode rows. -/
-theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 123 := by decide +kernel
+theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 129 := by decide +kernel
 
-/-- The remaining list has exactly eleven distinct opcode obligations. -/
-theorem counted_remaining_count : countedRemainingOpcodes.length = 11 ∧ countedRemainingOpcodes.Nodup := by decide
+/-- The remaining list has exactly five distinct opcode obligations. -/
+theorem counted_remaining_count : countedRemainingOpcodes.length = 5 ∧ countedRemainingOpcodes.Nodup := by decide
 
 end OCaml.Vm.Sim

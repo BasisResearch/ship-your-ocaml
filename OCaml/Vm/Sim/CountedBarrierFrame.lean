@@ -1,8 +1,8 @@
 import OCaml.Vm.Sim.CountedRuntime
 import OCaml.Vm.Sim.F1GrowthPaths
 
-/-! Actual counted barrier effects. RefCustomApart is an explicit spatial
-supplier still missing from the current LibHeapAt invariant. Full-table
+/-! Actual counted barrier effects. RefCustomApart comes from the selected
+LibHeapAt custom-space invariant. Full-table
 collection requires BarrierGrowthFull at the local counted layout itself;
 the base-layout obligation does not imply that stronger instantiation. -/
 namespace OCaml.Vm.Sim
@@ -10,12 +10,12 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- Insertion frames use the real struct/entry windows and the selected
-ledger. Only custom-storage separation remains an explicit spatial input. -/
+ledger's custom-space evidence. -/
 theorem f1_insert_channelCountFrame {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} {c d : Config} {cp : ChanPlace} {world : World}
     {tbl ptr limit slot : BitVec 64}
     (custom : Gc.CustomMemCall Ready state Customs) (runtime : Gc.f1Runtime c)
-    (counts : ChannelCustomsRepr Customs c cp world) (apart : Gc.RefCustomApart c)
+    (counts : ChannelCustomsRepr Customs c cp world)
     (table : Gc.Barrier.Table (word c Layout.sym_Caml_state) tbl ptr limit c.σ.mem)
     (room : ptr.toNat < limit.toNat)
     (memory : d.σ.mem = writeLog c.σ.mem (Gc.Barrier.insertLog tbl ptr slot)) :
@@ -76,17 +76,15 @@ theorem f1_insert_channelCountFrame {Ready : Nat → Config → Prop}
             apply sep
             constructor <;> dsimp only at * <;>
               simp only [Layout.off_ref_table_ptr] at * <;> omega
-        · exact apart.entry_outside heap room (custom.footprint c x hx)
+        · exact heap.refCustomApart.entry_outside heap room (custom.footprint c x hx)
       exact congrArg (fun v => v.getD 0) (frame x out))
       (statics _ 8 (by decide))
 
-/-- Local counted BarrierRuntime, conditional on the precise missing
-custom-storage separation supplier. No arbitrary WindowStable or successor
-runtime is added. Table windows are transported with identical geometry. -/
+/-- Local counted BarrierRuntime from actual selected spatial evidence.
+Table windows are transported with identical geometry. -/
 theorem counted_barrierRuntime {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} {cp : ChanPlace} {world : World}
-    (custom : Gc.CustomMemCall Ready state Customs)
-    (remembered : ∀ c, Gc.f1Runtime c → Gc.RefCustomApart c) :
+    (custom : Gc.CustomMemCall Ready state Customs) :
     BarrierRuntime (countedLayout Gc.f1Layout Customs cp world) where
   idle c before := f1_barrierRuntime.idle c before.1
   table c before := by
@@ -95,7 +93,7 @@ theorem counted_barrierRuntime {Ready : Nat → Config → Prop}
       separated P s pl cp0 high (geometry.retarget rfl)⟩
   insert c tbl ptr limit slot before table room after memory young :=
     ⟨Gc.f1_insert c tbl ptr limit slot before.1 table room after memory young.1,
-      (f1_insert_channelCountFrame custom before.1 before.2 (remembered c before.1)
+      (f1_insert_channelCountFrame custom before.1 before.2
         table room memory).repr before.2⟩
 
 /-- The real unallocated growth return keeps all count components. Refcount
@@ -170,11 +168,10 @@ theorem counted_barrierGrowth {Ready : Nat → Config → Prop}
 /-- Shared adapter for the six barrier opcodes. The full-table supplier is
 G2 at each local counted layout, including physical accounting, references,
 links and all ordinary native fields. Its base-layout instance is insufficient.
-The separate RefCustomApart supplier is a concrete spatial gap, not table closure. -/
+The insertion spatial supplier is derived from the actual selected heap. -/
 theorem counted_barrier_row {P : Prog} {op : Opcode}
     {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
     (custom : Gc.CustomMemCall Ready state Customs)
-    (remembered : ∀ c, Gc.f1Runtime c → Gc.RefCustomApart c)
     (full : ∀ cp world, BarrierGrowthFull (countedLayout Gc.f1Layout Customs cp world))
     (row : ∀ cp world,
       BarrierRuntime (countedLayout Gc.f1Layout Customs cp world) →
@@ -189,7 +186,7 @@ theorem counted_barrier_row {P : Prog} {op : Opcode}
     (channels : ∀ (s : St) (i : Instr) (s' : St),
       i.op = op → stepI P s i = .next s' → s'.world.chans = s.world.chans) :
     OCaml.OpArm P (CountedLoopAt Customs Gc.f1Layout P) op :=
-  counted_row (fun cp world => row cp world (counted_barrierRuntime custom remembered)
+  counted_row (fun cp world => row cp world (counted_barrierRuntime custom)
     (counted_barrierGrowth custom) (full cp world)
     (counted_raiseRuntimeFrame custom) (fun _ _ => counted_fieldWriteReady custom)
     (counted_memoryStable f1_memoryStable custom.accounting)) channels

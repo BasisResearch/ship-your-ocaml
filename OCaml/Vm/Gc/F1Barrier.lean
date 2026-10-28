@@ -237,7 +237,12 @@ theorem LibHeapAt.insert_outside {H cap chs c} (h : LibHeapAt H cap chs c)
       dsimp only
       omega
 
-/-- The missing spatial supplier suffices at the precise insertion slot.
+/-- Actual runtime states carry selected local custom-space evidence. -/
+theorem f1_refCustomApart {c : Config} (runtime : f1Runtime c) : RefCustomApart c := by
+  obtain ⟨H, cap, chs, heap⟩ := runtime.freeListShape.libHeap
+  exact heap.refCustomApart
+
+/-- The selected spatial supplier suffices at the precise insertion slot.
 The struct store is excluded independently by CallerApart.covered. -/
 theorem RefCustomApart.entry_outside {H cap chs c} (apart : RefCustomApart c)
     (h : LibHeapAt H cap chs c)

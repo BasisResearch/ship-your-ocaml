@@ -8018,3 +8018,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.WalkGeometry.state_record_apart
 
 #print axioms OCaml.Vm.Sim.OutListWalk.OutListReturned.spatial_heap
+
+-- Counted write-row spatial suppliers from the selected custom-space invariant.
+#print axioms OCaml.Vm.Gc.LibHeapAt.refCustomApart
+#print axioms OCaml.Vm.Gc.f1_refCustomApart

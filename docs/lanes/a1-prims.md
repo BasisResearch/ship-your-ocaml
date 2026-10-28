@@ -2,6 +2,85 @@
 
 ## Current status
 
+**2026-10-28 counted write-row spatial supplier (base `9549edb8`):
+checked for lead review; all affected builds and focused audits pass.**
+
+Both prerequisites are present: the local `CustomSpace` repair (`2e47e2fc`)
+and counted field/native-growth adapters (`9549edb8`). Inventory and binding
+instructions were read before proof work. `LibHeapAt.refCustomApart` splits
+actual `h.table.shape`: base zero is immediate; allocated storage's selected
+arena bound excludes the static resource, `apartBlocks` excludes the domain
+resource, and `h.customSpace.allocated` excludes table/backing bytes using the
+actual nonzero remembered extent in `namedBlocked chs c`. Its end-minus-base
+extent and strict storage size remain in the proof. `f1_refCustomApart`
+exposes this at actual runtime states. Shared Covered membership alone is
+still insufficient; the existing weak-interface alias obstruction is unchanged.
+
+`f1_insert_channelCountFrame`, `counted_barrierRuntime` and all six barrier
+row contracts now derive the extra spatial evidence from the selected heap.
+No separate `RefCustomApart` supplier remains. Initially-empty growth still
+uses the actual `GrowDone.kept`, selected ownership and forward count frame;
+physical Customs, natural refcounts, list links and placement pass through
+that same native run. OFFSETREF retains its actual object-field supplier.
+The field/control generators emit complete SETGLOBAL, SETFIELD/0/1/2/3 and
+OFFSETREF contracts, and the exact partial table contains **129/134** rows
+relative to the named custom and counted G2 suppliers. Exactly **C_CALL1–5**
+still lack whole-row contracts.
+
+**Open G2 producer:** the six barrier contracts and partial table explicitly
+retain `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
+It must supply physical Customs, natural references, list links and all
+ordinary runtime/native fields at that frozen cp/world. The base-layout
+contract is not lifted. No arbitrary whole-row premise, backward count
+transport, GoodF1 restriction or physical-count change was added.
+`CustomMemCall` stays named; concrete physical/startup/channel/custom-call
+suppliers and full counted F1 assembly remain open. C4 round 2 waits for F1.
+
+Verification:
+
+- Guarded/capped `lake build OCaml.Vm.Gc.F1Heap OCaml.Vm.Gc.F1Barrier`:
+  **1,558 jobs passed**, `/tmp/counted-spatial-heap.log`.
+- Guarded/capped `lake build OCaml.Vm.Sim.CountedControlRows
+  OCaml.Vm.Sim.CountedPrimAllocRows`: **3,200 jobs passed**,
+  `/tmp/counted-spatial-rows.log`; includes the seven field rows,
+  counted insertion/empty-growth adapters and exact 129/5 census.
+- Final guarded/capped affected build: **3,664 jobs passed**,
+  `/tmp/counted-spatial-affected-final.log`. Explicit targets:
+  `Gc.{CustomLedger,F1Heap,F1Barrier,F1Grow}` and
+  `Sim.{CountedRuntime,F1Growth,BarrierF1,CountedControlRows,
+  CountedPrimAllocRows,CountedChannelRows,CountedEntry,F1Table,WhileMinTable}`
+  under `OCaml.Vm`. This checks all affected native/count/startup/assembly
+  consumers; full `OCaml.Audit` was left to the lead.
+- Separate guarded/capped prerequisites pass: `OCaml.Vm.Sim.PrimMlOutput`,
+  **1,908 jobs**, `/tmp/counted-spatial-mloutput.log`; and
+  `OCaml.Programs.WhileMinShape`, **2,061 jobs**, kernel shape certificate
+  39 seconds, `/tmp/counted-spatial-whilemin-shape.log`. No limits increased.
+- Six field/control/stack/allocation/A2/F1 generator checks pass; hole check
+  (4,750 files), discipline (27 rules), abstraction gate (C4 stays 3) and
+  diff whitespace checks pass.
+- Guarded/capped `lake env lean -M 6000 -j 1
+  OCaml/Vm/Sim/CountedFieldAudit.lean`: **57 focused reports passed**,
+  `/tmp/counted-spatial-focused-audit.log`. All axioms are within
+  `{propext, Classical.choice, Quot.sound}` (or empty). Both new spatial
+  theorems and all 15 new/changed theorem declarations are covered; every
+  report is registered exactly once in `OCaml/Audit.lean`. Exact name/order,
+  count, allowed-set, registration and declaration coverage are checked by
+  `/tmp/counted-spatial-check-audit.py`; the corresponding names are in
+  `/tmp/counted-spatial-{new-theorems,changed-theorems,audit-names}.txt`.
+  Full Audit stays with the lead.
+
+Every build/audit ran alone through `python3 scripts/lean-guarded.py --log
+/tmp/counted-spatial-....log -- scripts/lean-capped.sh lake ...`, under the
+inherited MemoryMax=12G and LEAN_NUM_THREADS=2 (focused audit: `-j 1`).
+`free -g` was checked before every launch: available memory was respectively
+74, 74, 73, 72, 91 and 87 GB (all at least 25 GB). No virtual-address limit,
+heartbeat increase or direct generated-source edit was used.
+
+Checked source edits remain in this worktree for lead review and landing via
+`scripts/integrate.sh`. No subagents, Git metadata writes or landing attempt.
+The earlier field/barrier entry below describes the superseded missing-supplier
+boundary; the selected custom-space producer above closes that local gap.
+
 **2026-10-28 counted field/barrier continuation (base `9de2d983`): checked
 for lead review; six barrier rows retain the missing spatial supplier.**
 

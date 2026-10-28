@@ -21,6 +21,11 @@
   and selected `CustomLedger.owned`. A supplier at every runtime state needs
   an invariant and real preservation/startup/custom-call producers. Do not
   infer it from two Covered witnesses or add it silently to GoodF1.
+  Resolved for the selected invariant by `LibHeapAt.refCustomApart` and
+  `f1_refCustomApart`: `CustomSpace.allocated` protects the real nonzero
+  remembered extent in `namedBlocked`; arena bounds separate the static
+  resource and `apartBlocks` separates the domain resource. The weak-interface
+  alias obstruction remains valid; it does not include `CustomSpace`.
 
 - 2026-10-28 counted full-table growth: `BarrierGrowthFull f1Layout` returns
   only the base runtime. It cannot be treated as

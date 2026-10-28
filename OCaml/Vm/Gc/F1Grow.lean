@@ -354,10 +354,10 @@ theorem f1_afterGrow {c c' : Config} {H : List (Nat × Nat)} {cap : Nat} {chs : 
     rw [tblNat] at l
     exact toNat_of_add l (by decide) (by simp only [heapEnd] at fits; omega)
 omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
-/-- The actual first allocation supplies the missing storage separation:
+/-- The actual first allocation supplies storage separation directly:
 the new remembered storage is fresh against the selected custom ledger.
-This does not manufacture a supplier at arbitrary f1Runtime states or after
-custom-table growth, whose invariant still records ownership alone. -/
+`LibHeapAt.refCustomApart` separately derives the general supplier from the
+selected local custom-space invariant. -/
 theorem f1_afterGrow_customApart {c d : Config} {H : List (Nat × Nat)} {cap capacity : Nat}
     {chs : List Nat} {slot value ra sp : BitVec 64} (h : LibHeapAt H cap chs c)
     (done : Barrier.GrowDone live H capacity slot value ra sp

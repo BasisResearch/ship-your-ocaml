@@ -27,7 +27,7 @@ ELF pin).
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
 | `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
-| Counted loop placement coherence, shared stack/allocation/raise/field frames, 123 ordinary rows and actual unary channel-call success | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedChannelRows}.lean` | A1 (a1-prims) | **proved helpers and 123/134 supplied ordinary rows** (58 stack/load/assignment/trap, 41 memory/control, 16 control/raise/halt, seven nursery allocation rows and OFFSETREF), plus six conditional barrier row terms retaining the missing `RefCustomApart` supplier and `BarrierGrowthFull` at the counted layout; actual unallocated growth retains counts from its native post. Eleven supplied-row obligations remain **open**: SETGLOBAL, SETFIELD0–3/SETFIELD and C_CALL1–5. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
+| Counted loop placement coherence, shared stack/allocation/raise/field frames, 129 ordinary rows and actual unary channel-call success | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedChannelRows}.lean` | A1 (a1-prims) | **proved helpers and 129/134 supplied ordinary rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 16 control/raise/halt, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. Five whole-row obligations remain **open**: C_CALL1–5. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
 | Actual custom-table zero occupancy and interpreter-entry transport | `OCaml/Vm/Gc/ChannelCustomCount.lean`, `OCaml/Vm/Sim/{EntryLoop,CountedEntry}.lean`; layout/runtime-read generators | A1 (a1-prims) | **proved count component**, selected custom-ledger startup ownership and actual prologue frame; `table_count_resources_unconstrained` checks that occupancy leaves resource words arbitrary. Full physical custom runtime/startup zero remains **open**; occupancy is not used as a quietness supplier |
 | Conditional global custom-frame obstruction; local selected spatial API and actual opening/listing frames | `OCaml/Vm/Gc/{CustomFrameObstruction,CustomLedger,CustomMem,F1Heap}.lean`, channel/listing consumers | A1 (a1-prims/a6-gc) | **proved helpers**: pinned-domain write-log obstruction, selected spatial startup/frame/fresh/growth producers and same-returned-ledger opening/listing evidence; concrete physical accounting/native `CustomMemCall` and runtime/F1 suppliers remain **open** |
 | F1 loop-head rows for the integer, comparison, constant, branch and push-constant families (`top_read_row`, `input_row`, `push_set_row`; `*_next` for 51 opcodes) | `OCaml/Vm/Sim/{IntRows,ImmediateRows,OperandRows,PushConstRows}.lean` | A1 (a2-sem) | **proved** from `LoopAt` + `DispatchCode` + operand fetches, concluding `LoopAt`; named premises: `MemoryStable`; EQ/NEQ in-range operands, BRANCHIF/NOT non-raw accumulator and BEQ/BNEQ immediates read off BcSem's use-site guards (BEQ/BNEQ on an in-range pointer or atom proved "not equal" natively, `imm_test_pointer`) |
@@ -406,29 +406,33 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
-**Counted field/barrier continuation, 2026-10-28: checked for lead review.**
-The supplied object-field frame reuses `FieldWriteOk.of_geometry`, the
-selected entry ledger and named custom separation; OFFSETREF reuses its
-actual native object-field store. Seven generated field-writing wrappers
-retain the real semantic guards. Only OFFSETREF has all local suppliers:
-the supplied ordinary census becomes 123/134. Six barrier terms retain the
-explicit missing `RefCustomApart` spatial supplier and the standing G2
-obligation at `countedLayout`, leaving eleven supplied-row obligations
-(SETGLOBAL, SETFIELD/0/1/2/3, C_CALL1–5). The actual initially-unallocated
-`GrowDone` post supplies a counted frame and fresh custom-storage separation;
-shared ledger ownership alone is insufficient at arbitrary runtime states
-(`RefStorage.custom_alias`, an interface obstruction, not a reachable alias).
-Base-layout `BarrierGrowthFull` is not silently lifted: G2 must supply the
-same named obligation with all counted/native/runtime fields at each frozen
-cp/world. No new opaque whole-row premise or GoodF1 guard is used.
-The field build passes 2,625 jobs, the final affected build 3,631 jobs and
-separate whileMin assembly 3,244 jobs. All 55 focused reports pass the allowed
-axiom check, cover every added/refactored theorem and are registered in Audit.
-Earlier concurrent heavy dependencies hit the 10 GiB guard; isolated console
-and shape prerequisites pass without changing limits. Exact logs and remaining
-suppliers are at the top of the A1 lane log. `CustomMemCall` stays named;
-C4 round 2 waits for F1. Full Audit and integration
-remain the lead gate; checked edits are left for review.
+**Counted write-row spatial supplier, 2026-10-28: checked for lead review.**
+`LibHeapAt.refCustomApart` derives separation from the actual selected state:
+unallocated base is immediate; allocated storage uses its arena bound for the
+static resource, `apartBlocks` for the domain resource, and
+`CustomSpace.allocated` with the actual nonzero remembered extent in
+`namedBlocked` for the custom-table struct/backing storage. `f1_refCustomApart`
+exposes the runtime producer. Shared ledger ownership alone remains insufficient
+(`RefStorage.custom_alias` concerns the weaker interfaces).
+
+The fast insertion count frame consumes this selected evidence without an extra
+premise. Initially-unallocated growth still uses the actual `GrowDone.kept` and
+selected ownership for physical Customs, refcounts and list links. Counts and
+placement pass forward through that same native run. Generated SETGLOBAL,
+SETFIELD/0/1/2/3 and OFFSETREF contracts now have all local runtime suppliers;
+the exact partial table/census contains 129/134 rows, with C_CALL1–5 remaining.
+Six barrier rows and the partial table explicitly retain
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
+The full-growth producer stays open with G2; no base-layout lift or arbitrary
+whole-row premise is claimed. `CustomMemCall` stays named, physical count
+meaning and GoodF1 are unchanged, and C4 round 2 waits for F1. The row build
+passes 3,200 jobs; final affected build passes 3,664 jobs, including counted
+channel/startup and both F1/whileMin assemblies. All 57 focused allowed-axiom
+reports pass, cover both new and all 15 new/changed theorem declarations,
+and are registered exactly once in Audit. Six generator drift checks, hole,
+discipline, abstraction and diff checks pass. Exact evidence is recorded at
+the top of the A1/a6 lane logs. Checked edits remain for lead review; full
+OCaml.Audit and integration remain the lead gate.
 
 **Local custom spatial repair, 2026-10-28: checked for lead review.**
 `Gc.global_records_frame_obstruction` checks the precise conditional pinned-domain

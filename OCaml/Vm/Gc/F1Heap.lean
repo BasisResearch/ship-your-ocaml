@@ -108,11 +108,9 @@ structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : 
   apartRecords : ∀ a ∈ chs, e ≤ a ∨ a + chanRecordBytes ≤ b
   apartCustom : e ≤ customTable ∨ customTable + Layout.custom_table_bytes ≤ b
 
-/-- Spatial boundary currently absent from LibHeapAt: dynamic remembered
-storage must miss the physical custom footprint, as well as the custom-table
-struct. Shared ownership of a ledger does not establish this separation.
-A producer must establish it at startup and preserve it across custom calls
-and remembered-set growth; no runtime successor is assumed here. -/
+/-- Dynamic remembered storage misses the full physical custom footprint.
+`LibHeapAt.refCustomApart` derives this from selected local spatial evidence;
+shared ownership of a ledger alone does not establish separation. -/
 def RefCustomApart (c : Config) : Prop :=
   (word c (refTable + Layout.off_ref_table_base)).toNat = 0 ∨
     ∀ x, CustomFoot c x →
@@ -304,6 +302,40 @@ theorem LibHeapAt.blocked_covered {H cap chs c} (h : LibHeapAt H cap chs c) :
     · rw [if_neg allocated.nonzero] at storage
       obtain rfl := List.mem_singleton.mp storage
       exact allocated.covered
+
+/-- The selected custom-space invariant separates allocated custom storage
+from the actual remembered-storage extent. Resource words use the storage's
+arena bounds and its separation from the domain allocation. -/
+theorem LibHeapAt.refCustomApart {H cap chs c} (h : LibHeapAt H cap chs c) :
+    RefCustomApart c := by
+  rcases h.table.shape with empty | storage
+  · exact Or.inl empty.1
+  · right
+    intro x foot
+    obtain ⟨owner, member, ownerLo, ownerHi⟩ := storage.covered
+    have arena := (h.ready.block_bounds member).1
+    have low : heapStart ≤ (word c (refTable + Layout.off_ref_table_base)).toNat := by
+      dsimp only at ownerLo
+      omega
+    rcases foot with static | resource | alloc
+    · have bound : Layout.sym_caml_extra_heap_resources + 8 ≤ heapStart := by decide
+      have hi := static.2
+      dsimp only at hi
+      exact Or.inl (by omega)
+    · have apart := storage.apartBlocks
+        (Boot.WhileMinRuntime.domain, Layout.domainStateBytes) (by simp [f1Covered])
+      have lo := resource.1
+      have hi := resource.2
+      have bound : Layout.off_extra_heap_resources_minor + 8 ≤ Layout.domainStateBytes := by decide
+      dsimp only at lo hi apart
+      omega
+    · have apart := h.customSpace.allocated x alloc _ (by
+        simp only [namedBlocked, if_neg storage.nonzero, List.mem_append, List.mem_singleton]
+        exact Or.inr rfl)
+      have sized := storage.sized
+      apply Classical.byContradiction
+      intro no
+      exact apart ⟨by omega, by dsimp only; omega⟩
 
 /-- The custom table is not among the ordinary caller-write extents. -/
 theorem F1HeapSafe.custom_out {w : W} (safe : F1HeapSafe w) {a : Nat}

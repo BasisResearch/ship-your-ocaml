@@ -1,5 +1,37 @@
 # Lane a6-gc
 
+## Counted write-row spatial supplier (2026-10-28)
+
+- `LibHeapAt.refCustomApart` now consumes the selected `CustomSpace` repair
+  below. It splits actual remembered-table shape, uses arena bounds for the
+  static resource, actual `apartBlocks` for the domain resource, and
+  `CustomSpace.allocated` on the real nonzero remembered-storage extent in
+  `namedBlocked` for custom-table/backing separation. `f1_refCustomApart`
+  exposes the actual runtime supplier without a new premise.
+- The fast insertion frame and six counted barrier rows no longer take an
+  extra spatial supplier. Empty-table growth retains the actual native
+  observations and forward physical/reference/link/placement frame.
+  Seven write contracts are supplied locally; generated census is 129/134
+  relative to named custom and counted G2 suppliers, with C_CALL1–5 open.
+- Full-table growth remains exactly
+  `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
+  G2 must supply the stronger counted/native return boundary; the base-layout
+  contract is not lifted. CustomMemCall, physical count meaning and GoodF1
+  are unchanged; C4 round 2 waits for F1. Full Audit/integration stay with
+  the lead. Validation and all remaining native supplier limitations are
+  tracked in the current entry at the top of `a1-prims.md`.
+- Validation: the final guarded/capped affected build passes **3,664 jobs**
+  (`/tmp/counted-spatial-affected-final.log`), including all targeted heap,
+  barrier/growth/count modules and counted channel/startup/F1/whileMin
+  consumers. All **57 focused reports** pass the allowed-axiom check,
+  covering both new and all 15 new/changed theorem declarations; all reports
+  are registered exactly once in Audit. Row build, isolated console/shape
+  prerequisites, six generator checks, holes, discipline, abstraction and
+  diff checks pass. Every Lean launch checks `free -g` (available ≥25 GB),
+  runs alone through the guard/cap and retains the 12 GiB/two-thread policy.
+  Checked edits stay uncommitted for lead integration; no metadata writes,
+  whole Audit, generated-output hand edits or proof-budget changes.
+
 ## Local custom spatial contract repair (2026-10-28)
 
 - Read the binding guidance, selected-ledger log, task brief, A1 plan/status

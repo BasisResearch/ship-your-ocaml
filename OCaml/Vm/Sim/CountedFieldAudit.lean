@@ -27,6 +27,8 @@ Full OCaml.Audit remains the lead gate. -/
 #print axioms OCaml.Vm.Sim.counted_barrierGrowth
 #print axioms OCaml.Vm.Sim.counted_barrier_row
 #print axioms OCaml.Vm.Gc.RefStorage.custom_alias
+#print axioms OCaml.Vm.Gc.LibHeapAt.refCustomApart
+#print axioms OCaml.Vm.Gc.f1_refCustomApart
 #print axioms OCaml.Vm.Gc.f1_table_eq
 #print axioms OCaml.Vm.Gc.LibHeapAt.insert_outside
 #print axioms OCaml.Vm.Gc.RefCustomApart.entry_outside
