@@ -30,8 +30,8 @@ footprint/accounting/frame laws and the captured counted startup entry.
 Lead review covered 45 new registrations, 3,679 consumer jobs and 62 focused
 reports (59 allowed, three pure); `logs/custom-physical-*`.
 
-**Next gate:** bprime is moving to the reviewed local batch below, including
-complete C_CALL1, for `scripts/integrate.sh`. Log:
+**Active gate:** bprime at fixed candidate `92be3a3e`, started 19:20 UTC,
+contains the reviewed local batch below, including complete C_CALL1. Log:
 `/tmp/syo-counted-unary-integrate.log`; bprime `.integrate.log` and
 `.check-build.log`. Do not change this tree's HEAD, source or cache mid-gate.
 
@@ -75,7 +75,8 @@ No active worker cache is copied into bprime.
 The parser worker resumed output after a quiet interval; it is active.
 Current task files: `tasks/sol-code-seek-scan.md`, `tasks/sol-format-parse-all.md`.
 Next G2 rotation: `tasks/sol-g2-small-wrapper.md` (original exact/next-small
-wrapper, factoring common caller frames). Next primitive rotation:
+wrapper, factoring common caller frames), then `tasks/sol-code-load.md`
+(actual CODE allocation/read to code-fragment registration entry). Next primitive rotation:
 `tasks/sol-named-reserve.md`; subsequent formatting decoder work is in
 `tasks/sol-format-decoder.md`. Read `docs/lanes/DEAD-ENDS.md` before reassignment.
 All task packets start with binding rules and stay under 40 lines.
