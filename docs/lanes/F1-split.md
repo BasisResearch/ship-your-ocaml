@@ -116,10 +116,11 @@ carry physical accounting. Wrong arities are still discharged by
 `PrimReturnsAtD.of_arity`; the full `GoodF1` domain is unchanged.
 
 The counted route now carries physical/refcount witnesses through loop
-placement, entry/setup, shared frames and **132/134 complete opcode rows**.
+placement, entry/setup, shared frames and **133/134 complete opcode rows**.
 C_CALL3/5 are complete by the checked arity classification; C_CALL4 has actual
 console returns and all rejection cases. Counted fresh-OO-ID success and
-native unary exit are also checked. Whole C_CALL1/2 remain open.
+native unary exit are also checked. Reviewed `26201d6b` composes complete
+C_CALL1, including rejected outcomes; only whole C_CALL2 remains open.
 
 `CountedCcall1` and the channel summaries retain actual returned placement,
 physical transitions and natural refcount observations. They do not by
@@ -169,8 +170,9 @@ Still open:
    are reviewed in `53e93d16`; reset execution remains separate.
 2. Integration of the reviewed concrete opening (`9f4e4fa1`) and listing
    (`66343b8a`) runtime producers; their native custom duties stay named.
-3. Whole C_CALL1 assembly from all unary successes and native exit, and
-   C_CALL2's general formatting/named-registration runtime producers.
+3. C_CALL2's general formatting/named-registration runtime producers.
+   Complete counted C_CALL1 is reviewed in `26201d6b` (four new theorems,
+   3,733-job consumer build, 22 exact focused audit reports).
 4. Complete counted F1 assembly, with counted `BarrierGrowthFull` supplied by
    G2. The old ordinary table is not completed merely by weakening away counts.
 5. Reset through the native CODE scan, CODE/PRIM/DATA loading, promotion and

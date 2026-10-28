@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 18:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:46 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -175,7 +175,7 @@ the concrete producer. Lead reviewed nine unique new registrations, all
 20 pure). Only additive dead-end notes conflicted on rebase; both retained.
 Snapshot: `keep/opening-runtime-reviewed-20261028`;
 evidence: `logs/opening-runtime-*`. This joins the next integration batch.
-Whole unary opcode assembly remains open until its own proof checks.
+The complete unary assembly is now reviewed below.
 
 ## Reviewed original-caller bounded G2 wrapper
 
@@ -193,25 +193,36 @@ Snapshot: `keep/g2-large-wrapper-reviewed-20261028`;
 evidence: `logs/a6-wrapper-*`. General caller production, small wrappers,
 requests>16, arbitrary trees, expansion and collection remain open.
 
+## Reviewed complete counted C_CALL1
+
+`26201d6b` closes the complete counted unary opcode on unchanged GoodF1/Fits,
+using concrete opening/listing producers, ordinary returns, counter, flush
+and the actual native exit. The four new theorems cover success classification,
+actual decoded/rejected outcomes and the complete row; shared halt helpers
+were moved unchanged below the census. The local checked table is **133/134**,
+with only C_CALL2 remaining, relative to the same CustomMemCall and counted
+G2 growth premises. Published coverage remains 132 until this batch lands.
+Lead checked all four unique new registrations, the 3,733-job consumer build
+and exact 22 focused reports (21 allowed-axiom, one pure). Rebase was clean.
+Snapshot: `keep/counted-unary-reviewed-20261028`;
+evidence: `logs/counted-unary-*`. Full gate and publication remain queued.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Startup Sol | Actual CODE reverse scan, lseek and return | `syo-wt/a6-gc-next2` |
-| Unary Sol | Complete counted C_CALL1 opcode and census assembly | `syo-wt/a1-prims-next` |
+| Format Sol | Full native format parser and actual format-int caller prefix | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
 The bounded G2 wrapper is reviewed and committed. That slot returns to
 `tasks/sol-code-seek-scan.md`, log `/tmp/syo-code-seek-scan-launch.log`.
 The next G2 rotation is `tasks/sol-g2-small-wrapper.md`, reusing shared
 original-caller frame suppliers for exact/next-size small success.
-Opening and listing runtime producers are reviewed. That slot now takes
-`tasks/sol-counted-unary-complete.md`, log
-`/tmp/syo-counted-unary-complete-launch.log`. No active worker cache is
-copied into bprime.
-After checked unary assembly, the primitive slot takes
-`tasks/sol-format-parse-all.md` for the complete native parser/caller prefix;
-named storage and root-cell resource work stays in `tasks/sol-named-reserve.md`.
+The primitive slot now takes `tasks/sol-format-parse-all.md`, log
+`/tmp/syo-format-parse-all-launch.log`, for the complete native parser/caller
+prefix. Named storage and root-cell resource work stays in
+`tasks/sol-named-reserve.md`. No active worker cache is copied into bprime.
 These rotations keep both F1 and G2 moving; remaining caller and native
 execution boundaries stay explicit.
 
@@ -221,9 +232,8 @@ The published **132/134** table is relative to named `CustomMemCall` and
 `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
 The base-layout G2 contract cannot supply the extra returned counts.
 
-C_CALL1 needs composition of all unary successes and actual exit. Opening
-and listing runtime producers are reviewed; counter and exit are checked.
-Its active assembly packet is tasks/sol-counted-unary-complete.md.
+Complete C_CALL1 is reviewed in `26201d6b`. Opening/listing runtime producers,
+all unary successes and actual exit now compose without extra runtime suppliers.
 C_CALL2 needs named registration and general formatting. Named registration
 must derive node/key reserve from immutable source provenance, including
 fully initialized partialBytes, and account separately for repeated root-cell
