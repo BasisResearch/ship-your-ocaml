@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:39 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -102,6 +102,10 @@ all 36 new unique registrations, the 2,372/3,713-job affected builds and
 terms remain unchanged. Snapshot: `keep/counted-console-reviewed-20261028`;
 evidence: `logs/console-counts-*`. Rebase conflicts were adjacent lane and
 dead-end notes; both sides were retained. It is not yet published.
+
+The next full gate is active in `syo-wt/bprime` at fixed candidate
+`34658c24` (started 16:36 UTC), including both reviewed batches.
+Log: `/tmp/syo-console-g2-integrate.log`.
 
 ## Active work
 
