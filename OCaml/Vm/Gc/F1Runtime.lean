@@ -1146,6 +1146,16 @@ theorem libHeap_at_of {c : Config}
     rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   have reserve : reserved (word c (refTable + Layout.off_ref_table_base)).toNat ([] : List Nat).length ≤ cap := by
     rw [base]; simp only [reserved, tableCharge, recordCharge, maxChannels, if_true, List.length_nil] at *; omega
+  have credit : reserved (word c (refTable + Layout.off_ref_table_base)).toNat ([] : List Nat).length +
+      customTableReserve c ≤ cap := by
+    have cb : customBase c = 0 := by
+      unfold customBase customTable
+      rw [WhileMinRuntime.read_custom_table_base memory]
+      rfl
+    rw [base]
+    simp only [reserved, tableCharge, recordCharge, maxChannels, if_true, List.length_nil,
+      customTableReserve, cb, customTableCharge] at *
+    omega
   have buckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0 := by
     intro b hb
     unfold word
@@ -1185,7 +1195,7 @@ theorem libHeap_at_of {c : Config}
   refine ⟨H, cap, room, ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
     (fun _ h => by cases h), (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
       Or.inl ⟨?_, ?_, ?_⟩⟩,
-    exact _ List.mem_cons_self, namedLedger, customLedger, customSpace, (fun _ h => by cases h)⟩⟩
+    exact _ List.mem_cons_self, namedLedger, customLedger, customSpace, (fun _ h => by cases h), credit⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl

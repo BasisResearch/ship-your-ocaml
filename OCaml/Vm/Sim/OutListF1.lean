@@ -330,33 +330,37 @@ theorem selected_table_mono {H H' : List (Nat × Nat)} {chs : List Nat} {c : Con
   · exact Or.inr { allocated with covered := selected_covered_mono allocated.covered sub }
 
 /-- The actual spatial return reconstructs every selected F1 heap field.
-Only the numeric reserve at this same returned capacity remains to be supplied
-by native allocation spending; no returned LibHeapAt is assumed. -/
+Its credit is carried by the native walk on this same returned capacity;
+no returned LibHeapAt is assumed. -/
 structure OutListHeapRestored (H : List (Nat × Nat)) (capacity : Nat) (chs : List Nat) (d : Config) : Prop where
   heap : Boot.Startup.HeapReady H capacity d
   physical : CustomOwned CustomFoot H d
-  restore : Gc.reserved (word d (refTable + Layout.off_ref_table_base)).toNat chs.length ≤ capacity →
-    LibHeapAt H capacity chs d
+  restore : LibHeapAt H capacity chs d
 
 /-- Rebuild from the real spatial/custom return and selected unchanged
-ref-table/named ledger. The conditional result exposes exactly where a
-capacity-spending supplier must connect to the returned heap witness. -/
+ref-table/named ledger. The returned credit was produced by composing actual
+native spending with ordinary caller frames, on this returned heap witness. -/
 theorem OutListReturned.restore_heap {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
     {w : Walk} {k cap : Nat} {ra s0 : BitVec 64} {c d : Config}
     (custom : CustomMemCall Ready state Customs)
     (ret : OutListReturned w Ready state Customs k ra s0 c d)
     (h : LibHeapAt w.H0 cap w.chs c)
+    (reserve : w.reserve = Gc.reserved (word c (refTable + Layout.off_ref_table_base)).toNat w.chs.length)
     (keepTable : ∀ y, InTableWords y → (d.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
     (keepNamed : ∀ a, NamedRead c a → byte d a = byte c a) :
     ∃ H capacity, OutListHeapRestored H capacity w.chs d := by
-  obtain ⟨H, capacity, heapD, physical, ledgerD, spaceD, namedD, sub⟩ :=
+  obtain ⟨H, capacity, heapD, physical, ledgerD, spaceD, namedD, sub, credit⟩ :=
     ret.spatial_heap custom h.ready h.customSpace h.named h.blocked_covered keepNamed
   have blocked : namedBlocked w.chs d = namedBlocked w.chs c := by
     simp only [namedBlocked, structWord_keep keepTable (off := Layout.off_ref_table_base) (by decide),
       structWord_keep keepTable (off := Layout.off_ref_table_end) (by decide)]
-  refine ⟨H, capacity, ⟨heapD, physical, fun room => ?_⟩⟩
+  have room : Gc.reserved (word d (refTable + Layout.off_ref_table_base)).toNat w.chs.length + customTableReserve d ≤ capacity := by
+    rw [structWord_keep keepTable (off := Layout.off_ref_table_base) (by decide)]
+    simpa only [reserve] using credit
+  refine ⟨H, capacity, ⟨heapD, physical, ?_⟩⟩
   exact {
-    room := room
+    room := by omega
+    credit := room
     channelsBound := h.channelsBound
     ready := heapD
     extents := fun e he => selected_covered_mono (h.extents e he) sub

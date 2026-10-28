@@ -163,9 +163,9 @@ physical increment is a field of the named custom-call accounting obligation;
 it is never inferred from the returned `Ready k`. -/
 theorem ChannelCustomsAt.allocate
     {state Customs : Config → Nat → Prop} {c d : Config} {chs : List Nat} {n pending : Nat}
-    {H : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64}
+    {H : List (Nat × Nat)} {cap : Nat} {site : CustomMemSite} {v : BitVec 64}
     (before : ChannelCustomsAt Customs c chs n (pending + 1))
-    (returned : CustomMemCountedReturned state Customs H site v c d)
+    (returned : CustomMemCountedReturned state Customs H cap site v c d)
     (links : ChannelLinksKept c.σ.mem d.σ.mem chs)
     (refs : ∀ a ∈ chs, chanRefs d.σ.mem a = chanRefs c.σ.mem a) :
     ChannelCustomsAt Customs d chs (n + 1) pending := by

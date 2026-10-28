@@ -148,6 +148,7 @@ def entryWalk (c : Config) (N : Nat) (cp : ChanPlace) (len : Nat) (H : List (Nat
   Lm := (runtimeFields c).youngLimit
   chs := Gc.placedChannels cp len
   H0 := H
+  reserve := Gc.reserved (word c (Gc.refTable + Layout.off_ref_table_base)).toNat (Gc.placedChannels cp len).length
   S := state c
 
 /-- **What the C_CALL entry gives the walk.** -/
@@ -156,6 +157,7 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
     Prop where
   geometry : WalkGeometry w (outChannelIds s.world).length
   selected : Gc.LibHeapAt w.H0 cap w.chs c
+  reserve : w.reserve = Gc.reserved (word c (Gc.refTable + Layout.off_ref_table_base)).toNat w.chs.length
   input : OutListInput w Ready state k cap ra s0 c
   listed : listedRecs c.σ.mem w.chs = (outChannelIds s.world).map fun id => (cp id).getD 0
   payload : ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot w.H0 a ∧
@@ -205,7 +207,8 @@ structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop)
     CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c →
     OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0 →
     Gc.LibHeapAt w.H0 cap w.chs c →
-    OutListReturned w Ready state Customs k ra s0 c after → L.runtimeOk after
+    OutListReturned w Ready state Customs k ra s0 c after →
+    8 * (s.stack.length + 2) ≤ Layout.stackBytes → L.runtimeOk after
 
 /-- **The walk's inputs at the callee entry** of a C_CALL. -/
 theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -312,6 +315,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
         fun r hr => space.record_apart (rt.custom.footprint c a hs) (recs.low r hr) (by simpa only [fixedDomain, recBytes, Gc.chanRecordBytes] using recs.domain r hr)
           (by simp only [Gc.namedBlocked, List.mem_append]; exact Or.inl (Or.inr (List.mem_map.mpr ⟨r, hr, rfl⟩))), rfl⟩ }
     selected := selected.selected
+    reserve := rfl
     input := {
       context := selected.context
       leaf := input.toLeafInput
@@ -331,6 +335,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       limit := wL
       opened := ng.channelsListed
       ready := by rw [← nN]; simpa only [Nat.zero_add] using ready
+      credit := selected.selected.credit
       heap := heap
       owned := ⟨fun a ha => customLedger.owned.bytes a (rt.custom.footprint c a ha)⟩
       ledger := customLedger }
@@ -825,7 +830,7 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
         · exact (ret.stack.trans ent.input.stack.symm : gprGet f.σ 2 = gprGet c.σ 2) }
     data := payload.listRefs
     primitives := bindings_frame_on input.primitives hw frame
-    platform := ⟨ret.good, ret.image, rt.runtime setup ent ent.selected ret⟩
+    platform := ⟨ret.good, ret.image, rt.runtime setup ent ent.selected ret stackFits⟩
     loop := out_list_loop input.loop ret
     resultRepr := listVal_word (by walk_omega) placed (by omega)
     semantics := primF1Impl_outList s

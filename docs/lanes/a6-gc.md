@@ -1,5 +1,30 @@
 # Lane a6-gc
 
+## Selected credit and concrete listing return (2026-10-28)
+
+- LibHeapAt now carries ordinary reserve plus the actual one-time 1 MiB
+  custom-table reserve, produced at the selected captured cut and retained
+  through ordinary/count/setup, record, insertion and first-growth frames.
+  Shared reserve/table/spending definitions live below CustomMem/F1Runtime
+  in CustomCreditDefs; the request and charge remain 792576 bytes.
+- CustomMemCall.call consumes actual input credit and context and returns
+  selected same-ledger/capacity spending, full ledger/ownership and retained
+  blocks. QuietCustomTable/physical-count observations stay explicit;
+  native allocation, resource arithmetic/threshold execution and precise
+  spending remain in that accepted named obligation.
+- The actual listing walk propagates selected credit and composes native
+  spending with real caller frames. outList_f1_restore is unconditional;
+  f1_outList_runtime and the counted listing return need only CustomMemCall.
+  Opening retains its real 65616-byte record charge, recordCharge reserve
+  decrement and selected native spending. Full OpenOutRuntimeAt.after stays
+  with the separate opening packet.
+- The final affected build passes **3682 jobs** and **144 exact focused
+  reports** (all six new theorems included) use only allowed axioms or none.
+  Generator, hole, discipline, abstraction and whitespace checks pass.
+  Checked edits remain for lead integration; exact logs and commands are
+  at the top of a1-prims.md. Full Audit/integration remain the lead gate;
+  GoodF1 is unchanged, BarrierGrowthFull stays G2, C4 round 2 waits for F1.
+
 ## Concrete custom physical startup/context (2026-10-28)
 
 - `CustomPhysical` now supplies full resource/table observations, unique

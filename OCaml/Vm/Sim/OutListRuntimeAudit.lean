@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.F1Barrier
 import OCaml.Vm.Sim.OutListObstruction
 import OCaml.Vm.Sim.OutListF1Runtime
 import OCaml.Vm.Sim.CountedChannelRows
@@ -48,11 +49,12 @@ import OCaml.Vm.Sim.CountedChannelRows
 #print axioms OCaml.Vm.Sim.OutListWalk.outList_table_frame
 #print axioms OCaml.Vm.Sim.OutListWalk.outList_runtime_fields
 #print axioms OCaml.Vm.Sim.OutListWalk.outList_f1_restore
-#print axioms OCaml.Vm.Boot.Startup.HeapReady.capacity_mono
+#print axioms OCaml.Vm.Sim.OutListWalk.f1_outList_runtime
 #print axioms OCaml.Vm.Gc.customTableRequest_operands
 #print axioms OCaml.Vm.Gc.customTableRequest_cut
 #print axioms OCaml.Vm.Gc.customTableRequest_charge
 #print axioms OCaml.Vm.Gc.customTableCredit_startup
+#print axioms OCaml.Vm.Gc.LibHeapAt.customHeapCredit
 #print axioms OCaml.Vm.Gc.customHeapCredit_of
 #print axioms OCaml.Vm.Gc.CustomHeapCredit.frame_windows
 #print axioms OCaml.Vm.Gc.LibHeapAt.tightCapacity
@@ -60,9 +62,13 @@ import OCaml.Vm.Sim.CountedChannelRows
 #print axioms OCaml.Vm.Gc.CustomMemInput.zeroCapacity
 #print axioms OCaml.Vm.Gc.CustomMemInput.credit_obstruction
 #print axioms OCaml.Vm.Gc.CustomMemReturned.heap_zero
+#print axioms OCaml.Vm.Gc.CustomHeapCredit.spending_frame
+#print axioms OCaml.Vm.Boot.Startup.HeapReady.capacity_mono
+#print axioms OCaml.Vm.Gc.customTableReserve_congr
+#print axioms OCaml.Vm.Gc.customTableReserve_of_mem
+#print axioms OCaml.Vm.Gc.quietBound_spec
 #print axioms OCaml.Vm.Gc.QuietCustomTable.not_full
 #print axioms OCaml.Vm.Gc.CustomMemSpending.trans
-#print axioms OCaml.Vm.Gc.CustomHeapCredit.spending_frame
 #print axioms OCaml.Vm.Gc.CustomMemSpending.room
 #print axioms Vsa.Sim.caml_realloc_custom_tableXa694Seg_seg
 #print axioms Vsa.Sim.caml_realloc_custom_tableXa694Row
@@ -107,6 +113,28 @@ import OCaml.Vm.Sim.CountedChannelRows
 #print axioms Vsa.Sim.Code.caml_realloc_custom_table_at_8000a6b0
 #print axioms Vsa.Sim.Code.caml_realloc_custom_table_chunk0_transport
 #print axioms Vsa.Sim.Code.caml_realloc_custom_table_transport
+#print axioms OCaml.Vm.Gc.LibHeapAt.open_credit
+#print axioms OCaml.Vm.Sim.counted_f1_out_channels_list_returns
+#print axioms OCaml.Vm.Gc.LibHeapAt.keep_windows
+#print axioms OCaml.Vm.Gc.LibHeapAt.keep_records
+#print axioms OCaml.Vm.Gc.LibHeapAt.link
+#print axioms OCaml.Vm.Gc.LibHeapAt.grow
+#print axioms OCaml.Vm.Gc.LibHeapAt.insert
+#print axioms OCaml.Vm.Gc.CustomMemCall.call_forget
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_enter
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_listed_run
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_listed
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_skip
+#print axioms OCaml.Vm.Sim.OutListWalk.pro_keeps
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_start
+#print axioms OCaml.Vm.Sim.OutListWalk.restore_keeps
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_finish
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_none
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_machine
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.spatial_heap
+#print axioms OCaml.Vm.Sim.OutListWalk.OutListReturned.spatial_heap
+#print axioms OCaml.Vm.Primitives.Channel.ml_open_descriptor
+#print axioms OCaml.Vm.Primitives.Channel.out_input
 #print axioms OCaml.Vm.Sim.OutListWalk.VmPoint.fold
 #print axioms OCaml.Vm.Gc.libHeap_at_of
 #print axioms OCaml.Vm.Gc.libHeap_of

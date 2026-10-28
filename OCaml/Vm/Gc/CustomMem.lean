@@ -79,10 +79,6 @@ structure CustomMemSite where
 def CustomMemSite.args (site : CustomMemSite) : GRegs :=
   [(10, channelOps), (11, 8#64), (12, channelMem), (8, site.record), (2, site.sp)]
 
-/-- A domain word's address at `c`. -/
-def domainAddr (c : Config) (offset : Nat) : Nat :=
-  (word c Layout.sym_Caml_state).toNat + offset
-
 /-- What callers write around the call: the runtime's custom-allocation state
 lies apart from it. -/
 structure CallerApart (c : Config) (a : Nat) : Prop where
@@ -157,13 +153,6 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   cannot be reclassified as backing storage. Supplied by the native callee. -/
   allocGrows : ∀ a, CustomAllocFoot d a → CustomAllocFoot f a ∨ VsaIris.VsaHeap.vsaFoot H a
 
-/-- Finite G1 channel-custom budget. The rational inequality below does
-not prove actual binary64 rounding or native threshold branches; those remain
-part of the accepted native call obligation. -/
-def quietBound : Nat := 5
-
-theorem quietBound_spec : quietBound * 57424 ≤ 297968 ∧ 297968 < (quietBound + 1) * 57424 := by decide
-
 /-- `Ready` from a count: `Customs c n` says the runtime's custom-allocation
 state at `c` is the one after `n` channel allocations since the cut (lane
 a6-gc supplies it at the cut with `n = 0` and across each call with `n + 1`;
@@ -227,9 +216,12 @@ structure CustomFramed (Ready : Nat → Config → Prop) (state Customs : Config
 /-- Exact physical accounting on this execution, in addition to the allocator's
 ordinary return facts. It is supplied by the actual `FnSummary` post. -/
 structure CustomMemCountedReturned (state : Config → Nat → Prop)
-    (Customs : Config → Nat → Prop) (H : List (Nat × Nat)) (site : CustomMemSite)
+    (Customs : Config → Nat → Prop) (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite)
     (v : BitVec 64) (f d : Config) : Prop extends CustomMemReturned state H site v f d where
   count : ∀ {n}, Customs f n → Customs d (n + 1)
+  /-- The native supplier selects one actual returned ledger/capacity with
+  full ownership, retained blocks and the precise one-time table spending. -/
+  credited : ∃ H' cap', CustomMemSpending H H' cap cap' f d ∧ CustomOwned state H' d
 
 /-- **The runtime's channel custom allocations** (named obligation, lane
 a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
@@ -252,10 +244,13 @@ structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Na
   /-- a caller's stores outside the runtime's state keep it ready -/
   frame : ∀ k c c', Ready k c → (∀ a, state c a → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
     word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state → Ready k c' ∧ (∀ a, state c' a ↔ state c a)
+  /-- Actual quiet table pins accompany the physical count on later calls.
+  Occupancy alone is not a no-growth contract. -/
+  table : ∀ {c n}, Customs c n → CustomCallPins c → n ≠ 0 → QuietCustomTable c n
   call : ∀ (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config),
-    Ready (k + 1) f → CustomMemInput H cap site f → CustomOwned state H f →
+    Ready (k + 1) f → CustomMemInput H cap site f → customTableReserve f ≤ cap → CustomOwned state H f →
     FnSummary customMemEntry (fun d => d = f)
-      (fun d => ∃ v, CustomMemCountedReturned state Customs H site v f d ∧ Ready k d)
+      (fun d => ∃ v, CustomMemCountedReturned state Customs H cap site v f d ∧ Ready k d)
 
 /-- Concrete read-only pins cannot overlap mutable custom-state bytes.
 This uses the actual domain pin and the existing footprint's local rules. -/
@@ -370,10 +365,10 @@ allocator post. The counted execution remains the source of the summary. -/
 theorem CustomMemCall.call_forget {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
     (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config)
-    (ready : Ready (k + 1) f) (input : CustomMemInput H cap site f) (owned : CustomOwned state H f) :
+    (ready : Ready (k + 1) f) (input : CustomMemInput H cap site f) (credit : customTableReserve f ≤ cap) (owned : CustomOwned state H f) :
     FnSummary customMemEntry (fun d => d = f)
       (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d) := by
-  apply (custom.call H cap site k f ready input owned).weaken (fun _ h => h)
+  apply (custom.call H cap site k f ready input credit owned).weaken (fun _ h => h)
   intro d ⟨v, returned, readyD⟩
   exact ⟨v, returned.toCustomMemReturned, readyD⟩
 

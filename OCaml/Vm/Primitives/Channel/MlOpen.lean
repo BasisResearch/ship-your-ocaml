@@ -169,7 +169,7 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   enter : OutEntered code.proLink live H capacity charge sp ra s0 s1 s2 v head c entered
   opening : OpenedIn live H capacity (sp - 16#64) code.proLink s0 s1 s2 (fdOf v) head entered opened
   flags : OutFlagged code.doneEntry code.out (sp - 16#64) opening.record opened flagged
-  custom : Gc.CustomMemCountedReturned state Customs ((opening.record.toNat, recordBytes) :: H)
+  custom : Gc.CustomMemCountedReturned state Customs ((opening.record.toNat, recordBytes) :: H) capacity
     (outSite code.doneEntry (sp - 16#64) opening.record) value flagged allocated
   done : OutDone sp ra s0 opening.record value allocated d
   record : OpenRecord code.out d.σ.mem opening.record (fdOf v) head
@@ -183,7 +183,8 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   counted : Gc.CustomCountStep Customs c d 1
   /-- Heap readiness and state ownership use the same returned ledger. -/
   heap : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧ Gc.CustomLedger H' d ∧
-    ∀ e ∈ (opening.record.toNat, recordBytes) :: H, e ∈ H'
+    (∀ e ∈ (opening.record.toNat, recordBytes) :: H, e ∈ H') ∧
+    capacity + Gc.customTableReserve d ≤ cap' + Gc.customTableReserve c
   /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
   block : value.toNat + 16 = (runtimeFields c).youngPtr
   youngPtr : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24
@@ -354,6 +355,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     youngAligned := by rw [ptrF]; exact N.aligned }
   obtain ⟨allocated, run4, ⟨value, C, readyA⟩⟩ :=
     (custom.call _ capacity (outSite code.doneEntry (sp - 16#64) O.record) k flagged readyF input
+      (by simpa only [Gc.customTableReserve, framedF.addresses.1] using h.credit)
       ((owned.frame stateEq).mono (fun e he => List.mem_cons_of_mem _ he))).run flagged ⟨F.pc, rfl⟩
   have block := C.block
   rw [ptrF] at block
@@ -486,11 +488,15 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     · exact Or.inl (((Gc.customFoot_congr baseF endF).2 a).mp old)
     · exact Or.inr free
   have heapD : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧ Gc.CustomLedger H' d ∧
-      ∀ e ∈ (O.record.toNat, recordBytes) :: H, e ∈ H' := by
-    obtain ⟨H', cap', heapA, ownedA, ledgerA, sub⟩ := C.heap
+      (∀ e ∈ (O.record.toNat, recordBytes) :: H, e ∈ H') ∧
+      capacity + Gc.customTableReserve d ≤ cap' + Gc.customTableReserve c := by
+    obtain ⟨H', cap', spent, ownedA⟩ := C.credited
+    have heapA := spent.heap
+    have ledgerA := spent.ledger
+    have sub := spent.retained
     refine ⟨H', cap', Gc.HeapReady.keep_windows heapA
       (ws := [⟨value.toNat + 8, value.toNat + 16⟩]) ?_
-      (fun a ha => doneOut a (ha _ List.mem_cons_self)), ownedA.frame framedD.state, ledgerA.congr baseD endD, sub⟩
+      (fun a ha => doneOut a (ha _ List.mem_cons_self)), ownedA.frame framedD.state, ledgerA.congr baseD endD, sub, by simpa only [Gc.customTableReserve, baseD, baseF] using spent.spend⟩
     intro w hw
     simp only [List.mem_singleton] at hw
     subst w
@@ -642,6 +648,9 @@ theorem out_input {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Conf
     unfold Gc.maxChannels at bound
     split at room <;> omega
   refine {
+    credit := by
+      have credit := heap.open_credit bound
+      omega
     ready := by rw [capEq]; exact RuntimeReadyL.of_heap heap.ready leaf platform gp stack
     frame := frame
     saved0 := saved0

@@ -1,5 +1,23 @@
 # Routes not to repeat
 
+- 2026-10-28 selected credit repair:
+  the old advertised-capacity obstruction does not refute the strengthened
+  runtime. `LibHeapAt.credit` now requires ordinary reserve plus the actual
+  `customTableReserve`; its startup and real frame producers retain that
+  field. `LibHeapAt.tightCapacity` explicitly returns only the old HeapReady
+  numeric projection, and `customCredit_obstruction` states the old ordinary
+  numeric room premise. `CustomMemInput.zeroCapacity` still concerns only
+  the uncredited leaf input; the accepted native call separately consumes
+  credit. `CustomMemReturned.heap_zero` forgets the credited native return.
+  None supplies a counterexample to `CustomMemCountedReturned.credited` or
+  the repaired listing runtime. Never attach a spending law to the unrelated
+  forgetful return witness: the listing and opening callers select the
+  ledger/capacity inside `credited`, then retain it through actual frames.
+  Register-only reserve transport should use `customTableReserve_of_mem`
+  and `customTableReserve_congr`; broad simplification of Config-indexed
+  observations produced apparently identical but mismatched types. The
+  bounded scalar observations check at default limits.
+
 - 2026-10-28 concrete custom physical/context production:
   occupancy is still only a component. `CustomPhysical` records both exact
   resource target words, all seven zero/allocated table observations and
@@ -66,18 +84,22 @@
 - 2026-10-28 native custom capacity (checked interface obstructions):
   `CustomMemInput.zeroCapacity` retains every native precondition while
   advertising zero; `CustomMemInput.credit_obstruction` refutes deriving a
-  positive charge from that contract. `LibHeapAt.tightCapacity` keeps the
+  positive charge from that contract. `LibHeapAt.tightCapacity` originally kept the old
   selected spatial invariant at exactly its ordinary reserve, and
-  `LibHeapAt.customCredit_obstruction` refutes deriving additional custom
-  credit for that selected capacity when the table is empty. The actual
+  `LibHeapAt.customCredit_obstruction` refuted deriving additional custom
+  credit there when the table is empty. After the selected credit repair,
+  those lemmas explicitly state the old HeapReady/numeric projection; they
+  do not assert the strengthened LibHeapAt at the tight capacity. The actual
   returned heap also admits a zero-capacity witness
   (`CustomMemReturned.heap_zero`). These do not show a physical shortage,
   nor refute existence of a better returned capacity witness. Neither
   ownership nor `HeapReady` alone proves future `LibHeapAt.room` after
   native table spending. Carry separate input credit, actual table shape,
   and spending on the same returned ledger/capacity. `CustomMemSpending`
-  names the missing component of the accepted `CustomMemCall` obligation;
-  its native supplier and migration through counted callers remain open.
+  names the native component of the accepted `CustomMemCall` obligation.
+  The selected-credit repair incorporates it into that named boundary and
+  carries it through actual counted listing callers; native execution remains
+  named. See the current credit repair entry above.
 
 - 2026-10-28 listing default kernel recursion: the represented channel
   upper bound is `(b + chanOffBuff) + ioBufferSize`, whereas the selected

@@ -362,6 +362,10 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
         omega
   refine {
     room := by rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]; exact h.room
+    credit := by
+      have cb := (customAddresses_frame keepCustom).1
+      rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]
+      simpa only [customTableReserve, cb] using h.credit
     channelsBound := h.channelsBound
     ready := HeapReady.keep_windows h.ready (fun w hw => ?_) keep
     extents := h.extents

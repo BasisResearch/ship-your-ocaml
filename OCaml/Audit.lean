@@ -8304,3 +8304,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.physical_frame
 
 #print axioms OCaml.Vm.Sim.EntryFrame.accountingFrame
+
+-- Selected custom credit and concrete F1 listing runtime.
+#print axioms OCaml.Vm.Sim.OutListWalk.f1_outList_runtime
+#print axioms OCaml.Vm.Gc.customTableReserve_congr
+#print axioms OCaml.Vm.Gc.customTableReserve_of_mem
+#print axioms OCaml.Vm.Gc.LibHeapAt.open_credit
+#print axioms OCaml.Vm.Sim.counted_f1_out_channels_list_returns
+#print axioms OCaml.Vm.Gc.LibHeapAt.customHeapCredit

@@ -69,6 +69,7 @@ theorem outSaveLog_inside {sp ra s0} (frame : NativeFrame sp 16) :
 premises for `Int_val(v)`, with room for the primitive's own 16-byte frame. -/
 structure OutInput (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
     (c : Config) : Prop where
+  credit : Gc.customTableReserve c ≤ capacity
   ready : RuntimeReadyL live H (capacity + charge) sp ra c
   frame : NativeFrame sp 592
   saved0 : gprGet c.σ 8 = some s0

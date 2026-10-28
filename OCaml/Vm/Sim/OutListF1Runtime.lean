@@ -263,18 +263,17 @@ theorem outList_runtime_fields {Ready : Nat → Config → Prop} {state Customs 
       change (w.Y - 48 * (outChannelIds s.world).length) % 8 = 0
       omega }
 
-/-- The checked native return rebuilds the complete F1 runtime conditional
-only on reserve at this selected returned capacity. The capacity condition is
-not discharged by HeapReady or by spatial custom ownership. -/
+/-- The checked native return rebuilds the complete F1 runtime with reserve
+on its selected returned capacity. Credit comes from the strengthened entry
+and actual native spending, separately from spatial ownership. -/
 structure OutListF1Restored (H : List (Nat × Nat)) (capacity : Nat) (chs : List Nat) (d : Config) : Prop
     extends OutListHeapRestored H capacity chs d where
-  runtime : Gc.reserved (word d (refTable + Layout.off_ref_table_base)).toNat chs.length ≤ capacity →
-    f1Runtime d
+  runtime : f1Runtime d
 
 /-- Concrete listing reconstruction from the real setup, selected entry ledger
-and checked returned memory. The missing native component is numeric reserve
-for this same existential heap, including actual input credit and spending
-through every CustomMemCall. No returned runtime or LibHeapAt is assumed. -/
+and checked returned memory. Actual input credit and spending through each
+CustomMemCall supply reserve on this same final ledger/capacity. No returned
+runtime or LibHeapAt is assumed. -/
 theorem outList_f1_restore {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
     (custom : CustomMemCall Ready state Customs)
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -284,12 +283,25 @@ theorem outList_f1_restore {Ready : Nat → Config → Prop} {state Customs : Co
     (ret : OutListReturned w Ready state Customs k ra s0 c d)
     (stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes) :
     ∃ H capacity, OutListF1Restored H capacity w.chs d := by
-  obtain ⟨H, capacity, spatial⟩ := ret.restore_heap custom ent.selected
+  obtain ⟨H, capacity, spatial⟩ := ret.restore_heap custom ent.selected ent.reserve
     (outList_table_frame custom setup.input.runtime ent ret)
     (outList_named_frame setup ent ret stackFits)
   exact ⟨H, capacity, {
     toOutListHeapRestored := spatial
-    runtime := fun room => outList_runtime_fields custom setup.input.runtime setup.geometry ent ret
-      ⟨H, capacity, w.chs, spatial.restore room⟩ }⟩
+    runtime := outList_runtime_fields custom setup.input.runtime setup.geometry ent ret
+      ⟨H, capacity, w.chs, spatial.restore⟩ }⟩
+
+/-- Concrete F1 listing runtime, relative only to the accepted native custom
+call. Entry credit comes from F1Pins; the walk returns that credit on its own
+selected final ledger, so no whole-listing runtime or reserve is assumed. -/
+theorem f1_outList_runtime {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
+    (custom : CustomMemCall Ready state Customs) : OutListRuntime f1Layout Ready state Customs where
+  custom := custom
+  customBudget := by decide
+  entry := f1_outList_entry custom
+  runtime := by
+    intro ra s0 P s c after pl cp sp high domain entry k cap env w setup ent _selected ret stackFits
+    obtain ⟨H, capacity, restored⟩ := outList_f1_restore custom setup ent ret stackFits
+    exact restored.runtime
 
 end OCaml.Vm.Sim.OutListWalk

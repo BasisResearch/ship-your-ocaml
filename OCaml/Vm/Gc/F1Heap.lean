@@ -1,5 +1,5 @@
 import OCaml.Vm.Gc.NamedLedger
-import OCaml.Vm.Gc.CustomLedger
+import OCaml.Vm.Gc.CustomCreditDefs
 import OCaml.Vm.Reloc
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.OpenChannels
@@ -227,6 +227,19 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   customSpace : CustomSpace (namedBlocked chs c) c
   customRecords : ∀ a ∈ chs, a + chanRecordBytes ≤ customTable ∨
     customTable + Layout.custom_table_bytes ≤ a
+  /-- Ordinary future allocations and the first custom backing table share
+  this actual selected capacity. -/
+  credit : reserved (word c (refTable + Layout.off_ref_table_base)).toNat chs.length + customTableReserve c ≤ cap
+
+/-- The real opening spends 65616 bytes on its channel record. The
+recordCharge decrement pays that spend and retains all remaining reserves. -/
+theorem LibHeapAt.open_credit {H cap chs c} (heap : LibHeapAt H cap chs c)
+    (bound : chs.length < maxChannels) :
+    reserved (word c (refTable + Layout.off_ref_table_base)).toNat (chs.length + 1) +
+      customTableReserve c ≤ cap - 65616 := by
+  have credit := heap.credit
+  simp only [reserved, recordCharge, maxChannels] at credit bound ⊢
+  omega
 
 /-- Separation of an actual record follows from the selected spatial
 invariant and its real arena/domain bounds, not merely its linked-list shape. -/
@@ -534,6 +547,12 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
     (keep : ∀ a, (∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) :
     LibHeapAt H cap chs c' where
   room := by rw [structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) (by decide)]; exact h.room
+  credit := by
+    have cb := (customAddresses_frame (c := c) (d := c') (fun a ha => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep a fun w hw => (safe w hw).custom_out ha)).1
+    rw [structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) (by decide)]
+    simpa only [customTableReserve, cb] using h.credit
   channelsBound := h.channelsBound
   ready := HeapReady.keep_windows h.ready (fun w hw => (safe w hw).heapSafe h) keep
   extents := h.extents
@@ -621,6 +640,18 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       · exact s.misses_table hy
       · exact r.misses_table h ha hy) (by decide)]
     exact h.room
+  credit := by
+    have cb := (customAddresses_frame (c := c) (d := c') (fun x hx => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => by
+        rcases safe w hw with safe | ⟨lo, hi, _⟩
+        · exact safe.custom_out hx
+        · exact h.custom_record_out ha hx lo hi)).1
+    rw [structWord_keep (fun y hy => keep y fun w hw => by
+      rcases safe w hw with s | r
+      · exact s.misses_table hy
+      · exact r.misses_table h ha hy) (by decide)]
+    simpa only [customTableReserve, cb] using h.credit
   channelsBound := h.channelsBound
   ready := HeapReady.keep_windows h.ready (fun w hw => by
     rcases safe w hw with s | ⟨lo, hi, _⟩
@@ -756,6 +787,14 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     simp only [reserved, List.length_cons] at r ⊢
     rw [spend] at r
     exact key _ _ bound r
+  credit := by
+    have cb := (customAddresses_frame keepCustom).1
+    rw [structWord_keep keepTable (by decide)]
+    have r := h.credit
+    simp only [reserved, List.length_cons, customTableReserve, cb] at r ⊢
+    rw [spend] at r
+    simp only [maxChannels, recordCharge] at *
+    omega
   channelsBound := by simp only [List.length_cons]; omega
   ready := ready
   extents := fun x hx => (h.extents x hx).mono _
@@ -890,6 +929,13 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     rw [empty] at r
     rw [base']
     simp only [reserved, nonzero, if_false, if_true] at r ⊢
+    omega
+  credit := by
+    have cb := (customAddresses_frame keepCustom).1
+    have r := h.credit
+    rw [empty] at r
+    rw [base']
+    simp only [reserved, nonzero, if_false, if_true, customTableReserve, cb] at r ⊢
     omega
   channelsBound := h.channelsBound
   ready := ready

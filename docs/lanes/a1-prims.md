@@ -1,5 +1,98 @@
 # A1 F1 primitive summaries
 
+## Selected custom credit and concrete listing runtime (2026-10-28)
+
+The numeric reserve seam is discharged relative to the accepted named
+`CustomMemCall`. Checked edits remain for lead review/integration; no commit,
+Git metadata write, queue write, other worktree or worker was used. This
+entry supersedes the earlier listing/physical handoffs' open counted-credit
+status. Native custom allocation execution remains named.
+
+`LibHeapAt.credit` now includes ordinary `reserved` plus
+`customTableReserve` on the same selected H/cap. The extra reserve is 1 MiB
+exactly while the actual custom backing base is zero. `libHeap_at_of` proves
+it from the existing captured selected heap, capacity bound and actual base
+read. The F1 runtime carries this stronger invariant. `keep_windows`,
+`keep_records`, actual remembered insertion, first remembered allocation and
+channel linking preserve it, so ordinary/count/setup/native-safe frames and
+the actual counted entry retain the credit. `LibHeapAt.customHeapCredit` is
+an honest compatibility projection; `customHeapCredit_of` reuses that
+selected producer. Captured memory is still not reset execution.
+
+`Gc/CustomCreditDefs.lean` places the shared reserve, generated table geometry,
+quiet shape and native `CustomMemSpending` types below CustomMem/F1Runtime.
+The exact request remains **792576** with its checked `vsaChg` allowance.
+CustomMemInput retains actual read context; CustomMemCall.call additionally
+consumes real input credit. Its counted return is indexed by the input cap
+and selects one credited H'/cap' with HeapReady, CustomLedger, ownership,
+retained blocks and `cap + reserve(after) <= cap' + reserve(before)`.
+Callers select that witness, never attach spending to the independent
+forgetful spatial projection. The named contract explicitly retains actual
+QuietCustomTable observations from physical counts and separate context;
+occupancy alone is not a later no-growth supplier. Native table allocation,
+initialization/insertion, exact soft-double/threshold execution, quiet return
+and this precise spending contract remain inside CustomMemCall.
+
+The real listing walk fixes its ordinary reserve at entry and retains credit
+on each actual selected intermediate capacity. Its refcount/scratch stores,
+skips, prologue, native custom returns, cons stores and either epilogue frame
+that credit. Each listed step composes native spending with the actual
+returned caller frame using `CustomMemSpending.trans/room`. The final spatial
+reconstruction keeps the same returned ledger and credit.
+`outList_f1_restore` now returns unconditional f1Runtime on that ledger;
+`f1_outList_runtime` supplies concrete OutListRuntime at f1Layout using only
+CustomMemCall. `counted_f1_out_channels_list_returns` exposes the real counted
+return; `counted_channel_c_call1_next` no longer takes a separate listing
+runtime. The actual stack-room argument is retained through the runtime
+adapter.
+
+Opening preserves its separate **65616-byte** record spending. The new
+`LibHeapAt.open_credit` proves that decrement fits the existing recordCharge
+reserve decrement while keeping the custom allowance and ordinary future
+reserves. `out_input` produces the custom input credit after that actual
+record charge. OpenedOut.heap and its spatial consumer retain native spending
+on the selected final heap through the real epilogue. Full
+`OpenOutRuntimeAt.after` reconstruction remains the separate opening packet;
+it is not claimed here.
+
+The old tight-capacity/zero-capacity obstructions remain explicit old
+numeric/forgetful projections, as documented in DEAD-ENDS. They do not refute
+the strengthened LibHeapAt/native credited contract. GoodF1 is unchanged;
+BarrierGrowthFull stays G2; C4 round 2 waits for F1. Full OCaml.Audit and
+landing via scripts/integrate.sh remain the lead gate.
+
+Validation:
+
+- Final guarded build passes **3682 jobs**:
+  `lake build OCaml.Vm.Sim.OutListRuntimeAudit
+  OCaml.Vm.Gc.CustomPhysicalAudit OCaml.Vm.Sim.CountedControlRows
+  OCaml.Vm.Sim.F1Table OCaml.Vm.Sim.WhileMinTable`,
+  `/tmp/custom-credit-final.log`. This includes affected actual opening,
+  counted listing/entry/control, ordinary F1, barrier/growth and whileMin
+  consumers. The preceding affected run also passed 3682 jobs in
+  `/tmp/custom-credit-affected2.log`.
+- The generated focused file emits **144 exact reports**, checked for
+  membership/order and extracted to `/tmp/custom-credit-focused-axioms.log`.
+  **18** use no axioms; **126** use only
+  `{propext, Classical.choice, Quot.sound}`. All **six new theorems** are
+  included and registered once for full Audit. The exact membership and
+  allowed-axiom check is `/tmp/custom-credit-focused-check.json`.
+  Full OCaml.Audit was not run.
+- Custom-table request/geometry, opening-phase and focused-audit generator
+  checks pass. Hole, 27-rule discipline, abstraction and whitespace gates
+  pass; C4 remains 3. The focused audit's initial missing F1Barrier import
+  was repaired in its generator before the successful affected runs.
+- Every Lean launch first checked `free -g` (available >=25 GB), ran
+  serially through `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...`, and retained the inherited 12 GiB /
+  two-thread/default-budget rules. No virtual-memory limit, budget increase,
+  generated-output hand edit, commit or integration-queue write was used.
+
+The work is checked and left uncommitted for lead review. The sandbox's
+read-only Git metadata/landing queue leaves the final result awaiting lead
+integration, not an unclosed listing reserve/runtime seam.
+
+
 ## Concrete custom physical startup and independent native context (2026-10-28)
 
 Checked edits remain for lead review. No commit, integration queue write,

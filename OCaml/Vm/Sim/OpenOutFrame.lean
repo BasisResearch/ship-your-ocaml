@@ -133,7 +133,8 @@ theorem OpenedOut.spatial_heap (custom : Gc.CustomMemCall Ready state Customs)
     ∃ H' capacity, Boot.Startup.HeapReady H' capacity d ∧ Gc.CustomOwned Gc.CustomFoot H' d ∧
       Gc.CustomSpace ((o.opening.record.toNat, recordBytes) :: Gc.namedBlocked chs c) d ∧
       Gc.NamedLedger H' (Gc.namedBlocked chs c) d ∧ Gc.CustomLedger H' d ∧
-      ∀ e ∈ (o.opening.record.toNat, recordBytes) :: H, e ∈ H' := by
+      (∀ e ∈ (o.opening.record.toNat, recordBytes) :: H, e ∈ H') ∧
+      cap' + Gc.customTableReserve d ≤ capacity + Gc.customTableReserve c := by
   let H1 := (o.opening.record.toNat, recordBytes) :: H
   have sub : ∀ e ∈ H, e ∈ H1 := fun e he => List.mem_cons_of_mem _ he
   have fresh : FreshBlock vsaLayoutP H o.opening.record.toNat recordBytes :=
@@ -165,9 +166,9 @@ theorem OpenedOut.spatial_heap (custom : Gc.CustomMemCall Ready state Customs)
   have spaceD := space.grow heap.named keepNamed o.allocIn
     (fun e he _ inside => (coverage e he).notFoot (fun _ member => o.opening.heap.block_bounds member) inside)
     namedProtected
-  obtain ⟨H', capacity, ready, owned, ledger, old⟩ := o.heap
+  obtain ⟨H', capacity, ready, owned, ledger, old, spend⟩ := o.heap
   exact ⟨H', capacity, ready, custom.owned_physical owned o.ready, spaceD,
-    (heap.named.frame keepNamed).mono (fun e he => old e (sub e he)), ledger, old⟩
+    (heap.named.frame keepNamed).mono (fun e he => old e (sub e he)), ledger, old, spend⟩
 
 /-- **An open record is kept**, except the old head's `prev` word (bytes
 56–63), which the opening rewrites. -/
