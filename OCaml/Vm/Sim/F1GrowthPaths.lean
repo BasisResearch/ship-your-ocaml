@@ -29,6 +29,19 @@ the loop registers, which carry complete GPR presence. -/
 theorem growthCallState (L : OCaml.Layout) : GrowthCallState L :=
   ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ input => input.loop.gprs⟩
 
+/-- Compose the existing native path once at a layout whose budget and
+runtime project to F1. All extra runtime observations come from its actual
+GrowDone frame, and every native post field is retained. -/
+theorem barrierGrowth_of_runtime {L : OCaml.Layout}
+    (budget : L.budget = Gc.f1Layout.budget)
+    (project : ∀ c, L.runtimeOk c → Gc.f1Runtime c)
+    (idle : ∀ c, L.runtimeOk c → bytesT c.σ.mem Layout.sym_caml_gc_phase 4 = 3#32)
+    (runtime : BarrierGrowRuntime L) : BarrierGrowth L where
+  grow P s pl cp sp high codeReg ra codeWord stackWord value c l a i tag fields vVal D tbl ptr limit
+      input inv valid low live placed selected bound represented root fieldStable table empty grows :=
+    barrierGrowth_gprs_of_runtime budget project idle runtime input inv valid low live placed selected
+      bound represented root fieldStable table empty grows input.loop.gprs
+
 /-- **The unallocated remembered set's growth path for F1**, over a6-gc's
 `f1_barrierGrowth_gprs`. -/
 theorem f1_barrierGrowth (st : GrowthCallState Gc.f1Layout) : BarrierGrowth Gc.f1Layout where

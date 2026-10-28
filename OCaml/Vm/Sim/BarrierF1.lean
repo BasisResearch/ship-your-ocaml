@@ -84,11 +84,11 @@ theorem majorLog_addrs {nsp a i : Nat} {ra v : BitVec 64} (low : 32 ≤ nsp) (sm
 
 /-- **The barrier's entry facts from a represented call** that stores field
 `i` of the placed block `l`. -/
-theorem barrier_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+theorem barrier_entry_of_idle {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high codeReg : Nat} {ra codeWord stackWord value : BitVec 64} {c : Config}
     {l a i tag : Nat} {fields : List Val} {D : InvocationData}
     (input : ModifyInput L P s pl cp sp high codeReg ra codeWord stackWord (BitVec.ofNat 64 (a + 8 * i)) value c)
-    (br : BarrierRuntime L) (inv : Invocation D c) (v : NativeValid D)
+    (idle : bytesT c.σ.mem Layout.sym_caml_gc_phase 4 = 3#32) (inv : Invocation D c) (v : NativeValid D)
     (placed : pl.φ l = some a) (selected : s.heap.get? l = some (.block tag fields)) (bound : i < fields.length) :
     Gc.Barrier.Entry (BitVec.ofNat 64 (a + 8 * i)) value ra (BitVec.ofNat 64 D.nativeSp)
       (word c Layout.sym_Caml_state)
@@ -135,7 +135,7 @@ theorem barrier_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
         by rw [fn]; simp only [Layout.sym_stack_top] at ht; omega,
         by rw [fn]; simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Layout.sym_tohost] at hh ⊢; omega,
         by rw [fn]; have := v.aligned; omega⟩
-      idle := br.idle c input.runtime
+      idle := idle
       slotFrame := by rw [sn, fn]; left; simp only [nativeHeadroom] at hh; omega
       aboveCode := ?_
       readsApart := ?_ }
@@ -149,6 +149,20 @@ theorem barrier_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
     simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd] at hh da arena
     rw [width]
     rcases hx with rfl | rfl | rfl | rfl <;> (try rw [d32]) <;> (try rw [d40]) <;> omega
+
+/-- The complete runtime supplies the minimal idle observation. -/
+theorem barrier_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high codeReg : Nat} {ra codeWord stackWord value : BitVec 64} {c : Config}
+    {l a i tag : Nat} {fields : List Val} {D : InvocationData}
+    (input : ModifyInput L P s pl cp sp high codeReg ra codeWord stackWord (BitVec.ofNat 64 (a + 8 * i)) value c)
+    (br : BarrierRuntime L) (inv : Invocation D c) (v : NativeValid D)
+    (placed : pl.φ l = some a) (selected : s.heap.get? l = some (.block tag fields)) (bound : i < fields.length) :
+    Gc.Barrier.Entry (BitVec.ofNat 64 (a + 8 * i)) value ra (BitVec.ofNat 64 D.nativeSp)
+      (word c Layout.sym_Caml_state)
+      (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 32).toNat 8)
+      (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 40).toNat 8)
+      (bytesT c.σ.mem (BitVec.ofNat 64 (a + 8 * i) + BitVec.ofNat 64 0).toNat 8) c :=
+  barrier_entry_of_idle input (br.idle c input.runtime) inv v placed selected bound
 
 /-- **The remembered set at the barrier's entry**, from the collector's
 runtime facts. -/
@@ -645,12 +659,14 @@ theorem setField?_inv {h : Heap} {base : Val} {i : Nat} {x : Val} {h' : Heap}
     · cases e
   | _ => simp [setField?] at e
 
-/-- **`GlobalBarrier` for the F1 layout**: SETGLOBAL's `caml_modify`, given the
+/-- **`GlobalBarrier` from actual runtime and field frames**: SETGLOBAL's `caml_modify`, given the
 collector's barrier runtime and growth path (GC lane). -/
-theorem f1_globalBarrier {P : Prog} (br : BarrierRuntime Gc.f1Layout) (growth : BarrierGrowth Gc.f1Layout)
-    (growthFull : BarrierGrowthFull Gc.f1Layout)
+theorem globalBarrier_of_frames {L : OCaml.Layout} {P : Prog} (br : BarrierRuntime L) (growth : BarrierGrowth L)
+    (growthFull : BarrierGrowthFull L)
+    (rr : RaiseRuntimeFrame L Gc.f1High Gc.f1Domain)
+    (fieldReady : ∀ s c, L.runtimeOk c → 8 * s.stack.length ≤ Layout.stackBytes → FieldWriteReady L P s c)
     (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget) :
-    GlobalBarrier Gc.f1Layout P where
+    GlobalBarrier L P where
   callee s c pl cp sp high ofs value heap reach h nonnegative encoded update := by
     obtain ⟨l, k, tag, fs, glob, got, room, heapEq⟩ := setField?_inv update
     have gw := h.toVmReprAt.globals
@@ -664,7 +680,7 @@ theorem f1_globalBarrier {P : Prog} (br : BarrierRuntime Gc.f1Layout) (growth : 
       omega
     have space := stack_fits fits capacity reach (k := 0)
     simp only [Nat.add_zero] at space
-    have ready := (f1_fieldWriteReady h.runtime space).ready pl cp sp high l a (k + ofs.toInt.toNat) tag fs
+    have ready := (fieldReady s c h.runtime space).ready pl cp sp high l a (k + ofs.toInt.toNat) tag fs
       value h.toVmReprAt h.geometry placed got room
     have live : Live s.heap (roots P s) l := Live.root (v := .ptr l k) (by simp [roots, glob]) rfl
     have root : ∀ loc, s.accu.loc? = some loc → Live s.heap (roots P s) loc :=
@@ -674,25 +690,27 @@ theorem f1_globalBarrier {P : Prog} (br : BarrierRuntime Gc.f1Layout) (growth : 
     have hs := input.data.stack.1
     have low : high - Layout.stackBytes ≤ sp := by omega
     rw [slotEq] at input
-    obtain ⟨after, run, D, v, done⟩ := (barrier_summary br f1_raiseRuntimeFrame growth growthFull input low live
+    obtain ⟨after, run, D, v, done⟩ := (barrier_summary br rr growth growthFull input low live
       placed got room encoded root ready.1).run before ⟨pc, rfl⟩
     subst heapEq
     exact ⟨after, run, modify_return_of_done input done v (fun d => payload_pc (d.accu_int 0) _)
       (fun g => g.state rfl rfl) rfl rfl rfl (by decide) (by decide) (by decide)⟩
 
-/-- **A SETFIELD-shaped `caml_modify` call for F1**: field `j` of the
+/-- **A SETFIELD-shaped `caml_modify` call from frames**: field `j` of the
 accumulator's block takes the popped stack top. -/
-theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layout)
-    (growth : BarrierGrowth Gc.f1Layout) (growthFull : BarrierGrowthFull Gc.f1Layout)
+theorem field_callee_of_frames {L : OCaml.Layout} {P : Prog} {op : Opcode} (br : BarrierRuntime L)
+    (growth : BarrierGrowth L) (growthFull : BarrierGrowthFull L)
+    (rr : RaiseRuntimeFrame L Gc.f1High Gc.f1Domain)
+    (fieldReady : ∀ s c, L.runtimeOk c → 8 * s.stack.length ≤ Layout.stackBytes → FieldWriteReady L P s c)
     (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget)
     {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high j codeReg pcNext : Nat}
     {base value ra codeWord stackWord slot : BitVec 64} {v : Val} {rest : List Val} {heap : Heap}
-    (reach : Reach P s) (h : ArmInput Gc.f1Layout P s op c pl cp sp high)
+    (reach : Reach P s) (h : ArmInput L P s op c pl cp sp high)
     (source : valWord pl s.accu = some base) (stack : s.stack = v :: rest)
     (encoded : valWord pl v = some value) (update : setField? s.heap s.accu j v = some heap)
     (slotEq : slot = base + BitVec.ofNat 64 (8 * j))
     (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31) (codeOut : codeReg ∉ barrierClobber) :
-    ModifyCallee Gc.f1Layout P s {s with pc := pcNext, accu := .unit, heap := heap, stack := rest} pl cp sp
+    ModifyCallee L P s {s with pc := pcNext, accu := .unit, heap := heap, stack := rest} pl cp sp
       (sp + 8) high codeReg ra codeWord stackWord slot value := by
   obtain ⟨l, k, tag, fs, acc, got, room, heapEq⟩ := setField?_inv update
   rw [acc] at source
@@ -704,7 +722,7 @@ theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layou
     omega
   have space := stack_fits fits capacity reach (k := 0)
   simp only [Nat.add_zero] at space
-  have ready := (f1_fieldWriteReady h.runtime space).ready pl cp sp high l a (k + j) tag fs
+  have ready := (fieldReady s c h.runtime space).ready pl cp sp high l a (k + j) tag fs
     value h.toVmReprAt h.geometry placed got room
   have live : Live s.heap (roots P s) l := Live.root (v := .ptr l k) (by simp [roots, acc]) rfl
   have root : ∀ loc, v.loc? = some loc → Live s.heap (roots P s) loc :=
@@ -714,7 +732,7 @@ theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layou
   have hs := input.data.stack.1
   have low : high - Layout.stackBytes ≤ sp := by omega
   rw [slotNat] at input
-  obtain ⟨after, run, D, nv, done⟩ := (barrier_summary br f1_raiseRuntimeFrame growth growthFull input low live
+  obtain ⟨after, run, D, nv, done⟩ := (barrier_summary br rr growth growthFull input low live
     placed got room encoded root ready.1).run before ⟨pc, rfl⟩
   subst heapEq
   refine ⟨after, run, modify_return_of_done input done nv (fun d => ?_) (fun g => g.state rfl rfl)
@@ -722,24 +740,71 @@ theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layou
   have dropped := payload_stack_drop (n := 1) (payload_pc (d.accu_int 0) pcNext) (by simp [stack])
   simpa only [stack, List.drop_succ_cons, List.drop_zero, Nat.mul_one, Val.unit] using dropped
 
-/-- **`FieldBarrier` for the F1 layout** (SETFIELD n). -/
+/-- **`FieldBarrier` from frames** (SETFIELD n). -/
+theorem fieldBarrier_of_frames {L : OCaml.Layout} {P : Prog} (br : BarrierRuntime L) (growth : BarrierGrowth L)
+    (growthFull : BarrierGrowthFull L)
+    (rr : RaiseRuntimeFrame L Gc.f1High Gc.f1Domain)
+    (fieldReady : ∀ s c, L.runtimeOk c → 8 * s.stack.length ≤ Layout.stackBytes → FieldWriteReady L P s c)
+    (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget) :
+    FieldBarrier L P where
+  callee s c pl cp sp high ofs base value v rest heap reach h _ source stack encoded update :=
+    field_callee_of_frames br growth growthFull rr fieldReady fits capacity reach h source stack encoded update (BitVec.add_comm _ _)
+      (by decide) (by decide) (by decide)
+
+/-- **`FieldBarrierK` from frames** (SETFIELD0–3: field `k`, slot offset `8k`). -/
+theorem fieldBarrierK_of_frames {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat} {ra off : BitVec 64}
+    (br : BarrierRuntime L) (growth : BarrierGrowth L)
+    (growthFull : BarrierGrowthFull L)
+    (rr : RaiseRuntimeFrame L Gc.f1High Gc.f1Domain)
+    (fieldReady : ∀ s c, L.runtimeOk c → 8 * s.stack.length ≤ Layout.stackBytes → FieldWriteReady L P s c)
+    (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget)
+    (offset : off = BitVec.ofNat 64 (8 * k)) :
+    FieldBarrierK L P op k ra off where
+  callee s c pl cp sp high base value v rest heap reach h source stack encoded update :=
+    field_callee_of_frames br growth growthFull rr fieldReady fits capacity reach h source stack encoded update (by rw [offset])
+      (by decide) (by decide) (by decide)
+
+/-- The ordinary F1 instance retains its original suppliers. -/
+theorem f1_globalBarrier {P : Prog} (br : BarrierRuntime Gc.f1Layout) (growth : BarrierGrowth Gc.f1Layout)
+    (growthFull : BarrierGrowthFull Gc.f1Layout)
+    (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget) :
+    GlobalBarrier Gc.f1Layout P :=
+  globalBarrier_of_frames br growth growthFull f1_raiseRuntimeFrame
+    (fun _ _ => f1_fieldWriteReady) fits capacity
+
+/-- The ordinary F1 field instance retains its original suppliers. -/
 theorem f1_fieldBarrier {P : Prog} (br : BarrierRuntime Gc.f1Layout) (growth : BarrierGrowth Gc.f1Layout)
     (growthFull : BarrierGrowthFull Gc.f1Layout)
     (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget) :
-    FieldBarrier Gc.f1Layout P where
-  callee s c pl cp sp high ofs base value v rest heap reach h _ source stack encoded update :=
-    f1_field_callee br growth growthFull fits capacity reach h source stack encoded update (BitVec.add_comm _ _)
-      (by decide) (by decide) (by decide)
+    FieldBarrier Gc.f1Layout P :=
+  fieldBarrier_of_frames br growth growthFull f1_raiseRuntimeFrame
+    (fun _ _ => f1_fieldWriteReady) fits capacity
 
-/-- **`FieldBarrierK` for the F1 layout** (SETFIELD0–3: field `k`, slot offset `8k`). -/
+/-- The ordinary fixed-index F1 instance retains its original suppliers. -/
 theorem f1_fieldBarrierK {P : Prog} {op : Opcode} {k : Nat} {ra off : BitVec 64}
     (br : BarrierRuntime Gc.f1Layout) (growth : BarrierGrowth Gc.f1Layout)
     (growthFull : BarrierGrowthFull Gc.f1Layout)
     (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget)
     (offset : off = BitVec.ofNat 64 (8 * k)) :
-    FieldBarrierK Gc.f1Layout P op k ra off where
-  callee s c pl cp sp high base value v rest heap reach h source stack encoded update :=
-    f1_field_callee br growth growthFull fits capacity reach h source stack encoded update (by rw [offset])
-      (by decide) (by decide) (by decide)
+    FieldBarrierK Gc.f1Layout P op k ra off :=
+  fieldBarrierK_of_frames br growth growthFull f1_raiseRuntimeFrame
+    (fun _ _ => f1_fieldWriteReady) fits capacity offset
+
+/-- Ordinary F1 specialization of the shared field-call proof. -/
+theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layout)
+    (growth : BarrierGrowth Gc.f1Layout) (growthFull : BarrierGrowthFull Gc.f1Layout)
+    (fits : OCaml.Fits Gc.g1Budget P) (capacity : StackCapacity Gc.g1Budget)
+    {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high j codeReg pcNext : Nat}
+    {base value ra codeWord stackWord slot : BitVec 64} {v : Val} {rest : List Val} {heap : Heap}
+    (reach : Reach P s) (h : ArmInput Gc.f1Layout P s op c pl cp sp high)
+    (source : valWord pl s.accu = some base) (stack : s.stack = v :: rest)
+    (encoded : valWord pl v = some value) (update : setField? s.heap s.accu j v = some heap)
+    (slotEq : slot = base + BitVec.ofNat 64 (8 * j))
+    (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31) (codeOut : codeReg ∉ barrierClobber) :
+    ModifyCallee Gc.f1Layout P s {s with pc := pcNext, accu := .unit, heap := heap, stack := rest} pl cp sp
+      (sp + 8) high codeReg ra codeWord stackWord slot value :=
+  field_callee_of_frames br growth growthFull f1_raiseRuntimeFrame
+    (fun _ _ => f1_fieldWriteReady) fits capacity reach h source stack encoded update slotEq
+    codeLow codeHigh codeOut
 
 end OCaml.Vm.Sim

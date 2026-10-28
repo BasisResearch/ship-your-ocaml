@@ -2,6 +2,101 @@
 
 ## Current status
 
+**2026-10-28 counted field/barrier continuation (base `9de2d983`): checked
+for lead review; six barrier rows retain the missing spatial supplier.**
+
+`CountedRuntime` derives a real object-field channel/count frame from
+`FieldWriteOk.of_geometry`, `F1HeapSafe.outside`, the entry's selected ledger
+and `CustomMemCall.apart.covered`. `counted_fieldWriteReady` supplies the local
+counted layout and retains the original stack budget. OFFSETREF is an object
+field store. The existing ordinary native row is reused through `counted_row`.
+`LoopGeometry.retarget` retains every geometry/placement field and transports
+only an equal budget. The shared global/field call proofs now take actual
+runtime/field frames; the original F1 specializations retain their interfaces.
+
+`CountedBarrierFrame` derives the real struct/insertion windows from the
+actual Table words. `LibHeapAt.insert_outside` supplies complete record/link
+and static separation from `RefStorage.apartRecords` and the selected ledger.
+The physical insertion frame and `counted_barrierRuntime` explicitly require
+`∀ c, f1Runtime c → RefCustomApart c`. **That supplier is absent.** Ownership
+of both ranges in H does not imply separation. `RefStorage.custom_alias` is a
+checked conditional obstruction at the ledger/storage interfaces: given
+aliased addressing observations, ownership remains true and separation fails.
+It makes no reachable-alias or complete-runtime counterexample claim. No arbitrary WindowStable, counted
+successor, new GoodF1 restriction or opaque whole-row premise is introduced.
+
+The existing fast path composes at the counted layout using these frames.
+`barrierGrowth_gprs_of_runtime` composes the actual initially-unallocated
+path at an equal-budget layout while retaining the complete native post.
+`CustomMemCall.owned`, `kept_covered` and actual `GrowDone.kept` supply physical
+custom-state and live-record frames. `counted_barrierGrowth` has no insertion
+separation premise. `f1_afterGrow_customApart` proves separation at that actual
+fresh-allocation return from `GrowDone.disjoint` and `CustomLedger.owned`.
+It does not establish a universal runtime supplier or custom-growth frame.
+
+G2 must supply the existing named obligation at the stronger instantiation
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`.
+Its output must retain physical Customs, natural channel refcounts and list
+links for that frozen world/placement, all ordinary runtime/native fields and
+budget/geometry. `BarrierGrowthFull f1Layout` alone does not supply it. No
+additional opaque whole-row premise replaces this boundary.
+
+`scripts/gen_counted_field_rows.py` generates seven real stepI channel facts,
+OFFSETREF's supplied counted row, six conditional barrier row terms, their
+conditional subtable/census and `CountedFieldAudit.lean`. The six terms require
+both the missing spatial supplier and counted G2. They are deliberately
+excluded from `countedOrdinaryOpcode`. The ordinary control generator's
+exact census is **123/134 supplied counted rows**, with **eleven remaining**:
+
+  `SETGLOBAL`, `SETFIELD0`, `SETFIELD1`, `SETFIELD2`, `SETFIELD3`, `SETFIELD`,
+  `C_CALL1`, `C_CALL2`, `C_CALL3`, `C_CALL4`, `C_CALL5`.
+
+Relative to the two explicit barrier suppliers, the six conditional terms
+bring coverage to 129/134, with exactly C_CALL1–5 still lacking whole rows.
+No full counted table closure or counted F1 assembly is claimed.
+`CustomMemCall` remains named, `BarrierGrowthFull` stays G2 and C4 round 2
+waits for F1. Physical startup/runtime, opening/listing and native custom-call
+suppliers remain open. Checked source edits stay in this worktree for the
+lead's review, full OCaml.Audit and integration; no Git metadata was written.
+
+Verification:
+
+- Guarded `lake build OCaml.Vm.Sim.CountedFieldRows`: **2,625 jobs, passed**
+  (`/tmp/counted-field-frame7.log`). This checks all seven generated semantic
+  facts/wrappers, both local counted frame instances and the actual initially
+  unallocated growth frame, including its fresh custom-storage separation.
+- Final affected build of `CountedControlRows`, `CountedPrimAllocRows`,
+  `CountedChannelRows`, `CountedEntry` and `F1Table`: **3,631 jobs, passed**
+  (`/tmp/counted-field-affected-final.log`). All supplied ordinary rows and
+  inherited allocating opcode/primitive rows still check.
+- Separate `WhileMinTable` build: **3,244 jobs, passed**
+  (`/tmp/counted-field-whilemin-final.log`). Two earlier combined dependency
+  builds were guard-stopped at 10 GiB, without a Lean proof error; sequential
+  `PrimMlOutput` and `WhileMinShape` prerequisites passed (1,905 and 2,058 jobs;
+  `/tmp/counted-field-mloutput.log`, `/tmp/counted-field-whilemin-shape.log`).
+  The isolated kernel shape certificate took 118 seconds. No limits increased.
+- Guarded `lake env lean -M 6000 -j 1 OCaml/Vm/Sim/CountedFieldAudit.lean`:
+  **55 focused reports, passed**, with only `propext`, `Classical.choice`,
+  `Quot.sound` or no axioms (`/tmp/counted-field-focused-audit.log`,
+  `/tmp/counted-field-audit-check.txt`). All 48 added/refactored theorem
+  declarations are covered, along with ordinary frame/allocation/census
+  regressions (`/tmp/counted-field-declaration-check.txt`). All 55 reports
+  are registered in `OCaml/Audit.lean`; full Audit was left to the lead.
+- Nine final counted stack/allocation/control/field, A2 and F1 generator drift,
+  discipline, hole and abstraction checks: **passed**
+  (`/tmp/counted-field-static-checks.log`); `git diff --check` passes.
+  The field row/audit generator is registered in check_all.sh stage a5.
+- Every build/audit checked `free -g` first (available at least 25 GB), ran
+  alone through `lean-guarded.py`/`lean-capped.sh` and retained the inherited
+  12 GB scope and two-thread setting (the focused audit uses one Lean thread).
+  No heartbeat increases, proof holes or direct generated-source edits.
+
+The remaining blocker is an actual `RefCustomApart` runtime supplier,
+including preservation across custom-storage changes. The stronger counted
+`BarrierGrowthFull` remains the named G2 boundary. Checked source edits stay
+uncommitted for the lead; no landing or full counted table closure is claimed.
+
+
 **2026-10-28 local custom spatial migration: checked for lead review.**
 The conditional pinned-domain record/frame obstruction is checked; both global
 `CallerApart.records/named` laws are removed. Actual opening/listing and counted

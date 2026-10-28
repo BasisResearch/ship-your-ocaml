@@ -122,20 +122,38 @@ theorem table_unique {dom tbl ptr limit tbl' ptr' limit' : BitVec 64} {m : Std.E
   subst e
   exact ⟨rfl, t.ptrWord.symm.trans t'.ptrWord, t.limitWord.symm.trans t'.limitWord⟩
 
+/-- A layout's runtime frame for the actual unallocated-table native post.
+This is a low-level GrowDone frame, instantiated below from real effects;
+it does not assume a whole opcode or a counted runtime successor. -/
+structure BarrierGrowRuntime (L : OCaml.Layout) : Prop where
+  afterGrow : ∀ (c d : Config) (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat)
+      (slot value ra sp : BitVec 64), L.runtimeOk c → Gc.LibHeapAt H cap chs c →
+      (word c (Gc.refTable + Layout.off_ref_table_base)).toNat = 0 →
+      Gc.Barrier.GrowDone imageLive H (cap - Gc.tableCharge) slot value ra sp
+        (BitVec.ofNat 64 Gc.refTable) 0x40000#64 c d →
+      Gc.InHeapChunks (slot + BitVec.ofNat 64 0).toNat 8 →
+      ((slot + BitVec.ofNat 64 0).toNat + 8 ≤ Gc.privateRegion.lo ∨
+        Gc.privateRegion.hi ≤ (slot + BitVec.ofNat 64 0).toNat) → L.runtimeOk d
+
 /-- **`caml_modify` growing an unallocated remembered set, at an F1 state
 whose integer registers are all present.** newlib's library model runs over
 the program image alone (`imageLive`), present by `ExecutableImage`. -/
-theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high codeReg : Nat}
+theorem barrierGrowth_gprs_of_runtime {L : OCaml.Layout}
+    (budget : L.budget = Gc.f1Layout.budget)
+    (project : ∀ c, L.runtimeOk c → Gc.f1Runtime c)
+    (idle : ∀ c, L.runtimeOk c → bytesT c.σ.mem Layout.sym_caml_gc_phase 4 = 3#32)
+    (growRuntime : BarrierGrowRuntime L)
+    {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high codeReg : Nat}
     {ra codeWord stackWord value : BitVec 64} {c : Config} {l a i tag : Nat} {fields : List Val}
     {vVal : Val} {D : InvocationData} {tbl ptr limit : BitVec 64}
-    (input : ModifyInput Gc.f1Layout P s pl cp sp high codeReg ra codeWord stackWord
+    (input : ModifyInput L P s pl cp sp high codeReg ra codeWord stackWord
       (BitVec.ofNat 64 (a + 8 * i)) value c)
     (inv : Invocation D c) (v : NativeValid D) (low : high - Layout.stackBytes ≤ sp)
     (live : Live s.heap (roots P s) l) (placed : pl.φ l = some a)
     (selected : s.heap.get? l = some (.block tag fields)) (bound : i < fields.length)
     (represented : valWord pl vVal = some value)
     (root : ∀ loc, vVal.loc? = some loc → Live s.heap (roots P s) loc)
-    (fieldStable : WindowStable Gc.f1Layout.runtimeOk [⟨a + 8 * i, a + 8 * i + 8⟩])
+    (fieldStable : WindowStable L.runtimeOk [⟨a + 8 * i, a + 8 * i + 8⟩])
     (table : Gc.Barrier.Table (word c Layout.sym_Caml_state) tbl ptr limit c.σ.mem)
     (emptyW : word c (tbl + BitVec.ofNat 64 0).toNat = 0#64)
     (grows : ¬ Gc.Barrier.NoGrow (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 32).toNat 8)
@@ -144,9 +162,11 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
       value ptr limit)
     (gprs : GprPresent c.σ) :
     FnSummary (0x8000a9a8#64) (fun e => e = c)
-      (BarrierDone Gc.f1Layout P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c) := by
-  have ok : f1Runtime c := input.runtime
+      (BarrierDone L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c) := by
+  have ok : f1Runtime c := project c input.runtime
   have g := input.geometry
+  have gBase : OCaml.LoopGeometry Gc.f1Layout P s c pl cp high :=
+    ⟨g.toArmGeometry, by have room := g.room; rwa [budget] at room⟩
   have objArena := g.heapArena l a _ placed selected
   have size : (Obj.block tag fields).wosize = fields.length := rfl
   rw [size] at objArena
@@ -155,12 +175,12 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
   have small : D.nativeSp < 2 ^ 64 := by simp only [Layout.sym_stack_top] at ht; omega
   have fits : a + 8 * i < 2 ^ 64 := by simp only [Vsa.Sim.DlHeap.heapEnd] at objArena; omega
   have sn := barrier_slot_nat (a := a) (i := i) fits
-  have entry := barrier_entry input f1_barrierRuntime inv v placed selected bound
+  have entry := barrier_entry_of_idle input (idle c input.runtime) inv v placed selected bound
   obtain ⟨rfl, rfl, rfl⟩ := table_unique table (f1_table ok)
   obtain ⟨tbl', ptr', limit', t', arena, sep⟩ := f1_tableRuntime ok
   obtain ⟨rfl, rfl, rfl⟩ := table_unique t' (f1_table ok)
   have rem := barrier_remembered input v placed selected bound table arena
-    (sep P s pl cp high g input.data.codeBase input.data.stackHigh input.data.named)
+    (sep P s pl cp high gBase input.data.codeBase input.data.stackHigh input.data.named)
   simp only [Gc.Barrier.NoGrow, not_or] at grows
   obtain ⟨notYoung, notOld, young, notRoom⟩ := grows
   have emptyNat : (word c (refTable + Layout.off_ref_table_base)).toNat = 0 := by
@@ -195,14 +215,14 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
   apply (Gc.Barrier.barrier_grow entry rem grow notYoung notOld (Classical.not_not.1 young) (Nat.le_of_not_lt notRoom)).weaken
     (fun _ h => h)
   intro after ⟨gd⟩
-  have state0 : BarrierState Gc.f1Layout P s pl cp sp high D c :=
+  have state0 : BarrierState L P s pl cp sp high D c :=
     ⟨input.data, input.primitives, input.image, input.runtime, input.geometry, inv, low⟩
   refine ⟨state0.keep_field_step v live placed selected bound represented root fieldStable ?_ ?_ gd.ready.image
-    (Gc.f1_afterGrow ok h emptyNat gd slotChunks slotPrivate) gd.out ?_, gd.ready.good, gd.ready.tick,
+    (growRuntime.afterGrow c after H cap chs _ _ _ _ input.runtime h emptyNat gd slotChunks slotPrivate) gd.out ?_, gd.ready.good, gd.ready.tick,
     gd.ready.minstret, gd.pc, ?_, gd.ready.platform.htifIdle,
     fun _ => ⟨fun n lo hi => gd.ready.platform.gpr n lo (by omega)⟩⟩
   · intro x obs ns
-    have kk := observed_kept ok h g input.data low small x obs
+    have kk := observed_kept ok h gBase input.data low small x obs
     unfold InSpan at ns
     simp only [byte, bytesT, gd.kept x kk (by rw [sn]; omega)]
   · have w := gd.slotWord
@@ -214,5 +234,31 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
     simp only [barrierClobber, Gc.Barrier.calleeSaved, Realloc.calleeRest, List.cons_append, List.nil_append,
       List.mem_cons, List.not_mem_nil, or_false] at out ⊢
     omega
+
+/-- Ordinary F1 specialization, with every original native post field retained. -/
+theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high codeReg : Nat}
+    {ra codeWord stackWord value : BitVec 64} {c : Config} {l a i tag : Nat} {fields : List Val}
+    {vVal : Val} {D : InvocationData} {tbl ptr limit : BitVec 64}
+    (input : ModifyInput Gc.f1Layout P s pl cp sp high codeReg ra codeWord stackWord
+      (BitVec.ofNat 64 (a + 8 * i)) value c)
+    (inv : Invocation D c) (v : NativeValid D) (low : high - Layout.stackBytes ≤ sp)
+    (live : Live s.heap (roots P s) l) (placed : pl.φ l = some a)
+    (selected : s.heap.get? l = some (.block tag fields)) (bound : i < fields.length)
+    (represented : valWord pl vVal = some value)
+    (root : ∀ loc, vVal.loc? = some loc → Live s.heap (roots P s) loc)
+    (fieldStable : WindowStable Gc.f1Layout.runtimeOk [⟨a + 8 * i, a + 8 * i + 8⟩])
+    (table : Gc.Barrier.Table (word c Layout.sym_Caml_state) tbl ptr limit c.σ.mem)
+    (emptyW : word c (tbl + BitVec.ofNat 64 0).toNat = 0#64)
+    (grows : ¬ Gc.Barrier.NoGrow (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 32).toNat 8)
+      (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 40).toNat 8)
+      (BitVec.ofNat 64 (a + 8 * i)) (bytesT c.σ.mem (BitVec.ofNat 64 (a + 8 * i) + BitVec.ofNat 64 0).toNat 8)
+      value ptr limit)
+    (gprs : GprPresent c.σ) :
+    FnSummary (0x8000a9a8#64) (fun e => e = c)
+      (BarrierDone Gc.f1Layout P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c) :=
+  barrierGrowth_gprs_of_runtime rfl (fun _ h => h) Gc.f1_gcIdle
+    ⟨fun _ _ _ _ _ _ _ _ _ ok h empty done chunks slotPrivate0 =>
+      Gc.f1_afterGrow ok h empty done chunks slotPrivate0⟩
+    input inv v low live placed selected bound represented root fieldStable table emptyW grows gprs
 
 end OCaml.Vm.Sim

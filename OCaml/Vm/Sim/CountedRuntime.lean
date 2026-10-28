@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.ChannelCountFrame
 import OCaml.RefinementF1
 import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.F1RaiseRuntime
+import OCaml.Vm.Sim.HeapRows
 
 /-! Reuse generic rows under a local runtime invariant. Channel calls change
 the frozen world and use their counted machine summaries instead. Ordinary
@@ -153,6 +154,75 @@ theorem f1_stack_channelCountFrame {Ready : Nat → Config → Prop}
       · exact f1_vmWindow_heapSafe vm
       · exact Gc.heapSafe_native native)
     (fun w hw a ha => (allowed w hw).custom_outside custom runtime ha) frame
+
+/-- Retarget only the layout budget; all placement and native geometry fields
+are retained verbatim. -/
+theorem _root_.OCaml.LoopGeometry.retarget {L L' : OCaml.Layout} {P : Prog} {s : St}
+    {c : Config} {pl : Place} {cp : ChanPlace} {high : Nat}
+    (g : OCaml.LoopGeometry L P s c pl cp high) (budget : L'.budget = L.budget) :
+    OCaml.LoopGeometry L' P s c pl cp high :=
+  ⟨g.toArmGeometry, by rw [budget]; exact g.room⟩
+
+/-- A real object-field window misses custom state because it lies in one
+of the two represented heap chunks, both excluded by CallerApart.covered. -/
+theorem object_custom_outside {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {P : Prog} {s : St} {c geometryC : Config}
+    {pl : Place} {cp : ChanPlace} {high l a x n y : Nat} {o : Obj}
+    (custom : Gc.CustomMemCall Ready state Customs)
+    (g : Gc.NurseryGeometry P s geometryC pl cp high) (placed : pl.φ l = some a)
+    (object : s.heap.get? l = some o) (start : a - 8 ≤ x)
+    (finish : x + n ≤ a + 8 * o.wosize) (hy : state c y) : y < x ∨ x + n ≤ y := by
+  have apart := (custom.apart c y hy).covered
+  have chunks := g.heapChunks l a o placed object
+  have notIn : ¬ (x ≤ y ∧ y < x + n) := by
+    intro inside
+    rcases chunks with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · exact apart (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo)
+        (by decide) (by decide) ⟨by omega, by dsimp only; simp only [Gc.minorRegion] at *; omega⟩
+    · exact apart (Gc.majorRegion.lo, Gc.majorRegion.hi - Gc.majorRegion.lo)
+        (by decide) (by decide) ⟨by omega, by dsimp only; simp only [Gc.majorRegion] at *; omega⟩
+  omega
+
+/-- Count observations survive an actual object-field window. Separation
+uses the selected entry ledger, independently of the geometry's channel placement. -/
+theorem f1_field_channelCountFrame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {P : Prog} {s : St} {c d geometryC : Config}
+    {pl : Place} {cp cp0 : ChanPlace} {world : World} {high l a k tag : Nat}
+    {fields : List Val}
+    (custom : Gc.CustomMemCall Ready state Customs) (runtime : Gc.f1Runtime c)
+    (counts : ChannelCustomsRepr Customs c cp world)
+    (g : ArmGeometry P s geometryC pl cp0 high) (placed : pl.φ l = some a)
+    (object : s.heap.get? l = some (.block tag fields)) (bound : k < fields.length)
+    (frame : FrameOn [⟨a + 8 * k, a + 8 * k + 8⟩] c.σ.mem d.σ.mem) :
+    ChannelCountFrame Customs cp world c d := by
+  have low := g.heapLow l a _ placed object
+  have finish : a + 8 * k + 8 ≤ a + 8 * (Obj.block tag fields).wosize := by
+    simp only [Obj.wosize]; omega
+  apply f1_channelCountFrame custom runtime counts
+    (fun w hw => by simp only [List.mem_singleton] at hw; subst w; dsimp only; omega)
+    (fun w hw => by
+      simp only [List.mem_singleton] at hw; subst w
+      exact Gc.heapSafe_object g.nursery placed object (by omega) finish)
+    (fun w hw y hy => by
+      simp only [List.mem_singleton] at hw; subst w
+      exact object_custom_outside (x := a + 8 * k) (n := 8) custom g.nursery placed object (by omega) finish hy) frame
+
+/-- Local counted field-write readiness comes from the actual field window
+and FieldWriteOk.of_geometry, with the original stack-space guard. -/
+theorem counted_fieldWriteReady {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {P : Prog} {s : St} {c : Config}
+    {cp0 : ChanPlace} {world : World}
+    (custom : Gc.CustomMemCall Ready state Customs)
+    (runtime : (countedLayout Gc.f1Layout Customs cp0 world).runtimeOk c)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes) :
+    FieldWriteReady (countedLayout Gc.f1Layout Customs cp0 world) P s c where
+  ready pl cp sp high l a k tag fields w repr g placed object bound := by
+    have base := (f1_fieldWriteReady runtime.1 space).ready pl cp sp high l a k tag fields w
+      repr (g.retarget rfl) placed object bound
+    refine ⟨?_, base.2⟩
+    intro before after frame ok
+    exact ⟨base.1 before after frame ok.1,
+      (f1_field_channelCountFrame custom ok.1 ok.2 g.toArmGeometry placed object bound frame).repr ok.2⟩
 
 /-- All RuntimeFrame fields lift at the actual pinned F1 runtime. No stronger
 WindowStable premise or global runtime coherence is assumed. -/

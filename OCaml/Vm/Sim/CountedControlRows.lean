@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.CountedMemoryRows
 import OCaml.Vm.Sim.CountedStackRows
 import OCaml.Vm.Sim.CountedAllocRows
+import OCaml.Vm.Sim.CountedFieldRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.SignalRows
 import OCaml.Vm.Sim.RaiseRows
@@ -369,7 +370,7 @@ theorem counted_stop_row {P : Prog} {Customs : Config → Nat → Prop}
 /-- The union records supported OpArm families, relative to their named
 suppliers. It does not assert full F1 table closure. -/
 def countedOrdinaryOpcode (op : Opcode) : Bool :=
-  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op
+  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op || op == .OFFSETREF
 
 /-- Every opcode counted by the census has its actual complete row. This
 partial table retains the named custom supplier and real GoodF1/Fits guards. -/
@@ -508,7 +509,7 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
   | GTINT => exact counted_gtint_row f1_memoryStable custom.accounting fits
   | GEINT => exact counted_geint_row f1_memoryStable custom.accounting fits
   | OFFSETINT => exact counted_offsetint_row f1_memoryStable custom.accounting
-  | OFFSETREF => cases supported
+  | OFFSETREF => exact counted_offsetref_row custom fits
   | ISINT => exact counted_isint_row f1_memoryStable custom.accounting
   | GETMETHOD => cases supported
   | BEQ => exact counted_beq_row f1_memoryStable custom.accounting
@@ -530,9 +531,9 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
   | RAISE_NOTRACE => exact counted_raise_notrace_row custom fits good
   | GETSTRINGCHAR => cases supported
 
-/-- Object writes/barriers and complete primitive-call rows stay explicit. -/
+/-- Six barrier rows still need the spatial supplier and counted G2; complete primitive-call rows stay open. -/
 def countedRemainingOpcodes : List Opcode :=
-  [.SETGLOBAL, .SETFIELD0, .SETFIELD1, .SETFIELD2, .SETFIELD3, .SETFIELD, .OFFSETREF, .C_CALL1, .C_CALL2, .C_CALL3, .C_CALL4, .C_CALL5]
+  [.SETGLOBAL, .SETFIELD0, .SETFIELD1, .SETFIELD2, .SETFIELD3, .SETFIELD, .C_CALL1, .C_CALL2, .C_CALL3, .C_CALL4, .C_CALL5]
 
 /-- Exact complement against the authoritative F1 opcode classification. -/
 theorem counted_opcode_census (op : Opcode) :
@@ -540,9 +541,9 @@ theorem counted_opcode_census (op : Opcode) :
   cases op <;> decide
 
 /-- Number of supported complete counted ordinary opcode rows. -/
-theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 122 := by decide +kernel
+theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 123 := by decide +kernel
 
-/-- The remaining list has exactly twelve distinct opcode obligations. -/
-theorem counted_remaining_count : countedRemainingOpcodes.length = 12 ∧ countedRemainingOpcodes.Nodup := by decide
+/-- The remaining list has exactly eleven distinct opcode obligations. -/
+theorem counted_remaining_count : countedRemainingOpcodes.length = 11 ∧ countedRemainingOpcodes.Nodup := by decide
 
 end OCaml.Vm.Sim

@@ -11,6 +11,7 @@ import OCaml.Vm.Sim.CountedEntry
 import OCaml.Vm.Sim.CountedChannelRows
 import OCaml.Vm.Sim.CountedMemoryRows
 import OCaml.Vm.Sim.CountedControlRows
+import OCaml.Vm.Sim.CountedFieldRows
 import OCaml.Vm.Sim.CountedStackRows
 import OCaml.Vm.Sim.CountedAllocRows
 import OCaml.Vm.Sim.CountedPrimAllocRows
@@ -7948,6 +7949,49 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_opcode_census
 #print axioms OCaml.Vm.Sim.counted_opcode_count
 #print axioms OCaml.Vm.Sim.counted_remaining_count
+
+-- Counted field/barrier frame audit; spatial supplier and counted G2 stay explicit.
+#print axioms OCaml.LoopGeometry.retarget
+#print axioms OCaml.Vm.Sim.object_custom_outside
+#print axioms OCaml.Vm.Sim.f1_field_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_fieldWriteReady
+#print axioms OCaml.Vm.Sim.globalBarrier_of_frames
+#print axioms OCaml.Vm.Sim.field_callee_of_frames
+#print axioms OCaml.Vm.Sim.fieldBarrier_of_frames
+#print axioms OCaml.Vm.Sim.fieldBarrierK_of_frames
+#print axioms OCaml.Vm.Sim.barrierGrowth_gprs_of_runtime
+#print axioms OCaml.Vm.Sim.f1_insert_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_barrierRuntime
+#print axioms OCaml.Vm.Sim.f1_grow_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_barrierGrowth
+#print axioms OCaml.Vm.Sim.counted_barrier_row
+#print axioms OCaml.Vm.Gc.f1_table_eq
+#print axioms OCaml.Vm.Gc.LibHeapAt.insert_outside
+#print axioms OCaml.Vm.Gc.RefCustomApart.entry_outside
+#print axioms OCaml.Vm.Gc.LibHeapAt.custom_realloc_kept
+#print axioms OCaml.Vm.Gc.CallerApart.slot_outside
+#print axioms OCaml.Vm.Gc.f1_afterGrow_custom
+#print axioms OCaml.Vm.Sim.counted_setglobal_channels
+#print axioms OCaml.Vm.Sim.counted_setglobal_row
+#print axioms OCaml.Vm.Sim.counted_setfield0_channels
+#print axioms OCaml.Vm.Sim.counted_setfield0_row
+#print axioms OCaml.Vm.Sim.counted_setfield1_channels
+#print axioms OCaml.Vm.Sim.counted_setfield1_row
+#print axioms OCaml.Vm.Sim.counted_setfield2_channels
+#print axioms OCaml.Vm.Sim.counted_setfield2_row
+#print axioms OCaml.Vm.Sim.counted_setfield3_channels
+#print axioms OCaml.Vm.Sim.counted_setfield3_row
+#print axioms OCaml.Vm.Sim.counted_setfield_channels
+#print axioms OCaml.Vm.Sim.counted_setfield_row
+#print axioms OCaml.Vm.Sim.counted_offsetref_channels
+#print axioms OCaml.Vm.Sim.counted_offsetref_row
+#print axioms OCaml.Vm.Sim.barrier_entry_of_idle
+#print axioms OCaml.Vm.Gc.RefStorage.custom_alias
+#print axioms OCaml.Vm.Gc.f1_afterGrow_customApart
+#print axioms OCaml.Vm.Sim.counted_barrier_supported_row
+#print axioms OCaml.Vm.Sim.counted_barrier_opcode_count
+#print axioms OCaml.Vm.Sim.barrierGrowth_of_runtime
+#print axioms OCaml.Vm.Sim.counted_growRuntime
 
 -- Local custom spatial invariants and the conditional global-frame obstruction.
 #print axioms OCaml.Vm.Gc.global_records_frame_obstruction

@@ -1,5 +1,37 @@
 # Routes not to repeat
 
+- 2026-10-28 counted growth capacity frame: using one implicit capacity for
+  both entry `LibHeapAt H cap` and returned `GrowDone H capacity` forces the
+  real call's `cap - tableCharge` to unify with cap. Lean then unfolds the
+  large subtraction through Nat.rec and hits default recursion limits. Keep
+  caller and remaining capacities separate in observation-only frame helpers;
+  `BarrierGrowRuntime.afterGrow` retains the actual `cap - tableCharge` native
+  post and `f1_afterGrow` retains the real spending relation. Do not increase
+  budgets or erase the allocator's capacity change to hide this mismatch.
+
+- 2026-10-28 counted barrier insertion: shared ownership is insufficient to
+  separate dynamic remembered-set storage from custom storage.
+  `LibHeapAt.custom` covers custom storage in the selected H, while
+  `RefStorage.covered` may cover the same range; `apartCustom` separates only
+  the fixed custom-table struct. `RefStorage.custom_alias` checks that those
+  interfaces retain `CustomLedger` under aliased addressing observations
+  while `RefCustomApart` is false (a conditional interface obstruction). It does not assert an alias in reachable states
+  or refute the complete `f1Runtime`. `f1_afterGrow_customApart` instead derives
+  separation for the actual first-allocation return from `GrowDone.disjoint`
+  and selected `CustomLedger.owned`. A supplier at every runtime state needs
+  an invariant and real preservation/startup/custom-call producers. Do not
+  infer it from two Covered witnesses or add it silently to GoodF1.
+
+- 2026-10-28 counted full-table growth: `BarrierGrowthFull f1Layout` returns
+  only the base runtime. It cannot be treated as
+  `BarrierGrowthFull (countedLayout f1Layout Customs cp world)`: the latter's
+  BarrierDone must also retain physical Customs, natural channel refcounts
+  and opened-list links at that frozen placement/world, together with every
+  ordinary native/runtime field. G2 must supply this stronger existing
+  obligation for each cp/world, or expose real low-level effects from which
+  its extra count frame can be derived. The unallocated branch uses the
+  actual GrowDone.kept/disjoint and does not need that full-table premise.
+
 - 2026-10-28 custom read-context inspection: native `caml_alloc_custom_mem`
   reads ratio/max-size globals, domain heap sizes and memprof state beyond
   the current mutable custom footprint (`custom.c`, `memory.c`). Its input

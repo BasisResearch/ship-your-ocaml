@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.F1Barrier
+import OCaml.Vm.Gc.CustomMem
 import OCaml.Vm.Gc.BarrierGrow
 import OCaml.Vm.Sim.ReallocRefTableImage
 import OCaml.Vm.Sim.ReallocGenericImage
@@ -115,6 +116,65 @@ theorem LibHeapAt.named_realloc_kept {H : List (Nat × Nat)} {cap : Nat} {chs : 
     simp only [Layout.sym_named_value_table] at bucket
     omega
   · exact kept_covered h (x := (x, 1)) cov (Nat.le_refl _) (by omega) outStruct
+
+/-- The selected custom ownership is kept by the actual allocator return.
+CallerApart excludes the remembered-table struct; ownership excludes free
+allocator bytes. No universal-ledger separation is used. -/
+theorem LibHeapAt.custom_realloc_kept {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {H cap chs c} (h : LibHeapAt H cap chs c) {sp : BitVec 64} {x : Nat}
+    (hx : state c x) : Realloc.Kept H sp (BitVec.ofNat 64 refTable) x := by
+  have apart := custom.apart c x hx
+  rcases (custom.owned h).bytes x hx with low | cov
+  · apply kept_static low
+    have stat := apart.static low
+    unfold VsaIris.InExt Layout.sym_caml_extra_heap_resources at stat
+    unfold allocGlobal InRange
+    omega
+  · have sep := apart.covered (refTable, 56) (by decide) (by decide)
+    have out : x < refTable ∨ refTable + 56 ≤ x := by
+      by_cases low : x < refTable
+      · exact Or.inl low
+      · exact Or.inr (by apply Classical.byContradiction; intro no; exact sep ⟨by omega, by omega⟩)
+    exact kept_covered h (x := (x, 1)) cov (Nat.le_refl _) (by omega) out
+
+/-- Custom state misses an actual field store in either represented chunk. -/
+theorem CallerApart.slot_outside {c : Config} {x slot : Nat} (apart : CallerApart c x)
+    (chunks : InHeapChunks slot 8) : x < slot ∨ slot + 8 ≤ x := by
+  have notIn : ¬ (slot ≤ x ∧ x < slot + 8) := by
+    intro inside
+    rcases chunks with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · exact apart.covered (minorRegion.lo, minorRegion.hi - minorRegion.lo)
+        (by decide) (by decide) ⟨by omega, by dsimp only; simp only [minorRegion] at *; omega⟩
+    · exact apart.covered (majorRegion.lo, majorRegion.hi - majorRegion.lo)
+        (by decide) (by decide) ⟨by omega, by dsimp only; simp only [majorRegion] at *; omega⟩
+  omega
+
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
+/-- Physical accounting is framed by GrowDone.kept and the entry's actual
+selected custom ownership. The newly allocated table is not assumed quiet. -/
+theorem f1_afterGrow_custom {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {c d : Config} {H : List (Nat × Nat)} {cap capacity : Nat} {chs : List Nat}
+    {slot value ra sp : BitVec 64} (h : LibHeapAt H cap chs c)
+    (g : Barrier.GrowDone live H capacity slot value ra sp (BitVec.ofNat 64 refTable) 0x40000#64 c d)
+    (chunks : InHeapChunks (slot + BitVec.ofNat 64 0).toNat 8) : CustomCountStep Customs c d 0 := by
+  have dom : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
+    apply Reloc.bytesT_congr
+    intro j hj
+    have low : Layout.sym_Caml_state + j < heapStart := by
+      simp only [Layout.sym_Caml_state, heapStart]; omega
+    have notAlloc : ¬ allocGlobal (Layout.sym_Caml_state + j) := by
+      unfold allocGlobal InRange; simp only [Layout.sym_Caml_state]; omega
+    have outside : Layout.sym_Caml_state + j < (slot + BitVec.ofNat 64 0).toNat := by
+      rcases chunks with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [minorRegion, majorRegion, Layout.sym_Caml_state] at * <;> omega
+    simp only [bytesT, g.kept _ (kept_static low notAlloc) (Or.inl outside)]
+  constructor
+  intro n physical
+  simpa only [Nat.add_zero] using custom.accounting.frame physical
+    (fun x hx => g.kept x (h.custom_realloc_kept custom hx)
+      ((custom.apart c x hx).slot_outside chunks)) dom
 
 omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- A word whose bytes the growth call keeps (and that misses the slot) is unchanged. -/
@@ -293,4 +353,60 @@ theorem f1_afterGrow {c c' : Config} {H : List (Nat × Nat)} {cap : Nat} {chs : 
     have l := g.limit
     rw [tblNat] at l
     exact toNat_of_add l (by decide) (by simp only [heapEnd] at fits; omega)
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
+/-- The actual first allocation supplies the missing storage separation:
+the new remembered storage is fresh against the selected custom ledger.
+This does not manufacture a supplier at arbitrary f1Runtime states or after
+custom-table growth, whose invariant still records ownership alone. -/
+theorem f1_afterGrow_customApart {c d : Config} {H : List (Nat × Nat)} {cap capacity : Nat}
+    {chs : List Nat} {slot value ra sp : BitVec 64} (h : LibHeapAt H cap chs c)
+    (done : Barrier.GrowDone live H capacity slot value ra sp
+      (BitVec.ofNat 64 refTable) 0x40000#64 c d)
+    (chunks : InHeapChunks (slot + BitVec.ofNat 64 0).toNat 8) : RefCustomApart d := by
+  have tableKeep (off : Nat) (bound : off + 8 ≤ Layout.custom_table_bytes) :
+      word d (customTable + off) = word c (customTable + off) := by
+    apply grow_word done
+    · intro j hj
+      apply kept_covered h h.custom.table (by omega) (by dsimp only; omega)
+      right
+      have : refTable + 56 ≤ customTable := by decide
+      omega
+    · rcases chunks with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [customTable, WhileMinRuntime.customTable, Layout.custom_table_bytes,
+          minorRegion, majorRegion] at * <;> omega
+  have baseSame : customBase d = customBase c :=
+    congrArg BitVec.toNat (tableKeep Layout.off_custom_table_base (by decide))
+  have endSame : customEnd d = customEnd c :=
+    congrArg BitVec.toNat (tableKeep Layout.off_custom_table_end (by decide))
+  have refBase : (word d (refTable + Layout.off_ref_table_base)).toNat = done.p.toNat := by
+    have base := done.base
+    change word d refTable = done.p at base
+    exact congrArg BitVec.toNat base
+  have request : (Realloc.request 0x40000#64).toNat = 264192 := by decide
+  have refEnd : (word d (refTable + Layout.off_ref_table_end)).toNat = done.p.toNat + 264192 := by
+    have ending := done.endField
+    change word d (refTable + 8) = _ at ending
+    exact toNat_of_add ending (by decide) (by
+      have fits := done.fresh
+      rw [request] at fits
+      simp only [heapEnd] at fits
+      omega)
+  right
+  intro x hx
+  have before : CustomFoot c x := by
+    simpa only [CustomFoot, baseSame, endSame] using hx
+  rw [refBase, refEnd]
+  have notInside : ¬ VsaIris.InExt (done.p.toNat, 264192) x := by
+    intro inside
+    rcases h.custom.owned.bytes x before with below | ⟨e, he, lo, hi⟩
+    · have low := done.fresh.1
+      have := inside.1
+      omega
+    · apply done.disjoint e he x
+      · simpa only [request] using inside
+      · exact ⟨lo, by dsimp only at hi; omega⟩
+  unfold VsaIris.InExt at notInside
+  dsimp only at notInside
+  omega
+
 end OCaml.Vm.Gc

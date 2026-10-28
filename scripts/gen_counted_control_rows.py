@@ -28,7 +28,7 @@ CONTROL = {
 }
 DIVISION = ['DIVINT', 'MODINT']
 REMAINING = ['SETGLOBAL', 'SETFIELD0', 'SETFIELD1', 'SETFIELD2', 'SETFIELD3',
-             'SETFIELD', 'OFFSETREF', 'C_CALL1', 'C_CALL2', 'C_CALL3', 'C_CALL4', 'C_CALL5']
+             'SETFIELD', 'C_CALL1', 'C_CALL2', 'C_CALL3', 'C_CALL4', 'C_CALL5']
 OPERATIONS = {}
 for operation, ops in {
     'enter': ['APPLY', 'APPLY1', 'APPLY2', 'APPLY3', 'APPTERM', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'RETURN'],
@@ -85,7 +85,7 @@ theorem counted_{op.lower()}_row {{L : OCaml.Layout}} {{P : Prog}}
 
 def control_output():
     out = header(['CountedMemoryRows', 'CountedStackRows', 'CountedAllocRows',
-                  'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow'],
+                  'CountedFieldRows', 'ControlRows', 'SignalRows', 'RaiseRows', 'StopRow'],
                  'Counted control rows and exact remaining F1 opcode census.')
     out += '\n/-- Exactly the ordinary control rows generated here. -/\ndef countedControlOpcode : Opcode → Bool\n'
     out += ''.join(f'  | .{op} => true\n' for op in [*CONTROL, *DIVISION, 'STOP']) + '  | _ => false\n'
@@ -132,7 +132,7 @@ theorem counted_stop_row {P : Prog} {Customs : Config → Nat → Prop}
 /-- The union records supported OpArm families, relative to their named
 suppliers. It does not assert full F1 table closure. -/
 def countedOrdinaryOpcode (op : Opcode) : Bool :=
-  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op
+  countedStackOpcode op || countedMemoryOpcode op || countedControlOpcode op || countedAllocOpcode op || op == .OFFSETREF
 '''
     # Tie the census to actual OpArm terms, with exactly the existing suppliers.
     calls = {op: f'counted_{op.lower()}_row custom' + (' fits' if mode != 'stable' else '')
@@ -145,6 +145,7 @@ def countedOrdinaryOpcode (op : Opcode) : Bool :=
                   (' good' if 'good' in row else '') for op, row in CONTROL.items()})
     calls.update({op: f'counted_{op.lower()}_row custom fits good' for op in DIVISION})
     calls['STOP'] = 'counted_stop_row good'
+    calls['OFFSETREF'] = 'counted_offsetref_row custom fits'
     out += '''
 /-- Every opcode counted by the census has its actual complete row. This
 partial table retains the named custom supplier and real GoodF1/Fits guards. -/
@@ -159,7 +160,7 @@ theorem counted_supported_row {P : Prog} {op : Opcode}
     out += ''.join(f'  | {op} => ' + (f'exact {calls[op]}' if op in calls else 'cases supported') + '\n'
                    for op in opcodes())
     out += '''
-/-- Object writes/barriers and complete primitive-call rows stay explicit. -/
+/-- Six barrier rows still need the spatial supplier and counted G2; complete primitive-call rows stay open. -/
 def countedRemainingOpcodes : List Opcode :=
 '''
     out += '  [' + ', '.join('.' + op for op in REMAINING) + ']\n'
@@ -170,10 +171,10 @@ theorem counted_opcode_census (op : Opcode) :
   cases op <;> decide
 
 /-- Number of supported complete counted ordinary opcode rows. -/
-theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 122 := by decide +kernel
+theorem counted_opcode_count : (Opcode.all.filter countedOrdinaryOpcode).length = 123 := by decide +kernel
 
-/-- The remaining list has exactly twelve distinct opcode obligations. -/
-theorem counted_remaining_count : countedRemainingOpcodes.length = 12 ∧ countedRemainingOpcodes.Nodup := by decide
+/-- The remaining list has exactly eleven distinct opcode obligations. -/
+theorem counted_remaining_count : countedRemainingOpcodes.length = 11 ∧ countedRemainingOpcodes.Nodup := by decide
 
 end OCaml.Vm.Sim
 '''
@@ -181,8 +182,8 @@ end OCaml.Vm.Sim
 
 
 def outputs():
-    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP']
-    assert len(supported) == len(set(supported)) == 122
+    supported = [op for op, _ in STACK_ROWS] + list(ALLOC_ROWS) + [op for op, _ in MEMORY] + list(CONTROL) + DIVISION + ['STOP', 'OFFSETREF']
+    assert len(supported) == len(set(supported)) == 123
     assert set(supported).isdisjoint(REMAINING)
     assert set(supported) | set(REMAINING) == set(opcodes()) - set(NON_F1)
     return {ROOT / 'OCaml/Vm/Sim/CountedMemoryRows.lean': memory_output(),
@@ -199,4 +200,4 @@ if __name__ == '__main__':
                 raise SystemExit(f'counted control row drift: {target.relative_to(ROOT)}')
         else:
             target.write_text(content)
-    print('Counted ordinary rows current (122/134 F1 opcodes; 12 remaining)')
+    print('Counted ordinary rows current (123/134 F1 opcodes; 11 remaining)')

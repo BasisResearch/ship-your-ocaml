@@ -108,6 +108,43 @@ structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : 
   apartRecords : ∀ a ∈ chs, e ≤ a ∨ a + chanRecordBytes ≤ b
   apartCustom : e ≤ customTable ∨ customTable + Layout.custom_table_bytes ≤ b
 
+/-- Spatial boundary currently absent from LibHeapAt: dynamic remembered
+storage must miss the physical custom footprint, as well as the custom-table
+struct. Shared ownership of a ledger does not establish this separation.
+A producer must establish it at startup and preserve it across custom calls
+and remembered-set growth; no runtime successor is assumed here. -/
+def RefCustomApart (c : Config) : Prop :=
+  (word c (refTable + Layout.off_ref_table_base)).toNat = 0 ∨
+    ∀ x, CustomFoot c x →
+      x < (word c (refTable + Layout.off_ref_table_base)).toNat ∨
+        (word c (refTable + Layout.off_ref_table_end)).toNat ≤ x
+
+/-- Checked interface obstruction: ownership of both storage ranges in one
+selected ledger permits the same covered range. If the addressing words name
+that alias, CustomLedger still holds while RefCustomApart fails. This concerns
+the ledger/storage interfaces only, not reachability or all of f1Runtime. -/
+theorem RefStorage.custom_alias {H : List (Nat × Nat)} {chs : List Nat}
+    {b e p l : Nat} {c d : Config} (storage : RefStorage H chs b e p l)
+    (custom : CustomLedger H c) (base : customBase d = b) (ending : customEnd d = e)
+    (refBase : (word d (refTable + Layout.off_ref_table_base)).toNat = b)
+    (refEnd : (word d (refTable + Layout.off_ref_table_end)).toNat = e) :
+    CustomLedger H d ∧ ¬ RefCustomApart d := by
+  refine ⟨⟨custom.domain, custom.table, Or.inr ?_⟩, ?_⟩
+  · rw [base, ending]
+    exact storage.covered
+  · intro separate
+    rcases separate with zero | apart
+    · rw [refBase] at zero
+      exact storage.nonzero zero
+    · have inside : CustomFoot d b := by
+        apply Or.inr; apply Or.inr; apply Or.inr
+        rw [base, ending]
+        exact ⟨storage.nonzero, Nat.le_refl _, by dsimp only; have := storage.sized; omega⟩
+      have impossible := apart b inside
+      rw [refBase, refEnd] at impossible
+      have := storage.sized
+      omega
+
 /-- **The remembered set at an F1 state**: `Caml_state->ref_table` is the
 cut's struct; the table is unallocated (as at the cut) or has its storage. -/
 structure RefTableAt (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where

@@ -136,6 +136,16 @@ theorem f1_table {c : Config} (ok : f1Runtime c) :
     refine ⟨?_, ?_, ?_, ?_⟩ <;> rw [z] <;>
       simp only [Vsa.Sim.DlHeap.heapStart, Vsa.Sim.DlHeap.heapEnd, Layout.sym_tohost] at * <;> omega
 
+/-- Remembered-table identity is fixed by the actual domain/table words. -/
+theorem f1_table_eq {c : Config} {tbl ptr limit : BitVec 64} (ok : f1Runtime c)
+    (table : Barrier.Table (word c Layout.sym_Caml_state) tbl ptr limit c.σ.mem) :
+    tbl = BitVec.ofNat 64 refTable ∧ ptr = word c (refTable + Layout.off_ref_table_ptr) ∧
+      limit = word c (refTable + Layout.off_ref_table_limit) := by
+  have actual := f1_table ok
+  have t : tbl = BitVec.ofNat 64 refTable := table.tableWord.symm.trans actual.tableWord
+  subst tbl
+  exact ⟨rfl, table.ptrWord.symm.trans actual.ptrWord, table.limitWord.symm.trans actual.limitWord⟩
+
 /-- The open-channel list a geometry sees is the heap invariant's. -/
 theorem LibHeapAt.records_of {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
     (h : LibHeapAt H cap chs c) {chs' : List Nat} (list : OpenChannelList c.σ.mem chs') : chs' = chs :=
@@ -192,6 +202,60 @@ theorem f1_tableRuntime {c : Config} (ok : f1Runtime c) :
 /-- The insertion's two stores: the bumped `ptr` word and the entry. -/
 def insertWindows (p : Nat) : List W :=
   [⟨refTable + Layout.off_ref_table_ptr, refTable + Layout.off_ref_table_ptr + 8⟩, ⟨p, p + 8⟩]
+
+/-- Actual insertion windows miss every selected live channel record and
+all static words. This uses RefStorage.apartRecords, rather than payload
+placement chosen at an unrelated loop witness. -/
+theorem LibHeapAt.insert_outside {H cap chs c} (h : LibHeapAt H cap chs c)
+    (room : (word c (refTable + Layout.off_ref_table_ptr)).toNat <
+      (word c (refTable + Layout.off_ref_table_limit)).toNat) :
+    ∀ w ∈ insertWindows (word c (refTable + Layout.off_ref_table_ptr)).toNat,
+      Layout.sym_bss_end ≤ w.lo ∧
+      ∀ a ∈ chs, w.hi ≤ a ∨ a + chanRecordBytes ≤ w.lo := by
+  have st := h.storage room
+  obtain ⟨lo, hi⟩ := st.bounds h
+  have low := st.low
+  have lim := st.ptrLimit
+  have ending := st.limitEnd
+  have pa := st.ptrAligned
+  have la := st.limitAligned
+  intro w hw
+  simp only [insertWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl
+  · refine ⟨by decide, ?_⟩
+    intro a ha
+    have apart := h.recordsApart a ha (refTable, 56) (by decide)
+    dsimp only at apart ⊢
+    have : Layout.off_ref_table_ptr + 8 ≤ 56 := by decide
+    omega
+  · refine ⟨?_, ?_⟩
+    · have : Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapStart := by decide
+      dsimp only
+      omega
+    · intro a ha
+      have apart := st.apartRecords a ha
+      dsimp only
+      omega
+
+/-- The missing spatial supplier suffices at the precise insertion slot.
+The struct store is excluded independently by CallerApart.covered. -/
+theorem RefCustomApart.entry_outside {H cap chs c} (apart : RefCustomApart c)
+    (h : LibHeapAt H cap chs c)
+    (room : (word c (refTable + Layout.off_ref_table_ptr)).toNat <
+      (word c (refTable + Layout.off_ref_table_limit)).toNat)
+    {x : Nat} (inside : CustomFoot c x) :
+    x < (word c (refTable + Layout.off_ref_table_ptr)).toNat ∨
+      (word c (refTable + Layout.off_ref_table_ptr)).toNat + 8 ≤ x := by
+  have st := h.storage room
+  have lo := st.low
+  have hi := st.limitEnd
+  have lim := st.ptrLimit
+  have pa := st.ptrAligned
+  have la := st.limitAligned
+  rcases apart with zero | separate
+  · exact False.elim (st.nonzero zero)
+  · have := separate x inside
+    omega
 
 /-- A byte outside both insertion windows is unchanged by the insertion log. -/
 theorem insert_keep {m : Std.ExtHashMap Nat (BitVec 8)} {p : Nat} {v₁ v₂ : BitVec 64} {y : Nat}
