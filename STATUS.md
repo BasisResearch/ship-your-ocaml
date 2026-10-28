@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:57 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:09 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -158,8 +158,10 @@ evidence: `logs/custom-credit-*`. This follows the active physical-state gate.
 
 Startup entry handoff from 17:10 UTC is reviewed. Next packet:
 `tasks/sol-startup-seek-frames.md`, log `/tmp/syo-startup-seek-frames-launch.log`.
-Its actual descriptor/file source must be framed through the executed
-initialization, not assumed at the new PC.
+The worker now has a passing 3,533-job affected build of selected descriptor,
+filename/OpenFile, embedded-image and fd-position frames through actual
+initialization. Final audit and lead review remain. The next native scan
+packet is `tasks/sol-code-seek-scan.md`; G2 gets the next slot rotation first.
 G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
 wrapper conditions and returned representation/color for the reviewed branch.
 Its other branch/caller work stays in the ledger.
