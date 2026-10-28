@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 18:20 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:29 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -194,6 +194,12 @@ Opening and listing runtime producers are reviewed. That slot now takes
 `tasks/sol-counted-unary-complete.md`, log
 `/tmp/syo-counted-unary-complete-launch.log`. No active worker cache is
 copied into bprime.
+After checked unary assembly, the primitive slot takes
+`tasks/sol-format-parse-all.md` for the complete native parser/caller prefix;
+named storage and root-cell resource work stays in `tasks/sol-named-reserve.md`.
+After the bounded G2 wrapper handoff, its slot returns to the native CODE
+scan. These are work rotations, not claims that the remaining boundaries
+are closed.
 
 ## Remaining F1 boundaries
 
