@@ -589,6 +589,12 @@
   block. Reuse the existing `BestFitFallback.allocate_large` and
   `AllocLargeWrapper.allocate` where their premises hold, but retain heap
   expansion and the normal allocation wrapper's tracking obligations.
+  The reviewed CustomCallPins also fixes stat_heap_wsz=0x1f000, and its
+  PhysicalCustoms resource targets use the corresponding fixed denominator.
+  A major-heap expansion changes that native read; the general formatting
+  runtime must therefore generalize both the existing fixed free-list profile
+  and this context/accounting specialization. Do not claim the fixed-ratio
+  targets survive a changed heap size, or impose a new width guard on GoodF1.
   This is source-level scope analysis, not a checked reachable-state witness.
 
 - 2026-10-27: a proposed unbounded named-key construction using repeated

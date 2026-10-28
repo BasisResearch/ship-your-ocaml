@@ -168,7 +168,9 @@ must derive node/key reserve from immutable source provenance, including
 fully initialized partialBytes, and account separately for repeated root-cell
 removal/reallocation. Fixed name/count guards are absent from GoodF1.
 Formatting still needs full grammar/printf conversions, flags/width/precision,
-large-result allocation and actual caller/runtime suppliers.
+large-result allocation and actual caller/runtime suppliers. Major-heap
+expansion must generalize the fixed free-list, heap-size pin and resource
+target specialization; it cannot preserve those captured constants by fiat.
 
 Custom allocation needs concrete input credit and returned spending on the
 same selected heap; an existential HeapReady capacity alone supplies neither.
