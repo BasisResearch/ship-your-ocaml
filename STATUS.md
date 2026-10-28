@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:52 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:56 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -86,6 +86,9 @@ consumer build. Snapshot: `keep/outlist-runtime-reviewed-20261028`;
 `logs/outlist-*`. Rebase retained both additive audit/lane/dead-end sections.
 It does not close the native spending or full runtime supplier.
 
+The combined gate is active in `syo-wt/bprime` at fixed candidate
+`4e99ba14`, started 16:56 UTC; log `/tmp/syo-listing-bitmap-integrate.log`.
+
 ## Active work
 
 | Slot | Target | Worktree |
@@ -98,8 +101,9 @@ G2 repair started at 16:51 UTC from `eddfc88c`; log:
 `/tmp/syo-gc-bitmap-large-repair-launch.log`. It must preserve a bounded
 bitmap refinement and derive zero filtering before composing the existing
 request<=16/sufficiently-large-source native branch.
-Physical custom work is next in the listing slot, reusing its checked table
-geometry, credit and runtime components. Source/destination build locks and
+Physical custom work started at 16:56 UTC from `4e99ba14`, reusing the
+checked table geometry, credit and runtime components. Log:
+`/tmp/syo-custom-physical-runtime-launch.log`. Source/destination build locks and
 cache provenance were checked before copying the idle listing cache into
 bprime for the next full gate.
 No worker cache is copied while that worktree is building.
