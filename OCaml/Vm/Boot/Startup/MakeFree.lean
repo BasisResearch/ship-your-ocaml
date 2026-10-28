@@ -81,6 +81,8 @@ structure MadeFree (H : List (Nat × Nat)) (capacity : Nat) (sp ra p size s0 s1 
   /-- The caller's frame and everything above it are untouched. -/
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   /-- Below the arena only the chunk, the tree root and `caml_fl_cur_wsz` change. -/
+  highKept : ∀ x, heapEnd ≤ x → x + 80 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   kept : ∀ x, x < heapEnd →
     OutW [⟨p.toNat, p.toNat + 8 * size.toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩, ⟨flCurWszAddr, flCurWszAddr + 8⟩] x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -299,15 +301,16 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     A.ready.aligned).run d9 ⟨p9.pc, rfl⟩
   have mem10 : d10.σ.mem = d9.σ.mem := p10.memory
   have back (x : Nat) (h : (x < heapEnd ∧ OutW [⟨p.toNat, p.toNat + 8 * size.toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩,
-        ⟨flCurWszAddr, flCurWszAddr + 8⟩] x) ∨ sp.toNat ≤ x) :
+        ⟨flCurWszAddr, flCurWszAddr + 8⟩] x) ∨ (heapEnd ≤ x ∧ x + 80 < sp.toNat) ∨ sp.toNat ≤ x) :
       (d10.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
     have spHigh : 0x86800000 ≤ nativeFrameBase sp 80 := frameHighN
     have out : (x < p.toNat ∨ p.toNat + 8 * size.toNat ≤ x) ∧ (x < 0x800649f8 ∨ 0x800649f8 + 8 ≤ x) ∧
         (x < 0x80064a40 ∨ 0x80064a40 + 8 ≤ x) ∧ (x < nativeFrameBase sp 80 ∨ sp.toNat ≤ x) := by
-      rcases h with ⟨low, o⟩ | above
+      rcases h with ⟨low, o⟩ | ⟨above, below⟩ | above
       · simp only [OutW, largeTreeAddr, flCurWszAddr, and_true] at o
         have : x < 0x86800000 := low
         omega
+      · simp only [nativeFrameBase, heapEnd] at *; omega
       · unfold nativeFrameBase at spHigh; omega
     obtain ⟨o1, o2, o3, o4⟩ := out
     rw [mem10, mem9, writeLog_out _ _ _ (by simp only [OutL, flCurWszAddr, and_true]; omega),
@@ -348,7 +351,8 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
       · rw [bytesT_writeLog_out _ (cur _ (by rw [show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, pf 32 (by decide)]; omega))]
         exact word_writeLog_at _ _ 2 _ _ rfl (by simp only [rootLog, List.drop, OutLRange, show p + 8#64 + 16#64 = p + 8#64 + BitVec.ofNat 64 16 from rfl, show p + 8#64 + 8#64 = p + 8#64 + BitVec.ofNat 64 8 from rfl, show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, show p + 8#64 + 24#64 = p + 8#64 + BitVec.ofNat 64 24 from rfl, pf 16 (by decide), pf 8 (by decide), pf 32 (by decide), pf 24 (by decide), pb, largeTreeAddr, and_true]; omega)
     curWsz := by rw [mem10, mem9]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
-    caller := fun x above => back x (Or.inr above)
+    caller := fun x above => back x (Or.inr (Or.inr above))
+    highKept := fun x above below => back x (Or.inr (Or.inl ⟨above, below⟩))
     kept := fun x low out => back x (Or.inl ⟨low, out⟩)
     saved := fun k lo hi => by
       have o (L : List Nat) (h : ∀ m ∈ L, m < 25) : k ∉ L := fun mem => by have := h k mem; omega

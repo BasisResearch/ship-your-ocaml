@@ -145,6 +145,8 @@ structure PageAddAt (H : List (Nat × Nat)) (capacity : Nat) (sp ra kind base en
   known : ∀ i, i < 2048 → slotWord d.σ.mem ent i ≠ 0#64 →
     slotWord d.σ.mem ent i = slotWord m0 ent i ∨ ∃ j, j < k ∧ slotWord d.σ.mem ent i = kind ||| blockPage base j
   /-- Below the arena's end only the slots and the occupancy change. -/
+  highKept : ∀ x, heapEnd ≤ x → x + 256 < sp.toNat →
+    (d.σ.mem[x]?).getD 0 = (m0[x]?).getD 0
   kept : ∀ x, x < heapEnd → OutW [⟨pageTable + 0x18, pageTable + 0x20⟩, ⟨ent.toNat, ent.toNat + 16384⟩] x →
     (d.σ.mem[x]?).getD 0 = (m0[x]?).getD 0
   /-- The first `k` pages are in the table. -/
@@ -263,6 +265,14 @@ theorem page_add_step {H capacity sp ra kind base ent n m0 start} (S : PageAddSp
         rcases A.known i hi occupied with old | ⟨j, hj, eq⟩
         · exact Or.inl old
         · exact Or.inr ⟨j, by omega, eq⟩
+    highKept := fun x hx below => by
+      have entHi := S.tableLow
+      have stackNat := frame48.stack_nat
+      have pageHi : pageTable + 0x20 ≤ heapEnd := by decide
+      rw [mem3, M.memory, writeLog_out _ _ _ (by simp only [OutL, slotNat, and_true]; omega),
+        frameOn_writeLog _ _ _ (pageModifyLog_inside frameM) x
+          ⟨Or.inl (by dsimp only; unfold nativeFrameBase at *; omega), trivial⟩, mem1]
+      exact A.highKept x hx below
     kept := fun x hx out => by
       simp only [OutW, and_true] at out
       rw [mem3, M.memory, writeLog_out _ _ _ (by simp only [OutL, slotNat, and_true]; omega),
@@ -359,6 +369,8 @@ structure PageAdded (H : List (Nat × Nat)) (capacity : Nat) (sp ra kind s0 s1 s
     slotWord after.σ.mem ent i = slotWord before.σ.mem ent i ∨
       ∃ j, j < n ∧ slotWord after.σ.mem ent i = kind ||| blockPage base j
   present : ∀ j, j < n → ∃ i, i < 2048 ∧ slotWord after.σ.mem ent i = kind ||| blockPage base j
+  highKept : ∀ x, heapEnd ≤ x → x + 256 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   kept : ∀ x, x < heapEnd → OutW [⟨pageTable + 0x18, pageTable + 0x20⟩, ⟨ent.toNat, ent.toNat + 16384⟩] x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -439,6 +451,9 @@ theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
         rw [← slotWord_pageSlot _ _ _ hi fits64, ← slotWord_pageSlot _ _ _ hi fits64]
         exact slotWord_agree S.tableLow agree3 i hi
     known := fun i hi _ => Or.inl (slotWord_agree S.tableLow agree3 i hi)
+    highKept := fun x hx below => by
+      rw [mem3, frameOn_writeLog _ _ _ (pageAddLog_inside frame48) x
+        ⟨Or.inl (by dsimp only; unfold nativeFrameBase; omega), trivial⟩]
     kept := fun x hx _ => agree3 x hx
     present := fun j hj => absurd hj (Nat.not_lt_zero j)
     caller := fun _ _ => rfl
@@ -465,6 +480,7 @@ theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     count := by rw [mem5]; exact L.count
     known := fun i hi occupied => by rw [mem5] at occupied ⊢; exact L.known i hi occupied
     present := fun j hj => by rw [mem5]; exact L.present j hj
+    highKept := fun x hx below => by rw [mem5]; exact L.highKept x hx below
     kept := fun x hx out => by rw [mem5]; exact L.kept x hx out
     caller := fun x hx => by
       rw [mem5, L.caller x (by rw [stackNat]; omega)]

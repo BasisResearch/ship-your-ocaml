@@ -4,9 +4,9 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 
 /-- Successful checked allocation preserves every byte below the arena ceiling
 that was outside the allocator's original ownership, including old live blocks. -/
-theorem StatCheckedReturned.framed_byte {H capacity sp ra s0 n before after a}
+theorem StatCheckedReturned.framed_byte_below {H capacity sp ra s0 n before after a}
     (w : StatCheckedReturned H capacity sp ra s0 n before after)
-    (frame : NativeFrame sp 544) (below : a < heapEnd) (outside : ¬ vsaFoot H a) :
+    (frame : NativeFrame sp 544) (below : a + 544 < sp.toNat) (outside : ¬ vsaFoot H a) :
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 := by
   have short := frame.resize (small := 32) (by decide) (by decide)
   have nested : NativeFrame (nativeStack sp 32) 512 := frame.nested (front := 32) (by decide)
@@ -15,6 +15,9 @@ theorem StatCheckedReturned.framed_byte {H capacity sp ra s0 n before after a}
     rcases owned with scratch | heap
     · have high := nested.lower
       unfold stackWin InExt allocHeadroom at scratch
+      rw [short.stack_nat] at scratch
+      unfold nativeFrameBase at scratch
+      unfold allocHeadroom at *
       omega
     · exact outside heap
   have unchanged := w.allocation.allocation.memory a unowned
@@ -26,4 +29,11 @@ theorem StatCheckedReturned.framed_byte {H capacity sp ra s0 n before after a}
     unfold nativeFrameBase
     omega
   rw [frameOn_writeLog _ _ _ (statCheckedLog_inside short) a ⟨Or.inl low, trivial⟩]
+
+/-- The arena projection of the actual checked-allocation byte frame. -/
+theorem StatCheckedReturned.framed_byte {H capacity sp ra s0 n before after a}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after)
+    (frame : NativeFrame sp 544) (below : a < heapEnd) (outside : ¬ vsaFoot H a) :
+    (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 :=
+  w.framed_byte_below frame (by have := frame.lower; omega) outside
 end OCaml.Vm.Boot.Startup

@@ -29,6 +29,7 @@ structure InitStackCall (H : List (Nat × Nat)) (capacity charge : Nat) (ra s0 s
 /-- caml_init_stack returned: the stack block `p` is live and recorded. -/
 structure InitStackDone (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 mx p : BitVec 64) (before after : Config) :
     Prop where
+  highKept : ∀ x, EmbedByte x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   pc : PCAt ra after
   regs : GHolds after.σ [(2, parameterStack), (1, ra), (8, s0), (9, s1), (18, s2)]
   ready : RuntimeReady ((p.toNat, 32768) :: H) capacity parameterStack ra after
@@ -187,6 +188,19 @@ theorem caml_init_stack (c : Config) (H : List (Nat × Nat)) (capacity charge : 
       rw [word_observed (m := c4.σ.mem) _ fun i hi => by
         rw [last _ (Or.inl (by omega)), show c5.σ.mem = c4.σ.mem from p5.memory], p4.memory]
       exact OCaml.Vm.Gc.word_writeLog_cells _ _ (initStackCells_separate _ _) member
+    highKept := fun x hx => by
+      have high : 0x86800000 ≤ x := hx.1
+      have below := hx.stack_room
+      rw [last x (Or.inl (by unfold nativeFrameBase; omega)),
+        show c5.σ.mem = c4.σ.mem from p5.memory,
+        outW x (Or.inr (Nat.le_trans (show firstDomainPtr.toNat + 928 ≤ heapEnd by decide) hx.1))
+          (Or.inr (Nat.le_trans (show camlMaxStackSizeAddr + 8 ≤ heapEnd by decide) hx.1)),
+        w.framed_byte_below sp1 (by
+          change x + 544 < (nativeStack parameterStack 32).toNat
+          have stack : (nativeStack parameterStack 32).toNat = parameterStack.toNat - 32 := by decide
+          rw [stack]; omega) (KeptByte.not_foot (Or.inl hx)),
+        show c2.σ.mem = c1.σ.mem from p2.memory]
+      exact low1 x (by unfold nativeFrameBase; omega)
     kept := fun x hx foot out => by
       rw [last x (Or.inl (Nat.lt_of_lt_of_le hx deep))]
       exact low5 x hx foot out
@@ -198,4 +212,33 @@ theorem caml_init_stack (c : Config) (H : List (Nat × Nat)) (capacity charge : 
         outW x (Or.inr (Nat.le_trans dom hx)) (Or.inr (Nat.le_trans glob hx)),
         callerW.byte x (Nat.le_trans hsp hx), show c2.σ.mem = c1.σ.mem from p2.memory, p1.memory,
         frameOn_writeLog _ _ _ inside1 x ⟨Or.inr hx, trivial⟩]⟩ }⟩
+/-- The executed stack initializer preserves HTIF's file records and fd positions. -/
+theorem InitStackDone.htif {H capacity ra s0 s1 s2 mx p before after}
+    (S : InitStackDone H capacity ra s0 s1 s2 mx p before after) (x : Nat) (h : HtifByte x) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have b := h.bounds
+  apply S.kept x (by simp only [Layout.sym_files, heapEnd] at b ⊢; omega)
+    (KeptByte.not_foot (Or.inr (Or.inr (Or.inr (Or.inl h)))))
+  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config, Layout.sym_fds,
+      initStackFieldsLog, initStackCells, List.map, OutL, domainField, firstDomainPtr, heapStart, camlMaxStackSizeAddr,
+      BitVec.toNat_ofNat, and_true] at * <;> omega
+
+/-- Stack initialization keeps selected original blocks outside the domain record. -/
+theorem InitStackDone.selected_live {H capacity ra s0 s1 s2 mx p before after K}
+    (S : InitStackDone H capacity ra s0 s1 s2 mx p before after)
+    (sub : ∀ e ∈ K, e ∈ H)
+    (bounds : ∀ e ∈ K, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd)
+    (domain : ∀ e ∈ K, e.1 + e.2 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ e.1) :
+    LiveFrame K before after := by
+  apply LiveFrame.of_foot_arena bounds
+  intro x lo hi foot
+  obtain ⟨e, he, inside⟩ := owned_of_not_foot lo hi foot
+  have apart := domain e he
+  unfold InExt at inside
+  apply S.kept x hi (fun h => foot (vsaFoot_subset sub h))
+  simp only [initStackFieldsLog, initStackCells, List.map, OutL, domainField, camlMaxStackSizeAddr, and_true]
+  unfold heapStart at lo
+  omega
+
 end OCaml.Vm.Boot.Startup

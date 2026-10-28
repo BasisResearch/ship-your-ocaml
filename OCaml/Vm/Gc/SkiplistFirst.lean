@@ -1006,6 +1006,26 @@ theorem NativeFirst.low_kept {H capacity sp ra s0 s1 key before after}
     F.allocation.framed_byte nested (by omega) (fun h => h.elim alloc (fun h => by omega)),
     F.prepared.memory, frameOn_writeLog _ _ _ (prefix_inside short) x front]
 
+/-- The actual root insertion preserves the source between the arena and its scratch frame. -/
+theorem NativeFirst.high_kept {H capacity sp ra s0 s1 key before after}
+    (F : NativeFirst H capacity sp ra s0 s1 key before after)
+    (frame : NativeFrame sp Skiplist.opStack) (x : Nat) (high : heapEnd ≤ x)
+    (below : x + 1024 < sp.toNat) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have short := frame.resize (small := 192) (by decide) (by decide)
+  have nested := call_frame frame
+  have upper := F.cell.high
+  have seed : Skiplist.randomSeed + 4 ≤ heapEnd := by decide
+  have roots : Skiplist.globalRoots + 8 ≤ heapEnd := by decide
+  rw [F.terminal.memory, frameOn_writeLog _ _ _ (finish_inside F.p key) x (by
+      simp only [finishWindows, OutW, and_true]
+      exact ⟨Or.inr (by omega), Or.inr (by omega)⟩),
+    F.allocation.framed_byte_below nested (by rw [short.stack_nat]; unfold nativeFrameBase; omega)
+      (fun f => Nat.not_lt_of_ge high (allocator_foot_below f)),
+    F.prepared.memory, frameOn_writeLog _ _ _ (prefix_inside short) x (by
+      simp only [prefixWindows, OutW, and_true]
+      exact ⟨Or.inl (by unfold nativeFrameBase; omega), Or.inr (by omega)⟩)]
+
 structure FirstInserted (H kept : List (Nat × Nat)) (capacity : Nat)
     (sp ra s0 s1 key : BitVec 64) (before after : Config) where
   native : NativeFirst H capacity sp ra s0 s1 key before after

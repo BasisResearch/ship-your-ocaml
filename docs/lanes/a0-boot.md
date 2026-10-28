@@ -1,5 +1,75 @@
 # Lane a0-boot
 
+## Current CODE source observations from reset (2026-10-28; checked for lead review)
+
+The source-frame residual at `0x80004bcc` is closed.
+`SeekCodeReset.whileMin_reset_code_seek_source` takes the original
+parsed/matching-ELF reset and returns its actual `ResetCodeSeekEntry` with
+`CodeSeekSourceObserved`. It introduces no later-memory matching condition
+or additional native-run premise. The retained reset, section-reader,
+GC/stack/atom/root/interpreter runs and direct CODE-call run remain intact.
+
+The current observations include all 56 swapped descriptor bytes, the
+trailer count/table pointer, `OpenFile` (including the original filename
+allocation), the embedded loader image, descriptor 3's position `0x249c`
+(9372), and the executable's `CODE` literal. `descriptor_bytes`,
+`code_length`, `file_source`, `file_size`, `file`, `fd_position` and
+`code_literal` expose these at the actual optional-section entry. The
+selected file is 9388 bytes at `[0x86800090, 0x8680253c)`; its current CODE
+descriptor has unsigned and signed length 764. Its bytes come from
+`WhileMinImage`/`SeekSectionData`, not the stock ELF's embedded program.
+
+The frame selects the original descriptor and five-byte filename
+allocations on the actual extended heap ledger. `ArenaKeep` describes
+initializer write windows; `FreshBlock.outside_owned`, `vsaFoot_subset`
+and `LiveFrame.of_foot_arena` expose the necessary allocator-owned-byte
+argument, while `LiveFrame.of_arena/of_memory/trans/mono` and the existing
+root-insertion selected frame compose the native stages. `GcTableSource`
+retains the actual original page-table allocation's freshness through GC
+return, supplying selected-table separation at atom initialization.
+`StatCheckedReturned.framed_byte_below`, native `highKept` contracts and
+`EmbedByte.stack_room` cover source bytes above the arena and below the
+actual deepest scratch frame. Low HTIF frames separately retain file
+records and fd positions. `GcTailKeep` now covers bytes below the quiet
+message spill as well as the caller's side of the stack.
+
+Remaining: the bounded reverse scan and actual lseek/HTIF composition to
+`0x80004eb0`. Reuse `indexedLoop`, bounded strncmp (CRCS shares CODE's first
+byte), the certified reverse offset 9331 and actual lseek machinery to
+produce position 57 and return length 764. No updated fd position or
+missing-section exclusion after the scan is claimed here. CODE
+allocation/read, code-fragment/MD5, PRIM/DATA, promotion, sys/argv and Loaded
+remain open. GoodF1 is unchanged; BarrierGrowthFull stays G2,
+CustomMemCall remains named, and C4 round 2 waits for F1.
+
+Validation: affected initialization/entry modules and all four focused
+audits pass the guarded/capped 3533-job build
+(`/tmp/code-source-check-11.log`). All 37 new public theorems are registered
+in the existing Audit closure. The separate focused file
+`/tmp/code-source-new-axioms.lean` passes: 36 reports use only `propext`,
+`Classical.choice`, `Quot.sound`, and one theorem is axiom-free
+(`/tmp/code-source-new-axioms.log`). All axiom reports in the affected build
+also pass that allow-list. Generator drift passes for all 2132 outputs
+(`/tmp/code-source-generator-check-2.log`); focused audit drift, hole,
+discipline, abstraction and whitespace checks pass
+(`/tmp/code-source-{audit-drift,holes-final,discipline-final,abstraction-final}.log`).
+ELF pins pass with 114928 bytes and zero mismatches
+(`/tmp/code-source-pins.log`). Every Lean invocation followed `free -g` with at least
+25 GB available and used lean-guarded/lean-capped under the inherited
+12 GB/two-thread policy. No commit or landing metadata was written; full
+`OCaml.Audit`, commit and `scripts/integrate.sh` remain the lead gate.
+
+Reproduction:
+
+```sh
+free -g
+python3 scripts/lean-guarded.py --log /tmp/code-source-check-11.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.SeekAudit OCaml.Vm.Boot.Startup.InterpreterInitAudit OCaml.Vm.Boot.Startup.BacktraceAudit OCaml.Vm.Boot.Startup.SkipFirstAudit
+free -g
+python3 scripts/lean-guarded.py --log /tmp/code-source-new-axioms.log -- scripts/lean-capped.sh lake env lean /tmp/code-source-new-axioms.lean
+python3 scripts/gen_startup_rows.py --seek-audit-only --check
+python3 scripts/gen_startup_rows.py --check
+```
+
 ## CODE seek entry and trailer frame (2026-10-28; checked partial)
 
 Status: the requested reset-to-CODE-seek theorem at `0x80004eb0` remains

@@ -74,14 +74,20 @@ structure ResetInitStack (initial after : Config) where
   source_run : Steps sections after
   caller : CallerFrame (parameterStack + 16#64) sections after
   loadCaller : LoadCaller after
+  embed : EmbedImage after
+  htif : MemSame sections after HtifByte
   H : List (Nat × Nat)
   /-- The GC prepends blocks to the descriptor caller's actual ledger. -/
   sourceOwned : ∀ e ∈ source.blocks, e ∈ H
+  selectedLive : LiveFrame source.keptBlocks sections after
+  sourceTable : BitVec 64
+  sourceTableFresh : FreshBlock vsaLayoutP source.blocks sourceTable.toNat 16384
   s0 : BitVec 64
   s1 : BitVec 64
   s2 : BitVec 64
   mx : BitVec 64
   p : BitVec 64
+  sourceTableAt : GcTableAt ((p.toNat,32768) :: H) after.σ.mem sourceTable
   before : Config
   post : InitStackReset H (startupAllocatorCredits - 656 - initGcCredits - 32768)
     jal_80004e78_call.link s0 s1 s2 mx p before after
@@ -129,7 +135,9 @@ theorem reset_init_stack_witness_exists :
       exact D.low _ (GcLowKeep.of_range (Or.inr (Or.inl ⟨by unfold Layout.sym_caml_verb_gc; omega,
         by unfold Layout.sym_caml_verb_gc; omega⟩))) }
   obtain ⟨p, f, run4, S⟩ := caml_init_stack e _ _ _ _ _ _ _ _ IS
-  obtain ⟨ent, T⟩ := D.table
+  obtain ⟨TS⟩ := D.sourceTable
+  let ent := TS.ent
+  have T := TS.table
   have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
   have table : GcTableAt ((p.toNat, 32768) :: Hfinal) f.σ.mem ent := (T.agree fun x inT => by
     obtain ⟨below, foot⟩ := T.table.out inT
@@ -144,6 +152,20 @@ theorem reset_init_stack_witness_exists :
         rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
         · rw [hP] at lo hi; omega
         · omega), show e.σ.mem = d.σ.mem from P.memory]).cons _
+  have selectedOwned (e : Nat × Nat) (he : e ∈ w.keptBlocks) : e ∈ Hfinal := by
+    rw [hpre]
+    exact List.mem_append_right _ (w.kept_owned e he)
+  have bounds : ∀ e ∈ w.keptBlocks, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd :=
+    fun e he => A.ready.block_bounds (w.kept_owned e he)
+  have domainOut (e : Nat × Nat) (he : e ∈ w.keptBlocks) :
+      e.1 + e.2 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ e.1 := by
+    have o := G.selected_outside e he
+    simp only [gcOwnedWindows, OutWRange, and_true] at o
+    exact o.1
+  have gcLive := D.selected_live w.kept_owned bounds G.selected_outside
+  have stackLive := S.selected_live selectedOwned bounds domainOut
+  have selectedLive := ((G.live.mono w.kept_owned).trans gcLive).trans
+    ((LiveFrame.of_memory P.memory).trans stackLive)
   refine ⟨initial, f, ⟨{
     reset := w.reset
     sections := sections
@@ -152,8 +174,18 @@ theorem reset_init_stack_witness_exists :
     caller := G.caller.trans ((D.caller.trans
       ((CallerFrame.of_memory P.memory).trans S.caller)).weaken (by decide))
     loadCaller := ⟨gholds_lookup (n := 8) _ S.regs rfl, gholds_lookup (n := 9) _ S.regs rfl⟩
+    htif := ⟨fun x hx => by
+      rw [S.htif x hx, show e.σ.mem = d.σ.mem from P.memory, D.low x (GcLowKeep.htif hx)]
+      exact G.htif.same x hx⟩
+    embed := G.embed.of_bytes fun x hx => by
+      rw [S.highKept x hx, show e.σ.mem = d.σ.mem from P.memory,
+        D.highKept x hx.1 (by have := hx.stack_room; omega)]
     H := Hfinal
     sourceOwned := fun e he => by rw [hpre]; exact List.mem_append_right _ he
+    selectedLive := selectedLive
+    sourceTable := ent
+    sourceTableFresh := TS.fresh
+    sourceTableAt := table
     s0 := 3#64
     s1 := argvPtr
     s2 := vsaReg w.attempt.opened.call.atRetry 18

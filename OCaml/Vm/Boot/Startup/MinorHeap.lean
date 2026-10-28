@@ -483,10 +483,21 @@ structure MinorHeapCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s
   lambdaOff : bytesT c.σ.mem 0x80064cf0 8 = 0#64
   memprofIdle : bytesVal .lw (read8 c.σ.mem 0x80064b30) = 0#64
 
+/-- Mutable arena windows of minor initialization: domain, page table and ref records. -/
+def minorOwnedWindows (ent t1 t2 t3 : BitVec 64) : List W :=
+  [⟨firstDomainPtr.toNat, firstDomainPtr.toNat + 928⟩, ⟨ent.toNat, ent.toNat + 16384⟩,
+    ⟨t1.toNat, t1.toNat + 56⟩, ⟨t2.toNat, t2.toNat + 56⟩, ⟨t3.toNat, t3.toNat + 56⟩]
+
 /-- caml_set_minor_heap_size returned: the minor heap is the block above `raw`
 and its `n` pages are in the page table. -/
 structure MinorHeapSet (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 size ent : BitVec 64) (n : Nat)
     (raw : BitVec 64) (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (minorOwnedWindows ent
+    (bytesT before.σ.mem (domainField 104) 8) (bytesT before.σ.mem (domainField 112) 8)
+    (bytesT before.σ.mem (domainField 120) 8)) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (19, s3), (18, s2), (9, s1), (8, s0), (1, ra), (10, 0#64)]
   ready : RuntimeReady ((raw.toNat, (size + 4096#64).toNat) :: H) capacity sp ra after
@@ -1047,6 +1058,37 @@ theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : N
     · simp only [OutL, OCaml.Vm.Primitives.Memprof.RenewMinorSample.renewLog, domainField, dom,
         show OCaml.Vm.Primitives.Memprof.RenewMinorSample.triggerAddr.toNat = 2147896520 from rfl, and_true]
       omega
+  have arena16 (x : Nat) (K : ArenaKeep H (minorOwnedWindows ent t1 t2 t3) x) :
+      (d16.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    have low := K.lower
+    have high := K.upper
+    have o := K.outside
+    simp only [minorOwnedWindows, OutW, and_true] at o
+    obtain ⟨domain, table, a1, a2, a3⟩ := o
+    rw [p16.memory, show writeLog d15.σ.mem [] = d15.σ.mem from rfl, p15.memory,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.tail_miss (by omega))), mem14,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.clear_miss (by omega))),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.reset_miss (by omega))), mem13,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.clear_miss (by omega))),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.reset_miss (by omega))),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.clear_miss (by omega)))]
+    apply kept11 x K.foot
+    refine ⟨high, ?_, ?_, ?_⟩
+    · simp only [OutW, and_true]
+      exact ⟨Or.inr (Nat.le_trans (show pageTable + 0x20 ≤ heapStart by decide) K.lower), table⟩
+    · simp only [OutL, minorFieldsLog, domainField, dom, and_true]
+      rw [dom] at domain
+      omega
+    · have above := frame16.lower
+      have slotNat : (nativeStack sp 64 - 16#64 + 8#64).toNat = (nativeStack sp 64).toNat - 16 + 8 := by
+        rw [slotEq, nativeStack, frame16.address _ (by decide), frame16.slot_nat (by decide)]
+        rfl
+      simp only [OutL, OCaml.Vm.Primitives.Memprof.RenewMinorSample.renewLog,
+        domainField, dom, slotNat,
+        show OCaml.Vm.Primitives.Memprof.RenewMinorSample.triggerAddr.toNat = 2147896520 from rfl, and_true]
+      rw [dom] at domain
+      simp only [heapStart, heapEnd] at low high above
+      omega
   have caller16 (x : Nat) (hx : sp.toNat ≤ x) : (d16.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
     have spH := A.frame.lower
     unfold allocHeadroom at spH
@@ -1083,6 +1125,50 @@ theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : N
       show writeLog d5.σ.mem [] = d5.σ.mem from rfl, D.caller x (by rw [stackNat]; omega) (Or.inr (by omega)),
       p4.memory, show writeLog d3.σ.mem [] = d3.σ.mem from rfl, p3.memory, show writeLog d2.σ.mem [] = d2.σ.mem from rfl,
       p2.memory, frameOn_writeLog _ _ _ inside2 x ⟨Or.inr hx, trivial⟩, p1.memory]
+    rfl
+  have high16 (x : Nat) (hx : heapEnd ≤ x) (below : x + 1024 < sp.toNat) : (d16.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    have spH := A.frame.lower
+    unfold allocHeadroom at spH
+    have h1 := refs.spot1.high
+    have h2 := refs.spot2.high
+    have h3 := refs.spot3.high
+    have a1 : x + 1 ≤ t1.toNat ∨ t1.toNat + 56 ≤ x := Or.inr (by omega)
+    have a2 : x + 1 ≤ t2.toNat ∨ t2.toNat + 56 ≤ x := Or.inr (by omega)
+    have a3 : x + 1 ≤ t3.toNat ∨ t3.toNat + 56 ≤ x := Or.inr (by omega)
+    have slotLe : (nativeStack sp 64 - 16#64 + 8#64).toNat + 8 ≤ sp.toNat := by
+      rw [slotEq, nativeStack, frame16.address _ (by decide), frame16.slot_nat (by decide)]
+      unfold nativeFrameBase
+      rw [stackNat]
+      omega
+    have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+    have hE' : heapEnd = 0x86800000 := rfl
+    rw [hE'] at spH
+    have outNat8 : (nativeStack sp 64 + 8#64).toNat + 8 ≤ sp.toNat := by
+      rw [outNat]; unfold nativeFrameBase; have := frame64.lower; omega
+    have slotNat : (nativeStack sp 64 - 16#64 + 8#64).toNat = sp.toNat - 64 - 16 + 8 := by
+      rw [slotEq, nativeStack, frame16.address _ (by decide), frame16.slot_nat (by decide)]
+      unfold nativeFrameBase
+      rw [stackNat]
+    rw [p16.memory, show writeLog d15.σ.mem [] = d15.σ.mem from rfl, p15.memory,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.tail_miss a3)), mem14,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.clear_miss a3)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.reset_miss a2)), mem13,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.clear_miss a2)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.reset_miss a1)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.clear_miss a1)), R.memory,
+      writeLog_out _ _ _ (by
+        simp only [OutL, OCaml.Vm.Primitives.Memprof.RenewMinorSample.renewLog, domainField, dom,
+          show OCaml.Vm.Primitives.Memprof.RenewMinorSample.triggerAddr.toNat = 2147896520 from rfl, and_true]
+        omega),
+      p10.memory, writeLog_out _ _ _ (by simp only [OutL, minorFieldsLog, domainField, dom, and_true]; omega),
+      p9.memory, show writeLog d8.σ.mem [] = d8.σ.mem from rfl, p8.memory,
+      show writeLog d7.σ.mem [] = d7.σ.mem from rfl, PA.highKept x hx (by rw [stackNat]; omega), p6.memory,
+      show writeLog d5.σ.mem [] = d5.σ.mem from rfl, D.kept x (by rw [stackNat]; unfold allocHeadroom; omega) (by
+        rintro (g | ⟨_, hi, _⟩)
+        · simp only [allocGlobal, InRange, heapEnd] at *; omega
+        · omega),
+      p4.memory, show writeLog d3.σ.mem [] = d3.σ.mem from rfl, p3.memory, show writeLog d2.σ.mem [] = d2.σ.mem from rfl,
+      p2.memory, frameOn_writeLog _ _ _ inside2 x ⟨Or.inl (by dsimp only; unfold nativeFrameBase; omega), trivial⟩, p1.memory]
     rfl
   subst hblk
   refine ⟨raw, d16, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
@@ -1130,6 +1216,10 @@ theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : N
       · exact absurd (old.trans (table6.slot_zero fits64 i hi)) occupied
       · exact found
     domainHigh := domainHigh16
+    arenaKept := fun x hx => by
+      rw [A.refs.ptr1, A.refs.ptr2, A.refs.ptr3] at hx
+      exact arena16 x hx
+    highKept := high16
     lowKept := low16
     caller := caller16 }⟩
 end OCaml.Vm.Boot.Startup

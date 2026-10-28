@@ -300,9 +300,16 @@ heap statistics, and the new block. -/
 def majorChunkWindows (mem size : Nat) : List W :=
   [⟨heapStartAddr, heapStartAddr + 8⟩, ⟨domainField 336, domainField 376⟩, ⟨mem, mem + size⟩]
 
+/-- Existing arena blocks mutated by major initialization. Fresh blocks are
+accounted for separately by the actual allocator's ownership contract. -/
+def majorOwnedWindows (ent : BitVec 64) : List W :=
+  [⟨firstDomainPtr.toNat, firstDomainPtr.toNat + 928⟩, ⟨ent.toNat, ent.toNat + 16384⟩]
+
 /-- caml_page_table_add is entered for the new chunk. -/
 structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent : BitVec 64)
     (before after : Config) : Prop where
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   call : PageAddCall ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
     jal_80009400_call.link 1#64 (chunkStart mem) (chunkStart mem + BitVec.ofNat 64 (4096 * majorPages hsize))
     (BitVec.ofNat 64 Layout.sym_Caml_state) 1#64 0x80064ad0#64 s3 (chunkStart mem) ent (majorPages hsize) after
@@ -419,6 +426,22 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
     simp [majorSlots] at member; omega
   have slots3 : ∀ off value, (off, value) ∈ [(8, hsize)] → off + 8 ≤ 48 := fun off value member => by
     simp at member; omega
+  have keptBelow (x : Nat) (below : x + 1024 < sp.toNat) (foot : ¬ vsaFoot H x)
+      (out : OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x) :
+      (d12.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    simp only [majorChunkWindows, OutW, domainField, heapStartAddr, sizeNat, and_true] at out
+    obtain ⟨o1, o2, o3⟩ := out
+    have fl := frameIn.lower
+    have f48 := frame48.lower
+    rw [hE] at fl f48
+    have xb : x < nativeFrameBase sp 48 := by unfold nativeFrameBase; omega
+    rw [mem12, writeLog_out _ _ _ (by simp only [majorStatLog, OutL, domainField, and_true]; omega),
+      mem11, writeLog_out _ _ _ (by simp only [OutL, nextAddr, f24, and_true]; omega),
+      mem10, writeLog_out _ _ _ (by simp only [OutL, heapStartAddr, and_true]; omega),
+      D.kept x (by rw [stack48]; unfold allocHeadroom; omega) foot (by omega), E.memory, majorAllocMemory,
+      writeLog_out _ _ _ (by simp only [majorSizeLog, OutL, domainField, and_true]; omega),
+      frameOn_writeLog _ _ _ (frame48.word_log_inside slots3) x ⟨Or.inl xb, trivial⟩,
+      frameOn_writeLog _ _ _ (frame48.word_log_inside slots2) x ⟨Or.inl xb, trivial⟩]
   have kept (x : Nat) (low : x < heapEnd) (foot : ¬ vsaFoot H x)
       (out : OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x) :
       (d12.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
@@ -554,6 +577,13 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
           simp only [majorSizeLog, OutLRange, domainField, dom, and_true]; unfold nativeFrameBase; omega),
         bytesT_writeLog_out _ (by simp only [nativeWordLog, List.map, OutLRange, s8, and_true]; omega)]
       exact frame48.word_log_read slots2 (by simp [majorSlots]) _ member
+    highKept := fun x hx below => by
+      have mh : mem.toNat + (majorChunkSize hsize + 4152#64).toNat ≤ 0x86800000 := D.fresh.2.2.1
+      rw [sizeNat] at mh
+      have high : 0x86800000 ≤ x := hx
+      exact keptBelow x below (fun f => Nat.not_lt_of_ge hx (allocator_foot_below f)) (by
+        simp only [majorChunkWindows, OutW, heapStartAddr, domainField, dom, sizeNat, and_true]
+        omega)
     kept := kept
     count := count12
     tableApart := T.apartDomain
@@ -600,6 +630,10 @@ def majorLowWindows : List W :=
 /-- bf_init_merge returned into caml_init_major_heap. -/
 structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent : BitVec 64)
     (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (majorOwnedWindows ent) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jalr_80009410_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
@@ -773,6 +807,26 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
       exact ⟨i, hi, by rw [slotWord_window_agree fits tableSame i hi]; exact slot⟩
     lists := M.lists
     flMerge := M.flMerge
+    arenaKept := fun x K => by
+      have low := K.lower
+      have o := K.outside
+      simp only [majorOwnedWindows, OutW, and_true] at o
+      have fresh := (FreshBlock.outside_owned P.fresh) K.lower K.upper K.foot
+      rw [k16.same x (by
+          simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]
+          unfold heapStart at low; omega), mem15,
+        PA.kept x K.upper (by
+          simp only [OutW, and_true]
+          exact ⟨Or.inr (Nat.le_trans (show pageTable + 0x20 ≤ heapStart by decide) K.lower), o.2⟩)]
+      apply P.kept x K.upper K.foot
+      simp only [majorChunkWindows, OutW, and_true]
+      exact ⟨Or.inr (Nat.le_trans (show heapStartAddr + 8 ≤ heapStart by decide) K.lower),
+        by unfold domainField; rcases o.1 with h | h <;> omega, fresh⟩
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [k16.same x (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]; omega), mem15,
+        PA.highKept x hx (by rw [stack48]; omega)]
+      exact P.highKept x hx below
     lowSame := fun x low alloc out => by
       simp only [majorLowWindows, OutW, and_true] at out
       obtain ⟨o1, o2, o3, o4, o5⟩ := out
@@ -823,6 +877,10 @@ def majorFreeWindows : List W :=
 free block, the best-fit tree's root. -/
 structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent cur : BitVec 64)
     (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (majorOwnedWindows ent) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jalr_80009430_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
@@ -1048,6 +1106,22 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
     header := F.header
     tree := F.tree
     curWsz := F.curWsz
+    arenaKept := fun x K => by
+      have low := K.lower
+      have a := (FreshBlock.outside_owned M.fresh) K.lower K.upper K.foot
+      have chunkOut : x < (chunkStart mem).toNat ∨
+          (chunkStart mem).toNat + 8 * (majorChunkSize hsize >>> 3).toNat ≤ x := by
+        rw [chunkNat, words]
+        rw [sizeNat] at a
+        omega
+      rw [F.kept x K.upper (by
+        simp only [OutW, and_true]
+        exact ⟨chunkOut, Or.inr (Nat.le_trans (show largeTreeAddr + 8 ≤ heapStart by decide) K.lower),
+          Or.inr (Nat.le_trans (show flCurWszAddr + 8 ≤ heapStart by decide) K.lower)⟩), mem18]
+      exact M.arenaKept x K
+    highKept := fun x hx below => by
+      rw [F.highKept x hx (by rw [stack48]; omega), mem18]
+      exact M.highKept x hx below
     lowSame := fun x low alloc out => by
       unfold majorFreeWindows at out
       rw [outW_append] at out
@@ -1075,6 +1149,8 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
 address in `Caml_state->mark_stack`) and the entry array `entries`. -/
 structure MajorStackAllocated (H : List (Nat × Nat)) (capacity : Nat) (sp stack entries : BitVec 64)
     (before after : Config) : Prop where
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   pc : PCAt jal_80009460_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, stack), (10, entries)]
   ready : RuntimeReady ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: H) capacity
@@ -1176,6 +1252,14 @@ theorem major_stack_allocated (c d19 : Config) (H : List (Nat × Nat)) (cap c1 c
           (owned_not_foot' (by decide) (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ A.domainOwned))
             (by simp only [domainField]; omega) (by simp only [domainField]; omega)), mem23]]
       exact record22
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      have belowA : x < (nativeStack sp 48).toNat - allocHeadroom := by
+        rw [stack48]; unfold allocHeadroom; omega
+      rw [S2.kept x belowA (fun f => Nat.not_lt_of_ge hx (allocator_foot_below f)), mem23, p22.memory,
+        writeLog_out _ _ _ (by simp only [OutL, domainField, dom, and_true]; omega),
+        S1.kept x belowA (fun f => Nat.not_lt_of_ge hx (allocator_foot_below f)), p20.memory,
+        writeLog_out _ _ _ (by simp only [OutL, gcPhaseAddr, and_true]; omega)]
     back := back
     saved := fun k lo hi => g24.same k (by omega) (by omega) (by simp [abiClobbered]; omega) }⟩
 
@@ -1188,6 +1272,8 @@ def majorStackWindows (stack : Nat) : List W :=
 mark stack initialised and the caller's frame restored. -/
 structure MajorTailed (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 stack entries : BitVec 64)
     (base after : Config) : Prop where
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
   pc : PCAt 0x8004276c#64 after
   regs : GHolds after.σ [(2, sp), (10, BitVec.ofNat 64 majorRingAddr), (11, 0#64), (12, 400#64), (18, s2), (9, s1),
     (1, ra), (8, s0), (15, 0x800644a8#64)]
@@ -1356,6 +1442,12 @@ theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
         mem27]
       exact word_writeLog_at _ _ 2 _ _ rfl trivial
     allocated := by rw [mem28]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [p28.memory, writeLog_out _ _ _ (by simp only [OutL, allocatedWordsAddr, and_true]; omega), p27.memory,
+        writeLog_out _ _ _ (by simp only [stackInitLog, OutL, s8, s16, extraResourcesAddr, and_true]; omega),
+        mem26, p25.memory, writeLog_out _ _ _ (by simp only [OutL, and_true]; omega)]
+      exact S.highKept x hx below
     back := back28
     saved := fun k lo hi => by
       rw [g.same k (by omega) (by omega) (by simp; omega), S.saved k lo hi]
@@ -1419,6 +1511,10 @@ def majorInitLowWindows : List W :=
 is the pair of new blocks `stack` and `entries`. -/
 structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 mem stack entries cur ent : BitVec 64)
     (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (majorOwnedWindows ent) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
@@ -1601,6 +1697,29 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
       rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
           ⟨Or.inr (Nat.le_trans ringHi (Nat.le_trans (Nat.le_trans (Nat.le_add_right _ _) A.frame.lower) hx)), trivial⟩,
         Tl.caller x hx, F.caller x hx]
+    arenaKept := fun x K => by
+      have low := K.lower
+      have domain := K.outside
+      simp only [majorOwnedWindows, OutW, and_true] at domain
+      have foot : ¬ vsaFoot ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) x :=
+        fun h => K.foot (vsaFoot_of_cons h)
+      have apart := (FreshBlock.outside_owned S.freshStack) K.lower K.upper foot
+      have outside : OutW (majorStackWindows stack.toNat) x := by
+        simp only [majorStackWindows, OutW, domainField, and_true]
+        exact ⟨Or.inr (Nat.le_trans (show gcPhaseAddr + 4 ≤ heapStart by decide) K.lower),
+          by rcases domain.1 with h | h <;> omega, apart,
+          Or.inr (Nat.le_trans (show extraResourcesAddr + 8 ≤ heapStart by decide) K.lower),
+          Or.inr (Nat.le_trans (show allocatedWordsAddr + 8 ≤ heapStart by decide) K.lower)⟩
+      rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
+        ⟨Or.inr (Nat.le_trans (show (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16 ≤ heapStart by decide) K.lower), trivial⟩,
+        Tl.back x K.upper foot outside]
+      exact F.arenaKept x K
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
+        ⟨Or.inr (Nat.le_trans (show (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16 ≤ heapEnd by decide) hx), trivial⟩,
+        Tl.highKept x hx below]
+      exact F.highKept x hx below
     lowKept := fun x low alloc out => by
       unfold majorInitLowWindows at out
       rw [outW_append] at out

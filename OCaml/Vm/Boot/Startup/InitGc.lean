@@ -68,9 +68,18 @@ structure InitGcCall (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
   curWsz : bytesT c.σ.mem flCurWszAddr 8 = cur
   quiet : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
 
+/-- The original arena records written by GC initialization. -/
+def gcOwnedWindows (m : Std.ExtHashMap Nat (BitVec 8)) : List W :=
+  [⟨firstDomainPtr.toNat, firstDomainPtr.toNat + 928⟩,
+    ⟨(bytesT m (domainField 104) 8).toNat, (bytesT m (domainField 104) 8).toNat + 56⟩,
+    ⟨(bytesT m (domainField 112) 8).toNat, (bytesT m (domainField 112) 8).toNat + 56⟩,
+    ⟨(bytesT m (domainField 120) 8).toNat, (bytesT m (domainField 120) 8).toNat + 56⟩]
+
 /-- caml_page_table_initialize returned into caml_init_gc. -/
 structure InitGcTabled (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk : BitVec 64)
     (before after : Config) : Prop where
+  highKept : ∀ x, heapEnd ≤ x → x + 2048 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : CallerFrame sp before after
   pc : PCAt jal_8001f344_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (10, 0#64), (9, 262144#64), (18, 8192#64), (19, 2#64), (20, 15#64),
@@ -154,6 +163,15 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
     exact gC.get (by simp [abiSaved] at member; omega) (by simp [abiSaved] at member; omega)
       (by simp [abiSaved] at member; simp; omega) h
   refine ⟨blk, d4, run1.trans (run2.trans (run3.trans run4)), {
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [PT.kept x (by rw [frame96.stack_nat]; unfold allocHeadroom nativeFrameBase; omega)
+        (fun f => Nat.not_lt_of_ge hx (allocator_foot_below f))
+        (by
+          simp only [pageTableWindows, OutW, and_true]
+          exact Or.inr (Nat.le_trans (show pageTable + 0x28 ≤ heapEnd by decide) hx)), C.memory, p2.memory,
+        show writeLog d1.σ.mem [] = d1.σ.mem from rfl, p1.memory,
+        frameOn_writeLog _ _ _ inside x ⟨Or.inl (by dsimp only; unfold nativeFrameBase; omega), trivial⟩]
     caller := ⟨fun x hx => by
       rw [PT.caller x (by rw [frame96.stack_nat]; unfold nativeFrameBase; omega), C.memory, p2.memory,
         show writeLog d1.σ.mem [] = d1.σ.mem from rfl]
@@ -187,6 +205,10 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
 /-- caml_set_minor_heap_size returned into caml_init_gc. -/
 structure InitGcMinored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (gcOwnedWindows before.σ.mem) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 2048 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : CallerFrame sp before after
   pc : PCAt jal_8001f36c_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (10, 0#64), (8, 0xf8000#64), (9, 262144#64), (18, 8192#64),
@@ -304,6 +326,29 @@ theorem init_gc_to_minor (c d4 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     rw [M.saved k lo hi]; exact g46.get (by omega) (by omega) (by simp; omega) h
   have stackNat : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
   refine ⟨raw, d7, run5.trans (run6.trans run7), {
+    arenaKept := fun x K => by
+      have low := K.lower
+      have o := K.outside
+      simp only [gcOwnedWindows, A.refs.ptr1, A.refs.ptr2, A.refs.ptr3, OutW, and_true] at o
+      have tableOut := (FreshBlock.outside_owned T.fresh) K.lower K.upper K.foot
+      have km : ArenaKeep ((blk.toNat,16384) :: H)
+          (minorOwnedWindows blk t1 t2 t3) x := {
+        lower := K.lower
+        upper := K.upper
+        foot := fun h => K.foot (vsaFoot_of_cons h)
+        outside := by simp only [minorOwnedWindows, OutW, and_true]; exact ⟨o.1, tableOut, o.2⟩ }
+      have km' : ArenaKeep ((blk.toNat,16384) :: H)
+          (minorOwnedWindows blk (bytesT d6.σ.mem (domainField 104) 8)
+            (bytesT d6.σ.mem (domainField 112) 8) (bytesT d6.σ.mem (domainField 120) 8)) x := by
+        rw [refs6.ptr1, refs6.ptr2, refs6.ptr3]
+        exact km
+      rw [M.arenaKept x km', mem6]
+      exact T.kept x K.upper K.foot (by
+        simp only [pageTableWindows, OutW, and_true]
+        exact Or.inr (Nat.le_trans (show pageTable + 0x28 ≤ heapStart by decide) K.lower))
+    highKept := fun x hx below => by
+      rw [M.highKept x hx (by rw [stackNat]; omega), mem6]
+      exact T.highKept x hx below
     caller := ⟨fun x hx => by
       rw [M.caller x (by rw [stackNat]; omega), mem6]
       exact T.caller.byte x hx⟩
@@ -409,9 +454,27 @@ theorem GcLowKeep.of_range {x : Nat} (h : (0x800647f0 ≤ x ∧ x < 0x80064848) 
   · simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
     omega
 
+/-- HTIF file records and descriptor positions miss every GC initialization store. -/
+theorem GcLowKeep.htif {x : Nat} (h : HtifByte x) : GcLowKeep x := by
+  constructor
+  all_goals first
+  | exact h.not_alloc
+  | rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config,
+        Layout.sym_fds, heapStart, pageTable, OutL, policyLog, allocationPolicyAddr,
+        percentFreeAddr, percentMaxAddr, majorIncrementAddr, majorInitLowWindows, majorFreeWindows,
+        majorLowWindows, majorRingWindow, majorRingAddr, smallListsWindow, flMergeAddr, smallMapAddr,
+        heapStartAddr, largeTreeAddr, flCurWszAddr, gcPhaseAddr, extraResourcesAddr, allocatedWordsAddr,
+        OutW, outW_append, Layout.sym_caml_page_table, BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod,
+        gcStoreWindows, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true] at * <;> omega
+
 /-- caml_init_major_heap returned into caml_init_gc. -/
 structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (mem stack entries cur : BitVec 64) (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (gcOwnedWindows before.σ.mem) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 2048 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : CallerFrame sp before after
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jal_8001f3a4_call.link after
@@ -656,6 +719,28 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     rw [MH.saved k lo hi]; exact g713.get (by omega) (by omega) (by simp [abiClobbered]; omega) h
   refine ⟨mem, stack, entries, d14,
     run8.trans (run9.trans (run10.trans (run11.trans (run12.trans (run13.trans run14))))), {
+    arenaKept := fun x K => by
+      have low := K.lower
+      have o := K.outside
+      simp only [gcOwnedWindows, OutW, and_true] at o
+      have tableOut := (FreshBlock.outside_owned Mi.tableFresh) K.lower K.upper K.foot
+      have km : ArenaKeep (initGcH2 H blk raw) (majorOwnedWindows blk) x := {
+        lower := K.lower
+        upper := K.upper
+        foot := fun h => K.foot (vsaFoot_of_cons (vsaFoot_of_cons h))
+        outside := by simp only [majorOwnedWindows, OutW, and_true]; exact ⟨o.1, tableOut⟩ }
+      rw [MH.arenaKept x km, back13 x
+        (by simp only [OutL, policyLog, and_true]; unfold heapStart at low; omega)
+        (by simp only [OutL, percentFreeAddr, percentMaxAddr, and_true]; unfold heapStart at low; omega)
+        (by simp only [OutL, majorIncrementAddr, and_true]; unfold heapStart at low; omega)]
+      exact Mi.arenaKept x K
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [MH.highKept x hx (by rw [stack96]; omega), back13 x
+        (by simp only [OutL, policyLog, and_true]; omega)
+        (by simp only [OutL, percentFreeAddr, percentMaxAddr, and_true]; omega)
+        (by simp only [OutL, majorIncrementAddr, and_true]; omega)]
+      exact Mi.highKept x hx below
     caller := ⟨fun x hx => by
       rw [MH.caller x (by rw [stack96]; omega)]
       have high := frame96.lower
@@ -720,7 +805,7 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
 
 /-- Bytes the end of caml_init_gc leaves alone: low memory outside the stored
 parameters, and the caller's side of caml_init_gc's frame pointer. -/
-def GcTailKeep (fsp : BitVec 64) (x : Nat) : Prop := (x < heapEnd ∧ OutW gcStoreWindows x) ∨ fsp.toNat ≤ x
+def GcTailKeep (fsp : BitVec 64) (x : Nat) : Prop := (x < fsp.toNat - 80 ∧ OutW gcStoreWindows x) ∨ fsp.toNat ≤ x
 
 theorem MemSame.chain {c d e : Config} {K : Nat → Prop} (a : MemSame c d K) (b : MemSame d e K) : MemSame c e K :=
   (a.trans b).mono fun _ h => ⟨h, h⟩
@@ -739,8 +824,18 @@ theorem GcTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8
   ⟨T.table.cons e, T.count⟩
 
 /-- caml_init_gc returned. -/
+structure GcTableSource (H Hfinal : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8)) where
+  ent : BitVec 64
+  fresh : FreshBlock vsaLayoutP H ent.toNat 16384
+  table : GcTableAt Hfinal m ent
+
 structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
     (Hfinal : List (Nat × Nat)) (before after : Config) : Prop where
+  arenaKept : ∀ x, ArenaKeep H (gcOwnedWindows before.σ.mem) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  highKept : ∀ x, heapEnd ≤ x → x + 2048 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  sourceTable : Nonempty (GcTableSource H Hfinal after.σ.mem)
   caller : CallerFrame sp before after
   lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt ra after
@@ -753,6 +848,24 @@ structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   /-- The page table over the final live list. -/
   table : ∃ ent, GcTableAt Hfinal after.σ.mem ent
+
+/-- A selected original allocation survives GC when it misses the domain
+and ref records that GC intentionally changes. The allocator ledger is shared. -/
+theorem InitGcDone.selected_live {H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal before after K}
+    (D : InitGcDone H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal before after)
+    (sub : ∀ e ∈ K, e ∈ H)
+    (bounds : ∀ e ∈ K, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd)
+    (outside : ∀ e ∈ K, OutWRange (gcOwnedWindows before.σ.mem) e.1 e.2) :
+    LiveFrame K before after := by
+  apply LiveFrame.of_foot_arena bounds
+  intro x lo hi foot
+  obtain ⟨e, he, inside⟩ := owned_of_not_foot lo hi foot
+  apply D.arenaKept x
+  refine ⟨lo, hi, fun h => foot (vsaFoot_subset sub h), ?_⟩
+  have range := outside e he
+  simp only [gcOwnedWindows, OutWRange, OutW, and_true] at range ⊢
+  unfold InExt at inside
+  omega
 
 /-- A global store window misses everything `GcTailKeep` keeps. -/
 theorem gcTail_out {fsp : BitVec 64} (high : heapEnd ≤ fsp.toNat) {a w : Nat} (v : BitVec 64)
@@ -794,6 +907,7 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
   have frameTail : NativeFrame sp 80 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
   have fspHigh : heapEnd ≤ (nativeStack sp 96).toNat := by have := frameIn.lower; omega
   have stack96 : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
+  have spillLow : heapEnd ≤ (nativeStack sp 96).toNat - 80 := by have := frameMsg.lower; omega
   have keepLog (a w : Nat) (v : BitVec 64) (store : ⟨a, a + w⟩ ∈ gcStoreWindows) {c' d' : Config}
       (h : d'.σ.mem = writeLog c'.σ.mem [(a, w, v)]) : MemSame c' d' (GcTailKeep (nativeStack sp 96)) :=
     (MemSame.of_log h).mono fun x k => gcTail_out fspHigh v store k
@@ -804,13 +918,13 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
     ⟨fun x k => h.memory x (gcTail_spill frameMsg k)⟩
   have quietAt {d' : Config} (k : MemSame d14 d' (GcTailKeep (nativeStack sp 96))) :
       LPins8 d'.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8) :=
-    lpins8_observed Mj.quiet fun i hi => k.same _ (Or.inl ⟨by unfold Layout.sym_caml_verb_gc heapEnd; omega, by
+    lpins8_observed Mj.quiet fun i hi => k.same _ (Or.inl ⟨by simp only [Layout.sym_caml_verb_gc, heapEnd] at spillLow ⊢; omega, by
       simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr,
         Layout.sym_caml_verb_gc, and_true]; omega⟩)
   have wordAt {d' : Config} (k : MemSame d14 d' (GcTailKeep (nativeStack sp 96))) (a : Nat)
       (apart : a + 8 ≤ 0x80064858 ∨ (0x8006485c ≤ a ∧ a + 8 ≤ 0x800648b0) ∨ (0x800648c8 ≤ a ∧ a + 8 ≤ 0x86800000)) :
       bytesT d'.σ.mem a 8 = bytesT d14.σ.mem a 8 :=
-    k.word fun i hi => Or.inl ⟨by unfold heapEnd; omega, by
+    k.word fun i hi => Or.inl ⟨by simp only [heapEnd] at spillLow; omega, by
       simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
       omega⟩
   have regs14 := Mj.regs
@@ -979,14 +1093,36 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
       · omega
     have base : x < nativeFrameBase sp 80 := by unfold nativeFrameBase; omega
     rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl base, trivial⟩,
-      k15.same x (Or.inl ⟨below, by
+      k15.same x (Or.inl ⟨by omega, by
         simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
         rcases inT with ⟨lo, _⟩ | ⟨lo, _⟩
         · rw [hP] at lo; omega
         · rw [hS] at th; omega⟩)]
+  have tableFinal : GcTableAt (initGcFinal H blk raw mem stack entries) fin.σ.mem blk :=
+    ⟨Mj.table.agree sameT, by
+      rw [pageCount_agree (Nat.le_trans Mj.table.low (by decide)) sameT]
+      exact Mj.count⟩
   refine ⟨fin, run1.trans (run2.trans (run3.trans (run4.trans (runm1.trans (run5.trans (runm2.trans (run6.trans
     (runm3.trans (run7.trans (runm4.trans (run8.trans (runm5.trans (run9.trans (runm6.trans (run10.trans
     runf))))))))))))))), {
+    arenaKept := fun x K => by
+      have low := K.lower
+      have upper := K.upper
+      have lower := frameTail.lower
+      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x
+        ⟨Or.inl (by dsimp only; unfold nativeFrameBase; omega), trivial⟩,
+        k15.same x (Or.inl ⟨by omega, by
+          simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+          unfold heapStart at low; omega⟩)]
+      exact Mj.arenaKept x K
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x
+        ⟨Or.inl (by dsimp only; unfold nativeFrameBase; omega), trivial⟩,
+        k15.same x (Or.inl ⟨by rw [stack96]; omega, by
+          simp only [OutW, gcStoreWindows, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+          omega⟩)]
+      exact Mj.highKept x hx below
     caller := ⟨fun x hx => by
       rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inr hx, trivial⟩,
         k15.same x (Or.inr (by rw [stack96]; omega))]
@@ -1016,8 +1152,8 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
       rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl below, trivial⟩,
         k15.same x (Or.inl ⟨by omega, k.stores⟩)]
       exact Mj.low x k
-    table := ⟨blk, Mj.table.agree sameT, by
-      rw [pageCount_agree (Nat.le_trans Mj.table.low (by decide)) sameT]; exact Mj.count⟩
+    sourceTable := ⟨⟨blk, Mj.tableFresh, tableFinal⟩⟩
+    table := ⟨blk, tableFinal⟩
     extends_ := ⟨[(entries.toNat, (32768#64).toNat), (stack.toNat, (24#64).toNat),
       (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat), (raw.toNat, (0x200000#64 + 4096#64).toNat),
       (blk.toNat, 16384)], rfl⟩ }⟩

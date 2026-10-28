@@ -42,6 +42,7 @@ import OCaml.Vm.Boot.Startup.CamlInterpreterInitNormalized
 #print axioms OCaml.Vm.Boot.Startup.InterpreterInitDone.below
 #print axioms OCaml.Vm.Boot.Startup.interpreter_debugger_init
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.interpreter_input
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.embed
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.next_pc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.from_sections
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.load_caller
@@ -50,6 +51,11 @@ import OCaml.Vm.Boot.Startup.CamlInterpreterInitNormalized
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.num_sections
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.descriptors_owned
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.descriptors_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.descriptors_from_sections
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.selected_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.htif
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.file
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.fd_position
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.last_exn
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetInterpreterInit.page_table
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_interpreter_init
@@ -61,6 +67,10 @@ import OCaml.Vm.Boot.Startup.CamlInterpreterInitNormalized
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_atom_table_witness_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_atom_table_reset_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_atom_table_returned_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.selected_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.descriptors_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.htif
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.embed
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.next_pc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.domain_live
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.caller_frame

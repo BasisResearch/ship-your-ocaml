@@ -163,6 +163,8 @@ structure AtomTableCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra e
 aligned page, published, and the page is in the table. -/
 structure AtomTableDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra ent raw : BitVec 64) (before after : Config) :
     Prop where
+  highKept : ∀ x, heapEnd ≤ x → x + 1024 < sp.toNat →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (1, ra)]
   ready : RuntimeReady ((raw.toNat, 8192) :: H) capacity sp ra after
@@ -418,6 +420,16 @@ theorem caml_init_atom_table (c : Config) (H : List (Nat × Nat)) (capacity char
     table := t6.agree fun x _ => by rw [mem8]
     count := by
       rw [show pageCount c8.σ.mem ent.toNat = pageCount c6.σ.mem ent.toNat by rw [mem8], PA.count, count5]
+    highKept := fun x hx below => by
+      have high : 0x86800000 ≤ x := hx
+      have bh := span.high
+      have glob : atomTableAddr + 8 ≤ heapEnd := by decide
+      rw [mem8, PA.highKept x hx (by rw [stackNat]; omega), mem5,
+        L.kept x (Or.inr (by omega)), p3.memory,
+        writeLog_out _ _ _ (by simp only [OutL, and_true]; omega),
+        D.kept x (by rw [stackNat]; unfold allocHeadroom; omega)
+          (fun f => Nat.not_lt_of_ge hx (allocator_foot_below f))]
+      exact low1 x (by unfold nativeFrameBase; omega)
     kept := fun x hx foot tw aw notT => by
       rw [hbase] at aw
       simp only [InTable] at notT
@@ -428,6 +440,55 @@ theorem caml_init_atom_table (c : Config) (H : List (Nat × Nat)) (capacity char
       rw [p8.memory, show writeLog c7.σ.mem [] = c7.σ.mem from rfl, upper x (by omega) (by omega),
         p1.memory, frameOn_writeLog _ _ _ inside1 x ⟨Or.inr hx, trivial⟩]⟩
     saved := fun k hk => total.same k (savedRange k hk).1 (savedRange k hk).2.1 (savedRange k hk).2.2 }⟩
+
+/-- Atom initialization preserves HTIF's file records and fd positions. -/
+theorem AtomTableDone.htif {H capacity sp ra ent raw before after}
+    (A : AtomTableDone H capacity sp ra ent raw before after) (x : Nat) (h : HtifByte x) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have b := h.bounds
+  have tableLow := A.table.high
+  have rawHigh : raw.toNat + 8192 ≤ heapEnd := A.fresh.2.2.1
+  have atomsLow := (pageAbove_inside raw 4096 (by
+    have limit : heapEnd < 2 ^ 64 := by decide
+    omega)).1
+  have rawLow : heapStart ≤ raw.toNat := A.fresh.2.1
+  have low : x < heapStart := by simp only [Layout.sym_files, heapStart] at b ⊢; omega
+  apply A.kept x (by simp only [heapStart, heapEnd] at low ⊢; omega)
+    (KeptByte.not_foot (Or.inr (Or.inr (Or.inr (Or.inl h)))))
+  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config, Layout.sym_fds,
+        atomTableAddr] at * <;> omega
+  · omega
+  · simp only [InTable]
+    have recordOut : x < pageTable ∨ pageTable + 0x28 ≤ x := by
+      rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config, Layout.sym_fds,
+          pageTable, Layout.sym_caml_page_table] at * <;> omega
+    omega
+
+/-- Atom initialization keeps a selected original block apart from its page-table entries. -/
+theorem AtomTableDone.selected_live {H capacity sp ra ent raw before after K}
+    (A : AtomTableDone H capacity sp ra ent raw before after)
+    (sub : ∀ e ∈ K, e ∈ H)
+    (bounds : ∀ e ∈ K, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd)
+    (table : ∀ e ∈ K, e.1 + e.2 ≤ ent.toNat ∨ ent.toNat + 16384 ≤ e.1) :
+    LiveFrame K before after := by
+  apply LiveFrame.of_foot_arena bounds
+  intro x lo hi foot
+  obtain ⟨e, he, inside⟩ := owned_of_not_foot lo hi foot
+  have apart := table e he
+  have fresh := (FreshBlock.outside_owned A.fresh) lo hi (fun h => foot (vsaFoot_subset sub h))
+  have rh : raw.toNat + 8192 ≤ heapEnd := A.fresh.2.2.1
+  have span := pageAbove_inside raw 4096 (by
+    have limit : heapEnd < 2 ^ 64 := by decide
+    omega)
+  apply A.kept x hi (fun h => foot (vsaFoot_subset sub h))
+    (Or.inr (Nat.le_trans (show atomTableAddr + 8 ≤ heapStart by decide) lo))
+  · omega
+  · simp only [InTable]
+    unfold InExt at inside
+    have global : pageTable + 0x28 ≤ heapStart := by decide
+    omega
 
 /-- The atom initializer keeps the already owned domain record. -/
 theorem AtomTableDone.domain_live {H capacity sp ra ent raw before after}

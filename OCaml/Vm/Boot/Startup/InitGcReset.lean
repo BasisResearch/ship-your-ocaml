@@ -28,6 +28,21 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 abbrev ResetReadSections.blocks {initial after} (w : ResetReadSections initial after) : List (Nat × Nat) :=
   (w.blk.toNat, 56) :: attemptBlocks w.attempt.opened
 
+/-- The original filename allocation selected by the executed open. -/
+abbrev ResetReadSections.fileNode {initial after} (w : ResetReadSections initial after) : BitVec 64 :=
+  w.attempt.opened.call.retry.failed.opened.opened.node
+
+/-- The read-only owned loader records selected for subsequent native initialization. -/
+abbrev ResetReadSections.keptBlocks {initial after} (w : ResetReadSections initial after) : List (Nat × Nat) :=
+  [(w.blk.toNat,56),(w.fileNode.toNat,5)]
+
+theorem ResetReadSections.kept_owned {initial after} (w : ResetReadSections initial after)
+    (e : Nat × Nat) (he : e ∈ w.keptBlocks) : e ∈ w.blocks := by
+  simp only [ResetReadSections.keptBlocks, List.mem_cons, List.not_mem_nil, or_false] at he
+  rcases he with rfl | rfl
+  · exact List.mem_cons_self ..
+  · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
+
 /-- The actual local GC-call prefix, anchored at the descriptor-reading ancestor. -/
 structure ResetGcCalled {initial sections : Config} (w : ResetReadSections initial sections)
     (t1 t2 t3 : BitVec 64) (after : Config) : Prop where
@@ -39,6 +54,9 @@ structure ResetGcCalled {initial sections : Config} (w : ResetReadSections initi
     (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
     (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after
   gc : GcInitImage after
+  embed : EmbedImage after
+  live : LiveFrame w.blocks sections after
+  htif : MemSame sections after HtifByte
 
 /-- Execute the real argument stores and GC JAL, retaining its local Steps. -/
 theorem reset_init_gc_call_witness {initial sections : Config} (w : ResetReadSections initial sections)
@@ -74,11 +92,11 @@ theorem reset_init_gc_call_witness {initial sections : Config} (w : ResetReadSec
   have bss (a : Nat) (lo hi : Nat) (inside : lo ≤ a ∧ a + 8 ≤ hi) (window : ∀ x, lo ≤ x → x < hi → GcBssByte x) :
       bytesT after.σ.mem a 8 = 0#64 :=
     gc.word a fun i _ => window _ (by omega) (by omega)
-  refine ⟨after, run, ?_, ?_, gc⟩
+  refine ⟨after, run, ?_, ?_, gc, ?_, ?_, ?_⟩
   · constructor
     intro x hx
     rw [post.memory, frameOn_writeLog _ _ _ inside x ⟨Or.inr hx, trivial⟩]
-  exact {
+  · exact {
     pc := by have := post.pc; rwa [jal_80004e6c_call_target] at this
     regs := ⟨gholds_lookup (n := 2) _ post.regs rfl,
       keep 9 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ D.regs rfl),
@@ -134,6 +152,62 @@ theorem reset_init_gc_call_witness {initial sections : Config} (w : ResetReadSec
         gc.bss _ (by unfold GcBssByte Layout.sym_caml_verb_gc; omega)
       exact ⟨by simpa using b 0 (by decide), b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide),
         b 5 (by decide), b 6 (by decide), b 7 (by decide)⟩ }
+  · apply w.done.embed.of_bytes
+    intro x hx
+    have below := hx.stack_room
+    rw [post.memory, frameOn_writeLog _ _ _ inside x
+      ⟨Or.inl (by dsimp only; have : nativeFrameBase (parameterStack + 16#64) 16 = parameterStack.toNat := by decide
+                  rw [this]; omega), trivial⟩]
+
+
+  · exact LiveFrame.of_arena (fun e he => D.ready.block_bounds he) (fun x _ hi => low x hi)
+  · exact ⟨fun x hx => low x (by have := hx.bounds; simp only [Layout.sym_files, heapEnd] at *; omega)⟩
+
+/-- The selected descriptor is fresh over the real pre-descriptor ledger, so
+it misses the domain and all three original ref records at the GC call. -/
+theorem ResetGcCalled.descriptor_outside {initial sections after t1 t2 t3}
+    {w : ResetReadSections initial sections} (G : ResetGcCalled w t1 t2 t3 after) :
+    OutWRange (gcOwnedWindows after.σ.mem) w.blk.toNat 56 := by
+  have original := w.kept_after
+  have domOwned : (firstDomainPtr.toNat,928) ∈ w.blocks :=
+    List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ original.owned))
+  have word (off : Nat) (hi : off + 8 ≤ 928) :
+      bytesT after.σ.mem (domainField off) 8 = bytesT sections.σ.mem (domainField off) 8 :=
+    word_observed _ fun i h => G.live.byte _ domOwned _ (by unfold InExt domainField; dsimp only; omega)
+  have originalOwned (e : Nat × Nat)
+      (he : e ∈ w.attempt.opened.call.retry.failed.opened.call.search.path.table.H) :
+      e ∈ attemptBlocks w.attempt.opened :=
+    List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he)
+  have domain := (FreshBlock.apart w.done.fresh) (originalOwned _ original.owned) (by decide) (by decide)
+  have r1 := (FreshBlock.apart w.done.fresh) (originalOwned _ original.refs.owned1) (by decide) (by decide)
+  have r2 := (FreshBlock.apart w.done.fresh) (originalOwned _ original.refs.owned2) (by decide) (by decide)
+  have r3 := (FreshBlock.apart w.done.fresh) (originalOwned _ original.refs.owned3) (by decide) (by decide)
+  simp only [gcOwnedWindows, word 104 (by decide), word 112 (by decide), word 120 (by decide),
+    original.refs.ptr1, original.refs.ptr2, original.refs.ptr3, OutWRange, and_true]
+  exact ⟨domain, r1, r2, r3⟩
+
+/-- Both selected allocations miss the actual original domain/ref records. -/
+theorem ResetGcCalled.selected_outside {initial sections after t1 t2 t3}
+    {w : ResetReadSections initial sections} (G : ResetGcCalled w t1 t2 t3 after)
+    (e : Nat × Nat) (he : e ∈ w.keptBlocks) :
+    OutWRange (gcOwnedWindows after.σ.mem) e.1 e.2 := by
+  simp only [ResetReadSections.keptBlocks, List.mem_cons, List.not_mem_nil, or_false] at he
+  rcases he with rfl | rfl
+  · exact G.descriptor_outside
+  · have original := w.kept_after
+    have domOwned : (firstDomainPtr.toNat,928) ∈ w.blocks :=
+      List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ original.owned))
+    have word (off : Nat) (hi : off + 8 ≤ 928) :
+        bytesT after.σ.mem (domainField off) 8 = bytesT sections.σ.mem (domainField off) 8 :=
+      word_observed _ fun i h => G.live.byte _ domOwned _ (by unfold InExt domainField; dsimp only; omega)
+    have apart (q n : Nat) (owned : (q,n) ∈ w.attempt.opened.call.retry.failed.opened.call.search.path.table.H)
+        (positive : 0 < n) : w.fileNode.toNat + 5 ≤ q ∨ q + n ≤ w.fileNode.toNat :=
+      extents_apart (by decide) positive
+        (w.attempt.opened.call.retry.failed.opened.opened.apart (q,n) (List.mem_cons_of_mem _ owned))
+    simp only [gcOwnedWindows, word 104 (by decide), word 112 (by decide), word 120 (by decide),
+      original.refs.ptr1, original.refs.ptr2, original.refs.ptr3, OutWRange, and_true]
+    exact ⟨apart _ _ original.owned (by decide), apart _ _ original.refs.owned1 (by decide),
+      apart _ _ original.refs.owned2 (by decide), apart _ _ original.refs.owned3 (by decide)⟩
 
 /-- Compatibility projection retaining the previous reset-facing existential API. -/
 theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections initial sections)

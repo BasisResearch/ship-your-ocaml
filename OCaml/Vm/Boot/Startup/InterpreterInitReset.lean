@@ -24,6 +24,15 @@ structure ResetInterpreterInit (initial after : Config) where
   done : InterpreterInitDone source.blocks backtraceCapacity atBacktrace after
   run : Steps (Vsa.Densify.fillZero initial) after
 
+/-- The selected loader source survives the actual interpreter/debugger initialization. -/
+theorem ResetInterpreterInit.embed {initial after} (I : ResetInterpreterInit initial after) : EmbedImage after :=
+  I.source.embed.of_bytes fun x hx => I.done.below x (by
+    have := hx.stack_room
+    have frame : Layout.interpFrameBytes = 528 := by decide
+    unfold nativeFrameBase
+    rw [frame]
+    omega)
+
 /-- The native CODE-section lookup starts here; this does not assert `Loaded`. -/
 theorem ResetInterpreterInit.next_pc {initial after} (I : ResetInterpreterInit initial after) :
     PCAt 0x80004e94#64 after := I.done.pc
@@ -71,12 +80,55 @@ theorem ResetInterpreterInit.descriptors_owned {initial after} (I : ResetInterpr
   List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (I.source.sourceOwned _ (List.mem_cons_self ..)))
 
 /-- Interpreter stores preserve the owned descriptors from the backtrace return.
-The earlier GC/atom descriptor frame is still a separate obligation. -/
+The full frame from the descriptor-reading ancestor is composed below. -/
 theorem ResetInterpreterInit.descriptors_live {initial after} (I : ResetInterpreterInit initial after) :
     LiveFrame [(I.sections.blk.toNat, 56)] I.atBacktrace after :=
   I.done.live.mono fun e he => by
     rw [List.mem_singleton.mp he]
     exact I.descriptors_owned
+
+/-- Full descriptor-content frame from the executed descriptor read to debugger return. -/
+theorem ResetInterpreterInit.descriptors_from_sections {initial after} (I : ResetInterpreterInit initial after) :
+    LiveFrame [(I.sections.blk.toNat,56)] I.source.source.source.sections after :=
+  I.source.descriptors_live.trans I.descriptors_live
+
+/-- The interpreter also preserves the selected original filename allocation. -/
+theorem ResetInterpreterInit.selected_live {initial after} (I : ResetInterpreterInit initial after) :
+    LiveFrame I.sections.keptBlocks I.source.source.source.sections after :=
+  I.source.selected_live.trans (I.done.live.mono fun e he =>
+    List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (I.source.sourceOwned e (I.sections.kept_owned e he))))
+
+/-- Current HTIF file records and positions come from the real descriptor-read return. -/
+theorem ResetInterpreterInit.htif {initial after} (I : ResetInterpreterInit initial after) :
+    MemSame I.source.source.source.sections after HtifByte := by
+  constructor
+  intro x hx
+  rw [I.done.below x (by
+    have b := hx.bounds
+    have : Layout.sym_files + 56 * 64 ≤ nativeFrameBase parameterStack Layout.interpFrameBytes := by decide
+    omega)]
+  exact I.source.htif.same x hx
+
+/-- Current OpenFile, including the selected original filename bytes. -/
+theorem ResetInterpreterInit.file {initial after} (I : ResetInterpreterInit initial after) :
+    OpenFile after.σ.mem I.sections.fileNode := by
+  apply I.sections.done.file.transport
+  intro x hx
+  rcases hx with ⟨htif, _⟩ | ⟨lo, hi⟩
+  · exact I.htif.same x htif
+  · change I.sections.fileNode.toNat ≤ x at lo
+    change x ≤ I.sections.fileNode.toNat + 4 at hi
+    exact I.selected_live.byte _ (List.mem_cons_of_mem _ (List.mem_singleton_self _)) x
+      (by unfold InExt; dsimp only; omega)
+
+/-- No seek occurs during initialization; descriptor 3 still points just past its table. -/
+theorem ResetInterpreterInit.fd_position {initial after} (I : ResetInterpreterInit initial after) :
+    bytesT after.σ.mem (Layout.sym_fds + 80) 8 = 0x249c#64 := by
+  rw [word_observed (m := I.source.source.source.sections.σ.mem) _ fun i hi =>
+    I.htif.same _ (by
+      unfold HtifByte
+      exact Or.inr (Or.inr (Or.inr (Or.inr ⟨by omega, by omega⟩))))]
+  exact I.sections.done.pos
 
 /-- The registered domain root still contains the actually initialized tagged unit. -/
 theorem ResetInterpreterInit.last_exn {initial after} (I : ResetInterpreterInit initial after) :

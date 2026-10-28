@@ -28,6 +28,53 @@ structure ResetBacktrace (initial after : Config) where
   done : BacktraceDone ((raw.toNat,8192) :: H) backtraceCapacity parameterStack jal_80004e80_call.link atCall after
   run : Steps (Vsa.Densify.fillZero initial) after
 
+/-- The selected original loader allocations survive the actual root insertion. -/
+theorem ResetBacktrace.selected_live {initial after} (B : ResetBacktrace initial after) :
+    LiveFrame B.source.source.source.keptBlocks B.source.source.sections after := by
+  have owned (e : Nat × Nat) (he : e ∈ B.source.source.source.keptBlocks) : e ∈ ((B.raw.toNat,8192) :: B.H) :=
+    List.mem_cons_of_mem _ (B.sourceOwned e (B.source.source.source.kept_owned e he))
+  have selection : Gc.SkiplistFirst.Selected ((B.raw.toNat,8192) :: B.H) B.source.source.source.keptBlocks := by
+    constructor
+    · exact owned
+    · intro e he; exact (B.done.inserted.ready.block_bounds (List.mem_cons_of_mem _ (owned e he))).1
+    · intro e he; exact (B.done.inserted.ready.block_bounds (List.mem_cons_of_mem _ (owned e he))).2
+    · intro e he
+      simp only [ResetReadSections.keptBlocks, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> dsimp only <;> decide
+  exact B.source.selectedLive.trans ((LiveFrame.of_memory B.call.memory).trans
+    (B.done.selected_live selection (by constructor <;> decide)))
+
+/-- The descriptor projection of the selected original loader allocations. -/
+theorem ResetBacktrace.descriptors_live {initial after} (B : ResetBacktrace initial after) :
+    LiveFrame [(B.source.source.source.blk.toNat,56)] B.source.source.sections after :=
+  B.selected_live.mono fun e he => by
+    obtain rfl := List.mem_singleton.mp he
+    exact List.mem_cons_self ..
+
+/-- HTIF records and fd positions are kept by the actual root insertion. -/
+theorem ResetBacktrace.htif {initial after} (B : ResetBacktrace initial after) :
+    MemSame B.source.source.sections after HtifByte := by
+  constructor
+  intro x h
+  have low := h.bounds
+  rw [B.done.inserted.native.low_kept (by constructor <;> decide) x
+    (by simp only [Layout.sym_files, heapStart] at low ⊢; omega) h.not_alloc
+    (by
+      rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config,
+          Layout.sym_fds, Gc.Skiplist.randomSeed] at * <;> omega)
+    (by
+      rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config,
+          Layout.sym_fds, Gc.Skiplist.globalRoots] at * <;> omega), B.done.memory, B.call.memory]
+  exact B.source.htif.same x h
+
+/-- Embedded bytes are framed along the actual root-insertion execution. -/
+theorem ResetBacktrace.embed {initial after} (B : ResetBacktrace initial after) : EmbedImage after :=
+  B.source.embed.of_bytes fun x hx => by
+    rw [B.done.inserted.native.high_kept (by constructor <;> decide) x hx.1
+      (by have := hx.stack_room; omega), B.done.memory, B.call.memory]
+
 /-- The explicit next native instruction initializes the interpreter arguments. -/
 theorem ResetBacktrace.next_pc {initial after} (B : ResetBacktrace initial after) : PCAt 0x80004e84#64 after :=
   B.done.pc

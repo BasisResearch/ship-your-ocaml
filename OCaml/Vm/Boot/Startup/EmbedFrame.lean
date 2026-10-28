@@ -17,6 +17,12 @@ def embedLimit : Nat := Layout.sym_stack_top - Layout.sym_stack_size
 
 def EmbedByte (a : Nat) : Prop := heapEnd ≤ a ∧ a < embedLimit
 
+/-- Every embedded source byte is below startup's complete native scratch reserve. -/
+theorem EmbedByte.stack_room {x : Nat} (h : EmbedByte x) : x + 4096 < parameterStack.toNat := by
+  have bound : embedLimit + 4096 < parameterStack.toNat := by decide
+  have := h.2
+  omega
+
 def EnvironByte (a : Nat) : Prop := Layout.sym_environ ≤ a ∧ a < Layout.sym_environ + 8
 
 def VerbGcByte (a : Nat) : Prop := Layout.sym_caml_verb_gc ≤ a ∧ a < Layout.sym_caml_verb_gc + 8

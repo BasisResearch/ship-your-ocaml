@@ -24,6 +24,10 @@ import OCaml.Vm.Boot.Startup.CamlInitBacktraceNormalized
 #print axioms OCaml.Vm.Boot.Startup.caml_init_backtrace
 #print axioms OCaml.Vm.Boot.Startup.BacktraceDone.selected_live
 #print axioms OCaml.Vm.Boot.Startup.BacktraceDone.caller_frame
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.selected_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.descriptors_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.htif
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.embed
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.next_pc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.domain_live
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetBacktrace.caller_frame

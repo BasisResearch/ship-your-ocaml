@@ -1,5 +1,17 @@
 # Routes not to repeat
 
+- 2026-10-28 CODE selected-table provenance (interface inspection; repaired):
+  the current `GcTableAt` and final readiness contracts alone did not expose
+  the page table's original fresh-allocation separation from the selected
+  descriptor/name blocks. Do not reconstruct this from an arbitrary later
+  heap or snapshot. `GcTableSource.fresh` now retains the actual allocation
+  over the original source ledger; `ResetInitStack.sourceTableFresh` carries
+  it to the atom call. The filename's original `OpenOcamlrun.apart` ledger
+  also includes the temporary search copy before the domain/ref-table
+  ledger: its membership proof must include that real prefix. Selected
+  LiveFrames and native scratch-bounded source frames now close these
+  current-source obligations; the reverse scan remains separate.
+
 - 2026-10-28 selected credit repair:
   the old advertised-capacity obstruction does not refute the strengthened
   runtime. `LibHeapAt.credit` now requires ordinary reserve plus the actual

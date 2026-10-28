@@ -92,6 +92,64 @@ theorem LiveFrame.of_foot {H : List (Nat × Nat)} {before after : Config}
     unfold InExt at hx'
     exact f x (by omega) (owned_not_foot (by omega) ⟨e, he, hx⟩)⟩
 
+/-- An owned byte in the arena, outside the initializer's explicitly mutable windows. -/
+structure ArenaKeep (H : List (Nat × Nat)) (windows : List W) (x : Nat) : Prop where
+  lower : heapStart ≤ x
+  upper : x < heapEnd
+  foot : ¬ vsaFoot H x
+  outside : OutW windows x
+
+/-- Enlarging the owned ledger shrinks the allocator's footprint. -/
+theorem vsaFoot_subset {H K : List (Nat × Nat)} (sub : ∀ e ∈ K, e ∈ H) {x : Nat}
+    (foot : vsaFoot H x) : vsaFoot K x := by
+  rcases foot with global | ⟨lo, hi, outside⟩
+  · exact Or.inl global
+  · exact Or.inr ⟨lo, hi, fun e he => outside e (sub e he)⟩
+
+/-- In the arena, a byte outside the allocator footprint belongs to a live extent. -/
+theorem owned_of_not_foot {H : List (Nat × Nat)} {x : Nat}
+    (lower : heapStart ≤ x) (upper : x < heapEnd) (foot : ¬ vsaFoot H x) :
+    ∃ e ∈ H, InExt e x := by
+  classical
+  apply Classical.byContradiction
+  intro h
+  apply foot
+  exact Or.inr ⟨lower, upper, fun e he hx => h ⟨e, he, hx⟩⟩
+
+/-- Disjoint positive extents have separated endpoints. -/
+theorem extents_apart {p n q m : Nat} (positive : 0 < n) (otherPositive : 0 < m)
+    (apart : ∀ x, InExt (p,n) x → ¬ InExt (q,m) x) : p + n ≤ q ∨ q + m ≤ p := by
+  by_cases left : p + n ≤ q
+  · exact Or.inl left
+  · right
+    apply Classical.byContradiction
+    intro right
+    exact apart (max p q) (by unfold InExt; dsimp only; omega) (by unfold InExt; dsimp only; omega)
+
+/-- An actual allocator's fresh block misses every original owned byte. -/
+theorem FreshBlock.outside_owned {H : List (Nat × Nat)} {p n x : Nat}
+    (fresh : FreshBlock vsaLayoutP H p n) (lower : heapStart ≤ x) (upper : x < heapEnd)
+    (foot : ¬ vsaFoot H x) : x < p ∨ p + n ≤ x := by
+  obtain ⟨e, he, hx⟩ := owned_of_not_foot lower upper foot
+  by_cases below : x < p
+  · exact Or.inl below
+  · right
+    apply Classical.byContradiction
+    intro h
+    exact fresh.2.2.2 e he x (by unfold InExt; dsimp only; omega) hx
+
+/-- The arena form of the allocator-footprint constructor, used when runtime
+initializers also write globals below the arena. -/
+theorem LiveFrame.of_foot_arena {H : List (Nat × Nat)} {before after : Config}
+    (bounds : ∀ e ∈ H, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd)
+    (f : ∀ x, heapStart ≤ x → x < heapEnd → ¬ vsaFoot H x →
+      (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0) : LiveFrame H before after :=
+  ⟨fun e he x hx => by
+    have b := bounds e he
+    have inside := hx
+    unfold InExt at inside
+    exact f x (by omega) (by omega) (owned_not_foot (by omega) ⟨e, he, hx⟩)⟩
+
 /-- caml_init_domain's record and the minor ref tables as caml_init_gc reads
 them: the record is owned, `young_limit` equals `young_trigger`, there is no
 minor heap and no major heap yet, and the three tables are empty. -/

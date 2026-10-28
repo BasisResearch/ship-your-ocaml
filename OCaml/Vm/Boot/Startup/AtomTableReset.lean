@@ -21,8 +21,11 @@ structure ResetAtomTable (initial after : Config) where
   source_run : Steps stackReturned after
   caller : CallerFrame (parameterStack + 16#64) source.sections after
   loadCaller : LoadCaller after
+  embed : EmbedImage after
+  htif : MemSame source.sections after HtifByte
   H : List (Nat × Nat)
   sourceOwned : ∀ e ∈ source.source.blocks, e ∈ H
+  selectedLive : LiveFrame source.source.keptBlocks source.sections after
   ent : BitVec 64
   raw : BitVec 64
   before : Config
@@ -38,7 +41,8 @@ theorem reset_init_atom_table_witness_exists :
   let H := S.H
   let p := S.p
   have R := S.post
-  obtain ⟨ent, T⟩ := R.table
+  let ent := S.sourceTable
+  have T := S.sourceTableAt
   obtain ⟨a0, ha0⟩ := Option.isSome_iff_exists.mp (R.done.ready.gpr_some 10 (by decide) (by decide))
   have pc : PCAt 0x80004e7c#64 d := by
     have link : jal_80004e78_call.link = 0x80004e7c#64 := by decide
@@ -65,6 +69,15 @@ theorem reset_init_atom_table_witness_exists :
       charged := ⟨by decide, by decide⟩
       table := by rw [mem]; exact T.table
       room := by rw [mem, T.count]; decide }
+  have owned (e : Nat × Nat) (he : e ∈ S.source.keptBlocks) : e ∈ ((p.toNat,32768) :: H) :=
+    List.mem_cons_of_mem _ (S.sourceOwned e (S.source.kept_owned e he))
+  have selectedLive := A.selected_live owned (fun e he => readyE.block_bounds (owned e he))
+    (fun e he => by
+      have bounds := readyE.block_bounds (owned e he)
+      have pos : 0 < e.2 := by
+        simp only [ResetReadSections.keptBlocks, List.mem_cons, List.not_mem_nil, or_false] at he
+        rcases he with rfl | rfl <;> dsimp only <;> decide
+      exact ((FreshBlock.apart S.sourceTableFresh) (S.source.kept_owned e he) (by decide) pos).symm)
   refine ⟨initial, f, ⟨{
     reset := S.reset
     stackReturned := d
@@ -72,8 +85,12 @@ theorem reset_init_atom_table_witness_exists :
     source_run := step.trans steps
     caller := S.caller.trans (((CallerFrame.of_memory mem).trans A.caller).weaken (by decide))
     loadCaller := S.loadCaller.frame (g.trans (GprsSame.of_saved A.saved)) (by decide) (by decide)
+    htif := ⟨fun x hx => by rw [A.htif x hx, mem]; exact S.htif.same x hx⟩
+    embed := S.embed.of_bytes fun x hx => by
+      rw [A.highKept x hx.1 (by have := hx.stack_room; omega), mem]
     H := (p.toNat, 32768) :: H
     sourceOwned := fun e he => List.mem_cons_of_mem _ (S.sourceOwned e he)
+    selectedLive := S.selectedLive.trans ((LiveFrame.of_memory mem).trans selectedLive)
     ent := ent
     raw := raw
     before := e
