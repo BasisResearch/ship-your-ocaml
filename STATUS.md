@@ -85,6 +85,12 @@ the reviewed patches are committed for the full gate. Original snapshots remain 
 
 ## Remaining F1 boundaries
 
+The write-row worker identified missing dynamic remembered-storage/custom
+separation in its baseline (`RefCustomApart`). The parallel `CustomSpace`
+repair covers those actual blocked extents. Their results must be composed
+to produce that separation from the selected heap, not retain a new
+arbitrary spatial premise in the final row supplier.
+
 Ordinary uncounted opcode families and interpreter entry/halt composition
 exist. The reviewed counted table has 122 rows; seven write/barrier rows and five
 complete C_CALL rows remain, with primitive frames and C_CALL assembly. Opening and
