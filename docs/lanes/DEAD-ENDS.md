@@ -147,6 +147,18 @@
   be used separately: the synthetic listing footprint includes its store,
   even though the checked native return restores the same value.
 
+- 2026-10-28 original-wrapper carved-header window: `EntryLargeSource`
+  gives a lower heap bound and a nonwrapping extent below `2^64`. It does
+  not imply the carved header's ordinary-RAM upper bound (`2^32`), upper
+  major-arena membership, or selected-ledger ownership. This is interface
+  inspection, not a reachable-state counterexample. `AllocEntryLarge.Facts`
+  consumes `sourceUpper : sourceEnd c ≤ DlHeap.heapEnd` explicitly and derives
+  the carved `WriteWindow` from that bound and the source header alignment.
+  It does not infer ownership. Native separation must cover both the
+  wrapper's 48-byte frame and the free-list's 32-byte frame, including the
+  saved tag. Natural allocated/free counters also retain independent
+  original nonoverflow/nonunderflow credit; representation supplies neither.
+
 - 2026-10-28 original-entry least-large routing: absence of suitable small
   classes does **not** supply the native zero-filtered-bitmap branch from
   the current `SmallRepresentation`. `MapConsistent` constrains only bits

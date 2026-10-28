@@ -6,6 +6,24 @@ transport below consumes checked stage posts or their exact bounded store logs. 
 namespace OCaml.Vm.Gc.BfShape
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 
+/-- Transport the bounded representation using only its observed cells.
+Physical extents are data and need no memory premise. -/
+theorem BoundedSmallRepresentation.of_reads {m m' lists}
+    (repr : BoundedSmallRepresentation m lists)
+    (slots : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count →
+      bytesT m' (slot s).toNat 8 = bytesT m (slot s).toNat 8)
+    (links : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ x ∈ lists s,
+      bytesT m' x.toNat 8 = bytesT m x.toNat 8)
+    (headers : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ x ∈ lists s,
+      bytesT m' (x-8#64).toNat 8 = bytesT m (x-8#64).toNat 8)
+    (bits : mapBits m' = mapBits m) : BoundedSmallRepresentation m' lists := by
+  refine ⟨⟨repr.shape.congr slots links,repr.headers.congr headers,?_,repr.physical⟩,
+    repr.bounded.congr bits⟩
+  intro s lo hi
+  change (mapBits m').getLsbD _ = true ↔ _
+  rw [bits]
+  exact repr.map s lo hi
+
 theorem popped_mem {lists s b bs t x} (selected : lists s = b :: bs)
     (member : x ∈ popped lists s bs t) : x ∈ lists t := by
   by_cases eq : t = s

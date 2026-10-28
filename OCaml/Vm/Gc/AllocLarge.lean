@@ -59,14 +59,11 @@ theorem Conditions.of_memory {sp size before after} (memory : after.σ.mem = bef
 abbrev Post (sp size : BitVec 64) (before after : Config) : Prop :=
   AllocFinish.Post sp size (resultHeader sp size before) (freeEffect sp size before) before after
 
-/-- Complete large-block free-list allocation followed by the same proved
-color/header/accounting/native-return continuation used for exact-size lists. -/
-theorem allocate {sp size c} (input : Input sp size c) :
-    FnSummary BestFitSmall.pc (fun d => d = c) (Post sp size c) := by
-  constructor
-  apply Vsa.Logic.Triple.seq (BestFitFallback.allocate_large input.toMissingInput input.ffsCode input.splitCode
-    input.emptyBitmap input.large input.returnOutside (by change AllocEntry.returnPc.toNat % 4 = 0; decide)).run
-  intro middle allocatedPost
+/-- Normalize an existing free-list return and reuse the shared finish
+summary. Stronger entry routes can retain their physical post alongside it. -/
+theorem Input.finish {sp size c middle} (input : Input sp size c)
+    (allocatedPost : BestFitFallback.Allocated (freeRegs sp size) c middle) :
+    FnSummary AllocEntry.returnPc (fun d => d = middle) (Post sp size c) := by
   have kept : GHolds middle.σ [(8,size)] :=
     gholds_of_frame allocatedPost.native _ (by change KeysOK [8]; decide)
       (by change ∀ n ∈ [8], ∀ q ∈ noiseRegs, (q == gprReg n) = false; decide)
@@ -87,6 +84,17 @@ theorem allocate {sp size c} (input : Input sp size c) :
       memory := allocatedPost.memory
       output := allocatedPost.output
       native := allocatedPost.native }
-  exact (callee.finish input.tagRead input.continuation).run middle ⟨allocatedPost.pc,rfl⟩
+  exact callee.finish input.tagRead input.continuation
+
+
+/-- Complete large-block free-list allocation followed by the same proved
+color/header/accounting/native-return continuation used for exact-size lists. -/
+theorem allocate {sp size c} (input : Input sp size c) :
+    FnSummary BestFitSmall.pc (fun d => d = c) (Post sp size c) := by
+  constructor
+  apply Vsa.Logic.Triple.seq (BestFitFallback.allocate_large input.toMissingInput input.ffsCode input.splitCode
+    input.emptyBitmap input.large input.returnOutside (by change AllocEntry.returnPc.toNat % 4 = 0; decide)).run
+  intro middle allocatedPost
+  exact (input.finish allocatedPost).run middle ⟨allocatedPost.pc,rfl⟩
 
 end OCaml.Vm.Gc.AllocLarge

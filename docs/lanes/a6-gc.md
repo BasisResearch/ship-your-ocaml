@@ -1,5 +1,67 @@
 # Lane a6-gc
 
+## Original-caller bounded least-large wrapper (2026-10-28)
+
+- **Checked edits complete; lead review/integration pending.**
+  `AllocEntryLarge` composes the real
+  `AllocWrapperCore.enter`, `BestFitEntryLargeReturn.allocate_entry_large`,
+  the shared `AllocLarge.Input.finish`/`AllocFinish.CalleePost.finish`, and
+  `AllocWrapperCore.Entered.complete`. The existing `AllocLarge.allocate`
+  uses the same factored finish; no segment or allocator execution proof is
+  duplicated or regenerated.
+- The original `Input`/`Facts` expose the actual wrapper ABI/code/function
+  pointer, bounded small representation, positive request <=16, no suitable
+  small class, full original least-source geometry, both native frames,
+  explicit upper arena bound, actual state/threshold reads and their
+  separation, no-major-slice arithmetic and independent allocated/free
+  natural credit. There is no searched/allocated-state, whole-body
+  condition, execution or opaque returned invariant premise.
+- Prologue read/representation suppliers derive all slot/filter/large and
+  saved-bank observations; `continuation` and `large_input` supply the
+  internal successful-continuation conditions. `initialized_read` includes
+  the actual allocated-header store before accounting's reads. Lower small
+  lists may remain nonempty. Original phase/sweep reads select `isBlack`;
+  `Post.exactHeader` states the full `AllocColor.header`, separately from
+  size/tag-only `HeaderOk`.
+- The final post preserves the bounded small representation, actual least
+  pointer, shortened still-large source and its exact remnant header,
+  source/list/allocated separation, natural original-read counters, exact
+  composed `AllocLargeWrapper.effect`, output/code and original caller ABI.
+  Selected caller ledgers use `LiveFrame` with explicit exact-log separation.
+- `EntryLargeSource` is geometry/nonwrapping extent, not ownership or an
+  upper arena bound. `sourceUpper` is consumed explicitly for the carved RAM
+  write window; no selected-ledger ownership is inferred. Native/caller
+  production of all these facts, arbitrary trees, requests >16, expansion,
+  global accounting readiness and collection remain open. The old high-bit
+  interface counterexample is unchanged. `GoodF1` is unchanged;
+  `CustomMemCall` remains named; `BarrierGrowthFull` stays G2 and C4 round 2
+  waits for F1.
+- Validation: the original summary build passes **1,337 jobs** in
+  `/tmp/a6-wrapper-entry3.log`; the final reflected-window summary passes
+  **1,375 jobs** in `/tmp/a6-wrapper-windows.log`. The affected build passes
+  **1,419 jobs** in `/tmp/a6-wrapper-affected.log`, including
+  `AllocEntryLargeAudit`, `BestFitNextAudit`, `FreshLargeHeader` (and its
+  allocated/enqueued consumers), `ContextLargeAllocated`, `AllocationContext`
+  and `AllocWrapper`. Every module in the requested allocator/wrapper closure
+  is checked; the shared `AllocLarge.allocate` also rechecks with its
+  factored `Input.finish`.
+- Standalone focused audit:
+  `python3 scripts/lean-guarded.py --log /tmp/a6-wrapper-focused-axioms.log -- scripts/lean-capped.sh lake env lean -M 6000 -j 1 OCaml/Vm/Gc/AllocEntryLargeAudit.lean`.
+  It passes **43 unique reports**, with all **39 new theorems** covered once,
+  only `propext`, `Classical.choice`, `Quot.sound` or none. The existing
+  large-wrapper run and old high-bit counterexample are included. The
+  dedicated audit is registered in `OCaml.Audit`; full Audit stays with the
+  lead. Hole, discipline (27 rules), abstraction and whitespace checks pass;
+  static logs are `/tmp/a6-wrapper-final-{holes,discipline,abstraction}.log`.
+- Every Lean launch ran alone after `free -g` showed >=25 GB available,
+  through `lean-guarded.py` and `lean-capped.sh` in the inherited 12 GiB /
+  two-thread scope. Proof budgets are unchanged, with no virtual-memory
+  ulimit, generated-output edits, subagents, commit or landing attempt.
+  Internal composition is closed under the stated original facts; their
+  native/caller invariant producers remain open. Full `OCaml.Audit` and
+  commit/landing remain the lead gate. Git metadata and the landing queue
+  are read-only here.
+
 ## Actual native opening runtime (2026-10-28)
 
 - `f1_openOut_runtime` supplies concrete OpenOutRuntimeAt at f1Layout relative

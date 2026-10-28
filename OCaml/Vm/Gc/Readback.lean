@@ -52,4 +52,19 @@ theorem logInW_of_forall {ws : List W} {log : List WEntry}
   | cons e log ih =>
     exact ⟨inside e (by simp), ih (fun e he => inside e (by simp [he]))⟩
 
+/-- Change only the enclosing windows of an already reflected log. -/
+theorem logInW_transport {ws ws' : List W} {log : List WEntry}
+    (inside : LogInW ws log)
+    (cover : ∀ a n, InsideW ws a n → InsideW ws' a n) : LogInW ws' log := by
+  induction log with
+  | nil => trivial
+  | cons e log ih => exact ⟨cover _ _ inside.1,ih inside.2⟩
+
+/-- Compose reflected footprints without expanding their store values. -/
+theorem logInW_join {ws : List W} {left right : List WEntry}
+    (hl : LogInW ws left) (hr : LogInW ws right) : LogInW ws (left ++ right) := by
+  induction left with
+  | nil => exact hr
+  | cons e left ih => exact ⟨hl.1,ih hl.2⟩
+
 end OCaml.Vm.Gc

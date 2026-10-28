@@ -8,7 +8,8 @@ namespace OCaml.Vm.Gc.BestFitFallback
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 open OCaml.Vm.Boot.Startup
 
-/-- Owned original least block, its full physical extent and native frame.
+/-- Original least-block geometry, its nonwrapping extent and native frame.
+This supplies neither allocator ownership nor an upper arena bound.
 This does not assert or preserve an arbitrary large-tree topology. -/
 structure EntryLargeSource (sp request : BitVec 64) (lists : Nat → List (BitVec 64))
     (c : Config) : Prop where
