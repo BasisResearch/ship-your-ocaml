@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:56 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:11 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -74,7 +74,8 @@ interface counterexample, not a reachable native state. Lead checked all
 eight new unique registrations, 1,300/1,301-job builds and 295 focused
 reports (293 standard, two pure). Snapshot:
 `keep/g2-bitmap-obstruction-reviewed-20261028`; `logs/a6-entry-large-*`.
-The least-large adapter remains open; its bounded bitmap repair is active.
+The repair below supersedes the failed derivation while retaining this
+old-interface counterexample.
 
 `e9b985ce` repairs listing entry to consume actual setup/stack evidence and
 reconstructs returned heap/runtime fields, leaving numeric reserve on the
@@ -89,18 +90,31 @@ It does not close the native spending or full runtime supplier.
 The combined gate is active in `syo-wt/bprime` at fixed candidate
 `4e99ba14`, started 16:56 UTC; log `/tmp/syo-listing-bitmap-integrate.log`.
 
+## Reviewed for the following gate
+
+`d90918a9` repairs bitmap boundedness and supplies the original-entry
+least-large split for positive requests<=16 and request+17<source size.
+It derives actual filtering/setup, returns unchanged bounded small lists,
+shortened source/header and allocated separation, exact counter/effects,
+RA/SP and native frames. General tree topology, allocated colors, larger
+requests, wrapper/caller production and natural total-free credit remain
+open. Lead checked all 56 new registrations, 1,337-job final build and
+352 focused reports (350 standard, two pure). Rebase was clean.
+Snapshot: `keep/g2-bounded-large-reviewed-20261028`;
+evidence: `logs/a6-bounded-*`. It is not in the active `4e99ba14` gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Bounded bitmap invariant and original-entry least-large continuation | `syo-wt/a6-gc-next2` |
+| Startup Sol | Actual reset continuation through CODE-section seek | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Concrete physical custom state and separate native read context | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-G2 repair started at 16:51 UTC from `eddfc88c`; log:
-`/tmp/syo-gc-bitmap-large-repair-launch.log`. It must preserve a bounded
-bitmap refinement and derive zero filtering before composing the existing
-request<=16/sufficiently-large-source native branch.
+Startup began at 17:10 UTC from `d90918a9`; log:
+`/tmp/syo-startup-code-seek-launch.log`. Its actual descriptor/file source
+must be framed through the executed initialization, not assumed at the new PC.
+G2's remaining branch/wrapper/caller work stays in its ledger for rotation.
 Physical custom work started at 16:56 UTC from `4e99ba14`, reusing the
 checked table geometry, credit and runtime components. Log:
 `/tmp/syo-custom-physical-runtime-launch.log`. Source/destination build locks and
