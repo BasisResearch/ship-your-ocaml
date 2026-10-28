@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 18:29 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -177,19 +177,34 @@ Snapshot: `keep/opening-runtime-reviewed-20261028`;
 evidence: `logs/opening-runtime-*`. This joins the next integration batch.
 Whole unary opcode assembly remains open until its own proof checks.
 
+## Reviewed original-caller bounded G2 wrapper
+
+`ce120d18` composes the real allocator wrapper, bounded least-large split,
+phase-selected header/color, accounting and original caller restoration.
+Original inputs derive the internal conditions and returned bounded small
+representation, shortened source, separation, exact counters and write log.
+Geometry is kept distinct from ownership; natural credit and no-major-slice
+conditions remain explicit original-state requirements. Shared LogWindows
+and selected LiveFrame adapters use the actual composed log.
+Lead checked all 39 new unique registrations, 1,419 affected build jobs and
+43 exact focused reports (40 allowed-axiom, three pure). Only additive a6
+lane notes conflicted on rebase; both were retained.
+Snapshot: `keep/g2-large-wrapper-reviewed-20261028`;
+evidence: `logs/a6-wrapper-*`. General caller production, small wrappers,
+requests>16, arbitrary trees, expansion and collection remain open.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Original-caller bounded least-large allocator wrapper | `syo-wt/a6-gc-next2` |
+| Startup Sol | Actual CODE reverse scan, lseek and return | `syo-wt/a6-gc-next2` |
 | Unary Sol | Complete counted C_CALL1 opcode and census assembly | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-The source-frame handoff is reviewed and committed. Its slot now rotates to
-`tasks/sol-g2-large-wrapper.md`: original-caller wrapper conditions and
-returned representation/color for the reviewed branch. Log:
-`/tmp/syo-g2-large-wrapper-launch.log`. The next startup packet is
-`tasks/sol-code-seek-scan.md`; G2's other branch/caller work stays in the ledger.
+The bounded G2 wrapper is reviewed and committed. That slot returns to
+`tasks/sol-code-seek-scan.md`, log `/tmp/syo-code-seek-scan-launch.log`.
+The next G2 rotation is `tasks/sol-g2-small-wrapper.md`, reusing shared
+original-caller frame suppliers for exact/next-size small success.
 Opening and listing runtime producers are reviewed. That slot now takes
 `tasks/sol-counted-unary-complete.md`, log
 `/tmp/syo-counted-unary-complete-launch.log`. No active worker cache is
@@ -197,9 +212,8 @@ copied into bprime.
 After checked unary assembly, the primitive slot takes
 `tasks/sol-format-parse-all.md` for the complete native parser/caller prefix;
 named storage and root-cell resource work stays in `tasks/sol-named-reserve.md`.
-After the bounded G2 wrapper handoff, its slot returns to the native CODE
-scan. These are work rotations, not claims that the remaining boundaries
-are closed.
+These rotations keep both F1 and G2 moving; remaining caller and native
+execution boundaries stay explicit.
 
 ## Remaining F1 boundaries
 
