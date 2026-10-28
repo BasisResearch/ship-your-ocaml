@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 15:59 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:02 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -63,27 +63,32 @@ Snapshot: `keep/interpreter-init-reviewed-20261028`; evidence:
 from the generated backtrace audit (now 79 declarations); initialization
 still audits it. The full gate will check the combined result.
 
-C_CALL3/5 has passed its 3,184-job table build and 12 focused reports; six
-new theorems have unique registrations. The worker is finishing its handoff,
-so this **131/134** census is not yet reviewed or published. It closes those
-whole rows from actual F1 arity rejection without changing GoodF1.
+`607536da` closes C_CALL3/5, with a reviewed **131/134** census. The worker's
+3,184-job table build and 12 focused reports (11 standard, one axiom-free)
+passed; all six new declarations have unique audit registrations. The actual
+absent-slot branch remains `.wrong`; selected F1 primitives at these arities
+are `.unsupported`. Neither can occur on a GoodF1 run. No guard changed.
+Snapshot: `keep/counted-arity-reviewed-20261028`; logs: `logs/ccall35-*`.
+`b83bf39e` moves the two proof bodies unchanged to `Bytecode/PrimArity.lean`;
+Semantics.lean is byte-identical to the published baseline. The full gate
+will validate the import change and combined 131-row/startup result.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| C_CALL Sol | Complete C_CALL3/5 from checked F1 arity classification | `syo-wt/a6-gc-next2` |
+| Next C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
 | G2 Sol | Exact-size representation and shared original small-success dispatch | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Two Sol CLI workers are active. G2 started at 15:58 UTC from `10c5e3c6`
+G2 is active; the completed arity slot is being prepared for console work. G2 started at 15:58 UTC from `10c5e3c6`
 in `a1-prims-next`; log `/tmp/syo-gc-small-success-launch.log`.
 The idle startup cache was transferred to the integration worktree under
 source/destination build locks, with matching toolchain/manifests and
 tracked dependency trees, before the G2 launch. All four build roots were
 copied coherently, without deletion.
 
-The next call slot is counted console/C_CALL4. Other ready packets cover
+The next call slot is counted console/C_CALL4; it starts after the idle cache transfer. Other ready packets cover
 counter/exit, listing runtime repair, full physical custom startup/read
 context, general formatting, named reserve and the actual CODE-section seek.
 
