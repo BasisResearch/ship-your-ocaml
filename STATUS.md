@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 14:48 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 15:05 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -60,67 +60,50 @@ toolchain/manifests/dependency trees and held both build locks.
 
 ## Reviewed for the next gate
 
-- `9de2d983`: 122/134 counted ordinary rows and exact partial-table census;
-  3,494 affected jobs, 130 focused reports, 122 new declarations registered.
-- `2e47e2fc`: checked conditional global record/frame obstruction and local
-  `CustomSpace` replacement for actual records, named roots and remembered
-  storage. Startup/frame/native-return producers retain full custom ledgers.
-  3,653 affected jobs, 57 allowed reports, all 23 new theorems registered.
-  The native `CustomMemCall` stays named, with its physical obligations explicit.
-- `9549edb8`: counted field/empty-growth frames, supplied OFFSETREF and six
-  conditional barrier rows. Supplied census is **123/134**; six barrier rows
-  still need the spatial supplier and the stronger counted G2 full-growth
-  instantiation. 2,625 focused jobs, 3,631 affected jobs, isolated 3,244-job
-  whileMin check; 55 audited reports (53 standard, two axiom-free), covering
-  all 48 added/refactored declarations.
+The next batch includes `9de2d983` (122 counted rows), `2e47e2fc`
+(local custom-space repair), `9549edb8` (field and empty-growth frames),
+`4f827ee5` (actual counted insertion separation; 129-row table) and
+`d1314b91` (original best-fit entry through next-size allocation return).
 
-Lead reviewed the evidence and retained audit/ledger updates through rebases.
-Proof files merged cleanly; combined validation is due. Original reviewed
-snapshots remain on `keep/custom-space-reviewed-20261028` and
-`keep/counted-fields-reviewed-20261028`; previous recovery branches remain.
-Published `804538a5` contains none of these three later proof commits.
+The combined spatial/custom/count consumers passed 3,664 affected jobs and
+57 focused audits, covering both new and all 15 changed declarations.
+G2 passed 1,290 jobs and 260 audits (258 standard, two axiom-free), including
+all nine new theorems. Lead independently checked coverage and allowed sets;
+proof rebases were clean, and both adjacent lane-log entries were retained.
+Evidence is archived in `logs/counted-spatial-*` and `logs/a6-entry-next-*`.
+Reviewed snapshots remain on `keep/*` branches. Full integration is next;
+none of these five proof commits is yet published.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Write-row Sol | Derive RefCustomApart from selected CustomSpace and close row suppliers | `syo-wt/a6-gc-next2` |
-| G2 Sol | Original bf_allocate dispatch through larger-small-list allocation return | `syo-wt/a1-prims-next` |
-| Lead | Review merged contracts; stage combined validation and next full gate | main; `syo-wt/bprime` |
+| C_CALL Sol | Actual counted C_CALL1/2 successes for 19 ordinary primitive names | `syo-wt/a6-gc-next2` |
+| Startup Sol | Universal reset through null-interpreter/debugger initialization | `syo-wt/a1-prims-next` |
+| Lead | Full combined gate, then concrete custom runtime supplier review | main; `syo-wt/bprime` |
 
-Both prior workers finished successfully for review. Two replacement Sol CLI
-workers run at high effort under separate 12 GB scopes, launched after memory
-checks. No user-only decision blocks work.
+Two replacement Sol CLI tasks are queued after review, under the same 12 GB
+caps and memory checks. G2's next-size entry result is in the gate batch;
+remaining allocator routes and full growth continue in subsequent slots.
+No user-only decision blocks work.
 
 ## Remaining F1 boundaries
 
-The write-row worker identified missing dynamic remembered-storage/custom
-separation in its baseline (`RefCustomApart`). The parallel `CustomSpace`
-repair covers those actual blocked extents. Their results must be composed
-to produce that separation from the selected heap, not retain a new
-arbitrary spatial premise in the final row supplier.
+The reviewed counted table has **129/134** supplied rows relative to named
+`CustomMemCall` and G2 full growth. `LibHeapAt.refCustomApart` derives the
+remembered-storage/custom separation from actual selected `CustomSpace`;
+no extra arbitrary spatial supplier remains. Full growth still requires
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`;
+the base-layout boundary cannot silently supply counted return facts.
 
-Ordinary uncounted opcode families and interpreter entry/halt composition
-exist. The reviewed counted table has 123 supplied rows; six barrier rows and five
-complete C_CALL rows remain, with primitive frames and C_CALL assembly. Opening and
-out-channel listing use checked native returns, but their concrete runtime,
-heap/record and after-call suppliers remain open. Table occupancy alone is
-not the full physical `Customs` predicate: resource words and the current
-domain's table identity need startup/frame/call producers.
-
-Lead review also flagged `CallerApart.free`, which quantifies over every
-heap ledger although `HeapReady` does not require a ledger to be exhaustive.
-`sol-custom-ledger.md` asks for the precise captured empty-ledger obstruction
-and a repair tied to the actual caller ledger. The empty-ledger obstruction and selected-ownership consumers are now
-checked and reviewed in `58740097`. A separate lead inspection found a candidate
-incompatibility between the global record-separation law and unrestricted
-outside-byte framing; `sol-custom-apart-local.md` queues a checked conditional
-obstruction and local spatial-invariant repair. The conditional
-`global_records_frame_obstruction` now builds in the worker tree: readiness,
-a bounded pinned domain and a retained minor-resource byte contradict the
-old global record law plus arbitrary outside-write framing. This is neither
-a reachable execution nor a claim of global inconsistency. The local `CustomSpace` replacement and its consumers are checked in
-`2e47e2fc`; post-merge validation with the counted write changes is pending.
+C_CALL1–5 remain whole-row obligations. Native opening/listing returns exist,
+but their concrete runtime, heap/record and after-call suppliers remain open.
+Physical custom accounting also needs concrete startup/read-context producers;
+table occupancy alone is insufficient. Selected ownership and local spatial
+invariants replace the old universal ledger/global record laws. Their checked
+obstructions are conditional memory-contract results, not reachable executions
+or claims of global inconsistency. Combined affected consumers have passed;
+the full gate is pending.
 
 Named registration needs a proved node/key reserve and repeated root-cell
 removal/reuse accounting. Distinct immutable names alone do not bound all
@@ -132,12 +115,12 @@ reachable caller/runtime suppliers and the C_CALL2 return. Do not narrow GoodF1 
 
 Reset still needs the continuation after backtrace through interpreter/debugger
 initialization, code/primitives/data loading, system/argv setup and `Loaded`.
-G2 still needs original physical-invariant production/preservation, dispatch,
+G2 still needs original physical-invariant production and remaining dispatch,
 other size classes/colors, complete allocator readiness and collection.
 The a2-sem uncaught-path WIP stays preserved and lower priority: GoodF1
 excludes that path.
 
-Task packets are in `tasks/sol-*.md`. Next priorities are composing local custom separation into counted writes,
+Task packets are in `tasks/sol-*.md`. Next priorities are
 concrete custom startup/read-context suppliers, ordinary counted C_CALLs,
 console continuations, general formatting, named reserves and G2 original
 small-allocation dispatch. The concrete null-interpreter/debugger
