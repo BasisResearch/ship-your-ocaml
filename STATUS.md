@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 12:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 12:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -100,8 +100,13 @@ and a repair tied to the actual caller ledger. The empty-ledger obstruction and 
 checked and reviewed in `58740097`. A separate lead inspection found a candidate
 incompatibility between the global record-separation law and unrestricted
 outside-byte framing; `sol-custom-apart-local.md` queues a checked conditional
-obstruction and local spatial-invariant repair. That second candidate is
-not yet a proved defect or a claim of global inconsistency.
+obstruction and local spatial-invariant repair. The conditional
+`global_records_frame_obstruction` now builds in the worker tree: readiness,
+a bounded pinned domain and a retained minor-resource byte contradict the
+old global record law plus arbitrary outside-write framing. This is neither
+a reachable execution nor a claim of global inconsistency. The worker is
+checking a local `CustomSpace` replacement for actual records/named roots;
+its full consumer validation and audit are still pending.
 
 Named registration needs a proved node/key reserve and repeated root-cell
 removal/reuse accounting. Distinct immutable names alone do not bound all
