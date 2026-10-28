@@ -183,6 +183,38 @@
   be used separately: the synthetic listing footprint includes its store,
   even though the checked native return restores the same value.
 
+- 2026-10-28 original-small finish frame: the reviewed exact/large
+  `AllocFinish.CalleePost` allowed native clobbers only through x15. The
+  next-size `PickPost`/`PopPost` contracts explicitly include x16/x17; their
+  original-entry post cannot supply that narrower all-register frame.
+  This is contract inspection, not a reachable-state counterexample.
+  The common finish and wrapper post now carry explicit extra clobbers,
+  default `[]` for the existing exact/large consumers, `[16,17]` for small
+  dispatch. Recover its frame from the retained native stage summaries;
+  keep original RA/SP/x8/x9 restoration through the actual wrapper bank.
+
+- 2026-10-28 original-small natural charge: an unconditional free-counter
+  debit of request+1 does not follow from the next-size return contract.
+  `BestFitRemnant.Inserts` may be false for a zero remnant or sweep deferral;
+  then the native split retains its full selected-size+1 debit. This is
+  interface inspection, not a new native counterexample. Keep the actual
+  insertion decision and refund selected-size-request only on insertion.
+  `EntrySmallReturned.counter_nat` checks that equation under separate
+  original selected-source credit; `AllocEntrySmall.Post.freeCounter`
+  transports it through finish using the actual original prepared memory.
+  An insertion-log footprint also needs positive remnant size: the actual
+  zero-size effect is empty, not an insertion at class zero.
+
+- 2026-10-28 original-small reflection elaboration: recursively applying
+  constructors to window disjunctions exhausted default heartbeats
+  (`/tmp/a6-small-log3.log`). Name scalar slot/merge/map/counter containment
+  before assembling each finite exact log. Inferring a register map from
+  `R 10` at final representation transport hit default recursion
+  (`/tmp/a6-small-entry5.log`); give `AllocOriginal.finished_representation`
+  the actual `(R := R)` before unifying its memory/finish parameters.
+  Both repairs check at unchanged limits. These are elaboration failures,
+  not runtime obstructions or reasons to raise proof budgets.
+
 - 2026-10-28 original-wrapper carved-header window: `EntryLargeSource`
   gives a lower heap bound and a nonwrapping extent below `2^64`. It does
   not imply the carved header's ordinary-RAM upper bound (`2^32`), upper

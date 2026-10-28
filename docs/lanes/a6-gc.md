@@ -1,5 +1,69 @@
 # Lane a6-gc
 
+## Original-caller bounded exact/next-size small wrapper (2026-10-28)
+
+- **Checked edits; lead review/integration pending.** `AllocEntrySmall.allocate`
+  composes the actual `AllocWrapperCore.enter`, unchanged native
+  `BestFitFallback.allocate_entry_small`, shared
+  `AllocFinish.CalleePost.finish`, and `AllocWrapperCore.Entered.complete`.
+  The original ABI/code/free-list-pointer input requires a positive request
+  and a suitable represented class at or above it, bounded by 16. It supplies
+  bounded representation, physical sources, both native frames, selected
+  upper-arena bounds, actual threshold read/separation, no-major-slice and
+  independent allocated/free credit. There is no later-state/run premise,
+  whole wrapper conditions, opaque returned invariant or ownership inference.
+- `AllocOriginal` factors the reviewed large wrapper's prologue windows/read
+  transport, prepared representation, native bounds, initialized accounting
+  reads, saved-bank readback, phase color, finish-condition supply, finish
+  memory/read/representation transport, `LogWindows` and selected `LiveFrame`.
+  `AllocEntryLarge` now uses those shared laws. The original default exact
+  and large register-frame contracts remain available: the common finish
+  and original-caller post have an explicit extra-clobber parameter, default
+  `[]`; small dispatch uses `[16,17]` for the real next-size scratch registers.
+  Original RA/SP/x8/x9 and the saved tag are restored/read from the actual bank.
+- `BestFitEntrySmall` adds reflected selected-log footprints, class bounds,
+  the actual allocated-header interval and natural free accounting. All four
+  exact branches and existing next-size pick/pop/split/remnant/return runs
+  are reused. Bounded bitmap preservation consumes the existing real
+  clear/set proofs. `Post.path` retains the selected exact popped family or
+  next-size remnant family; no final representation is an input.
+- The final post returns bounded representation in actual returned memory,
+  allocated separation, exact `AllocColor.header` with original size/tag
+  and phase-selected color (beside `HeaderOk`), original caller bank/PC,
+  output/code, native frame and the composed `AllocWrapperCore.effect`.
+  Header/accounting stores are framed against every remaining list cell.
+  Selected caller ledgers use explicit bounds and actual-log separation;
+  geometric source bounds imply neither ownership nor global readiness.
+- Natural allocated words are original + request + 1 under original credit.
+  Natural free words are original - (selected size + 1) + `smallRefund`,
+  whose real zero-size/sweep-deferral/insertion decision is computed from
+  the original prepared memory. Insertion refunds selected size - request;
+  no insertion refunds zero. Credit covers the selected source before the
+  real split's transient subtraction; it is independent of representation.
+- Affected build passes **1,422 jobs** in `/tmp/a6-small-affected.log`, including
+  `AllocEntrySmallAudit`, `AllocEntryLargeAudit`, `BestFitNextAudit`,
+  every requested wrapper/allocator module, `AllocationContext`,
+  `ContextLargeAllocated`, `FreshLargeHeader`, and their fresh/oldify consumers.
+  Standalone focused audit passes **53 unique reports**, covering all **43 new
+  theorems** once, plus shared/legacy wrappers and the old high-bit obstruction;
+  every axiom set is a subset of `propext`, `Classical.choice`, `Quot.sound`.
+  Command: `python3 scripts/lean-guarded.py --log /tmp/a6-small-focused-axioms.log -- scripts/lean-capped.sh lake env lean -M 6000 -j 1 OCaml/Vm/Gc/AllocEntrySmallAudit.lean`.
+  The audit is registered in `OCaml.Audit`; full Audit remains the lead gate.
+  Hole, discipline (27 rules), abstraction and whitespace checks pass;
+  static evidence is `/tmp/a6-small-final-{holes,discipline,abstraction}.log`.
+- Residual: native initialization/caller production of the original bounded
+  representation and physical/read/credit facts; no-suitable least-large
+  beyond its separately checked case, arbitrary large-tree search,
+  requests >16, expansion, global allocator readiness and collection.
+  The old high-bit obstruction and stronger bounded refinement are preserved.
+  `GoodF1` is unchanged; `CustomMemCall` remains named;
+  `BarrierGrowthFull` stays G2 and C4 round 2 waits for F1.
+- Every Lean launch ran alone after `free -g` showed >=25 GB available,
+  through the required guard/cap in the inherited 12 GiB/two-thread scope.
+  No proof-budget increase, virtual-memory ulimit, generated-output edit,
+  subagent, commit or landing attempt. Checked edits remain in this worktree;
+  Git metadata and the landing queue are read-only here.
+
 ## Original-caller bounded least-large wrapper (2026-10-28)
 
 - **Checked edits complete; lead review/integration pending.**

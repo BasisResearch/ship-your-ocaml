@@ -186,4 +186,242 @@ theorem EntrySmallReturned.live {R lists s b bs family a writes before after H}
   intro x high owned
   rw [post.memory,writeLog_out _ _ _ (outside x high owned)]
 
+/-- Reflected footprint of a selected small source and the free-list frame.
+It includes both cursor cells, the real bitmap, and modular free accounting. -/
+def smallFreeWindows (sp : BitVec 64) (s : Nat) (b : BitVec 64) : List W :=
+  [⟨sp.toNat,sp.toNat+32⟩,
+   ⟨Layout.sym_bf_small_map,Layout.sym_bf_small_map+4⟩,
+   ⟨Layout.sym_caml_fl_cur_wsz,Layout.sym_caml_fl_cur_wsz+8⟩,
+   ⟨Layout.sym_bf_small_fl+16,Layout.sym_bf_small_fl+16*17⟩,
+   ⟨b.toNat-8,b.toNat+8*s⟩]
+
+theorem small_prefix_inside {sp s b} (positive : 1 ≤ s) (small : s ≤ 16) :
+    ∀ a n, InsideW (prefixWindows (BitVec.ofNat 64 s)) a n →
+      InsideW (smallFreeWindows sp s b) a n := by
+  have size : (BitVec.ofNat 64 s).toNat ≤ 16 := by
+    rw [BitVec.toNat_ofNat,Nat.mod_eq_of_lt (by omega)]; exact small
+  have slot := BestFitRemnant.slot_nat size
+  have merge := BestFitRemnant.merge_nat size
+  simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt (by omega : s < 2^64)] at slot merge
+  intro a n inside
+  simp only [prefixWindows,slotS,InsideW,slot,merge] at inside
+  simp only [smallFreeWindows,InsideW]
+  rcases inside with h | h | h | h
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)))
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)))
+  · exact Or.inr (Or.inl h)
+  · exact h.elim
+
+theorem small_remnant_inside {sp s b w m} (positive : 1 ≤ s) (small : s ≤ 16)
+    (remaining : w.toNat ≤ 16) (nonzero : 1 ≤ w.toNat) :
+    LogInW (smallFreeWindows sp s b) (BestFitRemnant.insertLog b w m) := by
+  apply logInW_transport (BestFitRemnant.insertLog_inside b w m)
+  intro a n inside
+  have slot := BestFitRemnant.slot_nat remaining
+  have merge := BestFitRemnant.merge_nat remaining
+  simp only [BestFitRemnant.writeWindows,InsideW,slot,merge] at inside
+  simp only [smallFreeWindows,InsideW]
+  rcases inside with h | h | h | h | h | h
+  · exact Or.inr (Or.inr (Or.inl h))
+  · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩))))
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)))
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)))
+  · exact Or.inr (Or.inl h)
+  · exact h.elim
+
+/-- A finite log certificate; no native instruction is reproved. -/
+theorem small_route_inside {sp s b request m} (positive : 1 ≤ s) (small : s ≤ 16)
+    (geo : SplitGeometry sp b)
+    (remaining : (BestFitRemnant.size b (splitMemory sp b request
+      (poppedMemory sp (BitVec.ofNat 64 s) b m))).toNat ≤ 16) :
+    LogInW (smallFreeWindows sp s b) (routeLog sp (BitVec.ofNat 64 s) b request m) := by
+  unfold routeLog completeLog
+  simp only [List.append_assoc]
+  apply logInW_join (logInW_transport (pick_inside _ _) (small_prefix_inside positive small))
+  apply logInW_join (logInW_transport (pop_inside _ _ _ _) (small_prefix_inside positive small))
+  apply logInW_join
+  · change LogInW (smallFreeWindows sp s b) [(_,8,_),(_,8,_),(_,8,_)]
+    simp only [LogInW,InsideW,smallFreeWindows,geo.header_nat]
+    exact ⟨Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)),
+      Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨by omega,by omega⟩)))) ,
+      Or.inl ⟨by omega,by omega⟩,True.intro⟩
+  · unfold BestFitRemnant.effect
+    split
+    · rename_i inserts
+      have nonzero : 1 ≤ (BestFitRemnant.size b (splitMemory sp b request
+          (poppedMemory sp (BitVec.ofNat 64 s) b m))).toNat := by
+        have := inserts.1
+        have zero : (BestFitRemnant.size b (splitMemory sp b request
+          (poppedMemory sp (BitVec.ofNat 64 s) b m))).toNat ≠ 0 := by
+          intro eq; apply this; exact BitVec.eq_of_toNat_eq eq
+        omega
+      exact small_remnant_inside positive small remaining nonzero
+    · trivial
+
+/-- Selected class bounds are recovered from the retained native branch. -/
+theorem EntrySmallReturned.class_bounds {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before) : (R 10).toNat ≤ s ∧ s ≤ 16 := by
+  cases post.path with
+  | exactSize exact => exact ⟨Nat.le_refl _,input.request_small⟩
+  | nextSize empty next =>
+    obtain ⟨middle,path⟩ := next.path_spec
+    obtain ⟨searched,search⟩ := path.search.path_spec
+    exact ⟨Nat.le_of_lt search.choice.larger,search.choice.small⟩
+
+theorem EntryNextReturned.split_size {R lists s b bs before after}
+    (post : EntryNextReturned R lists s b bs before after) (input : EntryNextInput R lists before) :
+    (BestFitRemnant.size b (searchSplitMemory R s b before)).toNat = s-(R 10).toNat-1 := by
+  obtain ⟨middle,path⟩ := post.path_spec
+  obtain ⟨searched,search⟩ := path.search.path_spec
+  have route := (input.search_input path.probe).route_input search.choice search.search
+  have size := search.allocation.remnant_size_nat route
+  have snapshot : searched.σ.mem = searchMemory R before := by
+    rw [search.search.memory]
+    simp only [searchMemory,bitmap,path.probe.memory]
+  simpa only [searchSplitMemory,snapshot,BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (by have := search.choice.small; omega : s < 2^64)] using size
+
+theorem EntrySmallReturned.log_inside {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before) : LogInW (smallFreeWindows (frameSp R) s b) writes := by
+  have bounds := post.class_bounds input
+  have positive : 1 ≤ s := by have := input.requestPositive; omega
+  cases post.path with
+  | exactSize exact =>
+    rw [BestFitExact.effect_parts]
+    have slot := BestFitRemnant.slot_nat input.request_small
+    have merge := BestFitRemnant.merge_nat input.request_small
+    change (BestFitSmall.slot (R 10)).toNat = _ at slot
+    change (BestFitSmall.slot (R 10)+8#64).toNat = _ at merge
+    have slotIn : InsideW (smallFreeWindows (frameSp R) (R 10).toNat b)
+        (BestFitSmall.slot (R 10)).toNat 8 := by
+      simp only [smallFreeWindows,InsideW,slot]
+      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by have := input.requestPositive; omega,by omega⟩)))
+    have mergeIn : InsideW (smallFreeWindows (frameSp R) (R 10).toNat b)
+        (BestFitSmall.slot (R 10)+8#64).toNat 8 := by
+      simp only [smallFreeWindows,InsideW,merge]
+      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨by have := input.requestPositive; omega,by omega⟩)))
+    have bitmapIn : InsideW (smallFreeWindows (frameSp R) (R 10).toNat b)
+        Layout.sym_bf_small_map 4 := Or.inr (Or.inl ⟨Nat.le_refl _,Nat.le_refl _⟩)
+    have counterIn : InsideW (smallFreeWindows (frameSp R) (R 10).toNat b)
+        Layout.sym_caml_fl_cur_wsz 8 := Or.inr (Or.inr (Or.inl ⟨Nat.le_refl _,Nat.le_refl _⟩))
+    by_cases empty : BestFitSmall.next (R 10) before = 0
+    all_goals by_cases repair : BestFitSmall.cursor (R 10) before = BestFitSmall.first (R 10) before
+    all_goals simp only [BestFitEmpty.effect,BestFitEmpty.route,repair,empty,decide_true,decide_false,
+      ite_true,ite_false,Bool.false_eq_true,BestFitSmall.repairLog,BestFitFinish.effect,
+      List.cons_append,List.nil_append,LogInW,Layout.off_bf_small_merge]
+    · exact ⟨mergeIn,slotIn,bitmapIn,counterIn,True.intro⟩
+    · exact ⟨slotIn,bitmapIn,counterIn,True.intro⟩
+    · exact ⟨mergeIn,slotIn,counterIn,True.intro⟩
+    · exact ⟨slotIn,counterIn,True.intro⟩
+  | nextSize empty next =>
+    apply logInW_join
+    · apply logInW_transport (input.toStackConditions.search_inside _)
+      intro x n inside
+      exact Or.inl (by simpa only [searchWindows,InsideW,or_false] using inside)
+    · apply small_route_inside positive bounds.2
+        (input.sources s positive bounds.2 b (by rw [post.selected]; simp)).geometry
+      have size := next.split_size (input.next_input empty)
+      change (BestFitRemnant.size b (searchSplitMemory R s b before)).toNat ≤ 16
+      omega
+
+/-- Actual selected header interval, including the zero-size remnant case. -/
+theorem EntrySmallReturned.result_interval {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before) :
+    b.toNat-8 ≤ a.toNat ∧ a.toNat+8*((R 10).toNat+1) = b.toNat+8*s := by
+  have bounds := post.class_bounds input
+  have positive : 1 ≤ s := by have := input.requestPositive; omega
+  have member : b ∈ lists s := by rw [post.selected]; simp
+  have physical := input.representation.physical.bounds s positive bounds.2 b member
+  have hn := input.representation.physical.header_nat positive bounds.2 member
+  cases post.path with
+  | exactSize exact => rw [hn]; omega
+  | nextSize empty next =>
+    obtain ⟨middle,path⟩ := next.path_spec
+    obtain ⟨searched,search⟩ := path.search.path_spec
+    have larger := search.choice.larger
+    have size := post.originalSize
+    have smallSize : (sourceSize (sourceHeader b before.σ.mem)).toNat = s := by
+      rw [size]; simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt (by omega : s < 2^64)]
+    rw [resultHeader_nat input.requestPositive (by omega) (by omega)
+      (by simp only [DlHeap.heapStart] at physical; omega) (by omega)]
+    omega
+
+/-- Natural refund uses the real remnant insertion decision. Sweep deferral
+is retained; no relationship between list geometry and counter credit is inferred. -/
+def smallRefund (R : Nat → BitVec 64) (s : Nat) (b : BitVec 64) (before : Config) : Nat :=
+  if s = (R 10).toNat then 0 else
+    if BestFitRemnant.Inserts b (searchSplitMemory R s b before) then s-(R 10).toNat else 0
+
+theorem EntrySmallReturned.counter_nat {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after)
+    (input : EntrySmallInput R lists before)
+    (credit : s+1 ≤ (word before Layout.sym_caml_fl_cur_wsz).toNat) :
+    (word after Layout.sym_caml_fl_cur_wsz).toNat =
+      (word before Layout.sym_caml_fl_cur_wsz).toNat-(s+1)+smallRefund R s b before := by
+  have bounds := post.class_bounds input
+  have initialBound := (word before Layout.sym_caml_fl_cur_wsz).isLt
+  cases post.path with
+  | exactSize exact =>
+    have count := exact.execution.counter_nat credit
+    simp only [smallRefund,ite_true]
+    change (word after Layout.sym_caml_fl_cur_wsz).toNat+(R 10).toNat+1 = _ at count
+    simp only [BestFitSmall.total] at count
+    omega
+  | nextSize empty next =>
+    obtain ⟨middle,path⟩ := next.path_spec
+    obtain ⟨searched,search⟩ := path.search.path_spec
+    have larger := search.choice.larger
+    have size := next.split_size (input.next_input empty)
+    have sizeNat : (sourceSize (sourceHeader b before.σ.mem)).toNat = s := by
+      rw [post.originalSize]
+      simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt (by omega : s < 2^64)]
+    have removed : (removedCount (word before Layout.sym_caml_fl_cur_wsz)
+        (sourceHeader b before.σ.mem)).toNat = (word before Layout.sym_caml_fl_cur_wsz).toNat-(s+1) := by
+      have debit : (sourceSize (sourceHeader b before.σ.mem)+1#64).toNat = s+1 := by
+        simp only [BitVec.toNat_add,sizeNat,BitVec.toNat_ofNat]
+        omega
+      unfold removedCount
+      rw [BitVec.toNat_sub_of_le (by rw [BitVec.le_def,debit]; exact credit),debit]
+    change (word after Layout.sym_caml_fl_cur_wsz).toNat = _
+    rw [show word after Layout.sym_caml_fl_cur_wsz = _ from next.counter]
+    unfold smallRefund
+    rw [if_neg (by omega : s ≠ (R 10).toNat)]
+    by_cases inserts : BestFitRemnant.Inserts b (searchSplitMemory R s b before)
+    · simp only [inserts,ite_true]
+      change ((removedCount (word before Layout.sym_caml_fl_cur_wsz) (sourceHeader b before.σ.mem)+1#64+
+        BestFitRemnant.size b (searchSplitMemory R s b before))).toNat = _
+      simp only [BitVec.toNat_add,removed,BitVec.toNat_ofNat,size]
+      omega
+    · simp only [inserts,ite_false]
+      exact removed
+
+/-- All-register frame recovered from the retained native stage summaries. -/
+theorem EntrySmallReturned.frame {R lists s b bs family a writes before after}
+    (post : EntrySmallReturned R lists s b bs family a writes before after) :
+    ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+      (∀ n ∈ [1,2,10,11,12,13,14,15] ++ [16,17], (gprReg n == r) = false) →
+      after.σ.regs.get? r = before.σ.regs.get? r := by
+  intro r noise outside
+  have cover (xs : List Nat) (subset : ∀ n ∈ xs, n ∈ [1,2,10,11,12,13,14,15,16,17]) :
+      ∀ n ∈ xs, (gprReg n == r) = false := fun n hn => outside n (subset n hn)
+  cases post.path with
+  | exactSize exact => exact exact.execution.native r noise (cover _ (by decide))
+  | nextSize empty next =>
+    obtain ⟨middle,path⟩ := next.path_spec
+    obtain ⟨searched,search⟩ := path.search.path_spec
+    obtain ⟨picked,popped,route⟩ := search.allocation.path_spec
+    exact (route.complete.frame r noise (cover _ (by decide))).trans
+      ((route.pop.frame r noise (cover _ (by decide))).trans
+      ((route.pick.frame r noise (cover _ (by decide))).trans
+      ((search.search.native r noise (cover _ (by decide))).trans
+      (path.probe.machine.frame_subset probe_written r noise (cover _ (by decide))))))
+
+theorem smallRefund_of_memory {R s b} {before after : Config}
+    (memory : after.σ.mem = before.σ.mem) : smallRefund R s b after = smallRefund R s b before := by
+  simp only [smallRefund,searchSplitMemory,searchMemory,bitmap,memory]
+  rfl
+
 end OCaml.Vm.Gc.BestFitFallback

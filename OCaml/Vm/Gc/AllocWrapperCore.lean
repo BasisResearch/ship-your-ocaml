@@ -58,7 +58,8 @@ theorem Entered.image {R before after lo hi} {Image : Std.ExtHashMap Nat (BitVec
 def effect (R : Nat → BitVec 64) (hp : BitVec 64) (log : List WEntry) (c : Config) :=
   AllocEntry.effect R ++ AllocFinish.effect (AllocEntry.frameSp R) (R 10) hp log (prepared R c)
 
-structure Post (R : Nat → BitVec 64) (hp : BitVec 64) (log : List WEntry) (before after : Config) : Prop where
+structure Post (R : Nat → BitVec 64) (hp : BitVec 64) (log : List WEntry) (before after : Config)
+    (extra : List Nat := []) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
@@ -69,17 +70,17 @@ structure Post (R : Nat → BitVec 64) (hp : BitVec 64) (log : List WEntry) (bef
   memory : after.σ.mem = writeLog before.σ.mem (effect R hp log before)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ [1,2,8,9,10,11,12,13,14,15], (gprReg n == r) = false) →
+    (∀ n ∈ [1,2,8,9,10,11,12,13,14,15] ++ extra, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
 /-- Shared original-caller restoration from a proved allocator body. Only
 its finite free-list write footprint must avoid the wrapper save/tag bank. -/
-theorem Entered.complete {R hp log before middle after} (entered : Entered R before middle)
+theorem Entered.complete {R hp log before middle after extra} (entered : Entered R before middle)
     (windows : AllocEntry.Windows R)
     (outside : ∀ cell ∈ AllocEntry.saveCells,
       OutLRange log (AllocEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat 8)
-    (body : AllocFinish.Post (AllocEntry.frameSp R) (R 10) hp log middle after) :
-    Post R hp log before after := by
+    (body : AllocFinish.Post (AllocEntry.frameSp R) (R 10) hp log middle after extra) :
+    Post R hp log before after extra := by
   have saved (cell : Nat × Nat) (member : cell ∈ AllocEntry.saveCells) :
       word (AllocFinish.snapshot log middle) (AllocEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1 := by
     simp only [AllocFinish.snapshot,word,entered.memory]
@@ -103,7 +104,7 @@ theorem Entered.complete {R hp log before middle after} (entered : Entered R bef
   · have same : middle.σ.mem = (prepared R before).σ.mem := entered.memory
     rw [body.memory,AllocFinish.effect_of_memory same,entered.memory,effect,writeLog_append]
   · intro r noise untouched
-    exact (body.native r noise untouched).trans (entered.native r noise untouched)
+    exact (body.native r noise untouched).trans (entered.native r noise (fun n hn => untouched n (List.mem_append_left _ hn)))
 
 /-- Original size/tag agreement after either proved wrapper route. The
 free-list log must preserve the native slot holding the requested tag. -/

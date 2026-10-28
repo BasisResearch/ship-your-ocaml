@@ -42,7 +42,7 @@ theorem effect_high {sp size hp log c}
 
 /-- Normalized evidence from a proved free-list callee. Concrete allocator
 summaries construct this record; it does not postulate an allocator run. -/
-structure CalleePost (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) : Prop where
+structure CalleePost (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) (extra : List Nat := []) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
@@ -52,10 +52,10 @@ structure CalleePost (sp size hp : BitVec 64) (log : List WEntry) (before after 
   memory : after.σ.mem = writeLog before.σ.mem log
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ [1,2,10,11,12,13,14,15], (gprReg n == r) = false) →
+    (∀ n ∈ [1,2,10,11,12,13,14,15] ++ extra, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
-structure Post (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) : Prop where
+structure Post (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) (extra : List Nat := []) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
@@ -66,15 +66,15 @@ structure Post (sp size hp : BitVec 64) (log : List WEntry) (before after : Conf
   memory : after.σ.mem = writeLog before.σ.mem (effect sp size hp log before)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ [1,2,8,9,10,11,12,13,14,15], (gprReg n == r) = false) →
+    (∀ n ∈ [1,2,8,9,10,11,12,13,14,15] ++ extra, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
 /-- Shared continuation for any proved successful free-list route: actual
 color selection, header/accounting stores and native wrapper return. -/
-theorem CalleePost.finish {sp size hp log before middle} (callee : CalleePost sp size hp log before middle)
+theorem CalleePost.finish {sp size hp log before middle extra} (callee : CalleePost sp size hp log before middle extra)
     (tagRead : ReadWindow (sp + BitVec.ofNat 64 AllocEntry.tagOffset) 8)
     (conditions : AllocSuccess.Conditions (entryRegs sp size hp) (snapshot log before)) :
-    FnSummary AllocEntry.returnPc (fun d => d = middle) (Post sp size hp log before) := by
+    FnSummary AllocEntry.returnPc (fun d => d = middle) (fun after => Post sp size hp log before after extra) := by
   have memory : middle.σ.mem = (snapshot log before).σ.mem := callee.memory
   have nonnull : hp ≠ 0 := by
     have lower := conditions.account.headerWrite.lower
@@ -107,8 +107,11 @@ theorem CalleePost.finish {sp size hp log before middle} (callee : CalleePost sp
   · intro r noise outside
     have finishCover : ∀ n ∈ [1,2,8,9,10,11,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
     have calleeCover : ∀ n ∈ [1,2,10,11,12,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
-    exact (finished.native r noise (fun n hn => outside n (finishCover n hn))).trans
-      (callee.native r noise (fun n hn => outside n (calleeCover n hn)))
+    exact (finished.native r noise (fun n hn => outside n (List.mem_append_left _ (finishCover n hn)))).trans
+      (callee.native r noise (fun n hn => outside n (by
+        rcases List.mem_append.mp hn with h | h
+        · exact List.mem_append_left _ (calleeCover n h)
+        · exact List.mem_append_right _ h)))
 
 /-- Route-independent typed header readback from the common continuation log. -/
 theorem header_of_effect {sp size hp log} {before after : Config}
@@ -125,7 +128,7 @@ theorem header_of_effect {sp size hp log} {before after : Config}
   rw [stored]
   exact AllocColor.header_ok _ _ _ sizeBound tagBound
 
-theorem Post.header {sp size hp log before after} (post : Post sp size hp log before after)
+theorem Post.header {sp size hp log before after extra} (post : Post sp size hp log before after extra)
     (separate : hp.toNat + 8 ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words + 8 ≤ hp.toNat)
     (sizeBound : size.toNat < 2^54)
     (tagBound : (word (snapshot log before) (sp + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat < 256) :

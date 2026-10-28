@@ -52,6 +52,16 @@ theorem logInW_of_forall {ws : List W} {log : List WEntry}
   | cons e log ih =>
     exact ⟨inside e (by simp), ih (fun e he => inside e (by simp [he]))⟩
 
+/-- Eliminate reflected containment at one selected write. -/
+theorem logInW_member {ws log} (inside : LogInW ws log) {e : WEntry} (member : e ∈ log) :
+    InsideW ws e.1 e.2.1 := by
+  induction log with
+  | nil => exact (List.not_mem_nil member).elim
+  | cons head tail ih =>
+    rcases List.mem_cons.mp member with rfl | member
+    · exact inside.1
+    · exact ih inside.2 member
+
 /-- Change only the enclosing windows of an already reflected log. -/
 theorem logInW_transport {ws ws' : List W} {log : List WEntry}
     (inside : LogInW ws log)

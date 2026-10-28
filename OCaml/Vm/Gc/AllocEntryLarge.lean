@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.BestFitEntryLargeReturn
 import OCaml.Vm.Gc.AllocLargeWrapper
+import OCaml.Vm.Gc.AllocOriginal
 import OCaml.Vm.Sim.PayloadWindows
 
 /-! Bounded least-large allocation from the real wrapper's original caller.
@@ -69,32 +70,17 @@ structure Input (R : Nat → BitVec 64) (lists : Nat → List (BitVec 64)) (c : 
 /-- The two native frames meet exactly; neither subtraction wraps. -/
 theorem Input.native_bounds {R lists c} (input : Input R lists c) :
     (nativeSp R).toNat+32 = (AllocEntry.frameSp R).toNat ∧
-    (AllocEntry.frameSp R).toNat+48 ≤ 0x100000000 := by
-  have upper := input.windows.frame_bound
-  have addr := stack_address (AllocEntry.frameSp R) AllocEntry.maxSave.2 AllocEntry.maxSave.2 upper (by omega)
-  have lower := (input.windows.saved AllocEntry.maxSave (by decide)).lower
-  rw [addr] at lower
-  have raw : nativeSp R = AllocEntry.frameSp R - 32#64 := rfl
-  rw [raw,BitVec.toNat_sub]
-  simp only [BitVec.toNat_ofNat,AllocEntry.maxSave,AllocEntry.saves,List.head!] at upper lower ⊢
-  constructor <;> omega
+    (AllocEntry.frameSp R).toNat+48 ≤ 0x100000000 :=
+  AllocOriginal.native_bounds input.windows
 
 theorem Input.prologue_inside {R lists c} (input : Input R lists c) :
-    LogInW [⟨(AllocEntry.frameSp R).toNat,(AllocEntry.frameSp R).toNat+48⟩] (AllocEntry.effect R) := by
-  rw [AllocEntry.effect_bank]
-  apply logInW_of_forall
-  intro e member
-  obtain ⟨cell,hcell,rfl⟩ := List.mem_map.mp member
-  have off := AllocEntry.saveCells_bounded cell hcell
-  have bound := input.windows.frame_bound
-  have addr := stack_address (AllocEntry.frameSp R) cell.2 AllocEntry.maxSave.2 bound off
-  simp only [InsideW,addr,AllocEntry.maxSave,AllocEntry.saves,List.head!] at off ⊢
-  exact Or.inl ⟨by omega,by omega⟩
+    LogInW [⟨(AllocEntry.frameSp R).toNat,(AllocEntry.frameSp R).toNat+48⟩] (AllocEntry.effect R) :=
+  AllocOriginal.prologue_inside input.windows
 
 theorem Input.prologue_read {R lists c a n} (input : Input R lists c)
     (outside : a+n ≤ (AllocEntry.frameSp R).toNat ∨ (AllocEntry.frameSp R).toNat+48 ≤ a) :
     bytesT (AllocWrapperCore.prepared R c).σ.mem a n = bytesT c.σ.mem a n :=
-  bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows input.prologue_inside ⟨outside,True.intro⟩)
+  AllocOriginal.prologue_read input.windows outside
 
 theorem Input.prepared_least {R lists c} (input : Input R lists c) :
     BestFitLarge.least (AllocWrapperCore.prepared R c) = BestFitLarge.least c := by
@@ -119,32 +105,12 @@ theorem Input.prepared_header {R lists c} (input : Input R lists c) :
 
 theorem Input.prepared_representation {R lists c} (input : Input R lists c) :
     BfShape.BoundedSmallRepresentation (AllocWrapperCore.prepared R c).σ.mem lists := by
-  have static (a n : Nat) (high : a+n ≤ DlHeap.heapStart) :
-      bytesT (AllocWrapperCore.prepared R c).σ.mem a n = bytesT c.σ.mem a n := by
-    apply input.prologue_read
-    exact Or.inl (by have := input.native_bounds.1; have := input.stackHeap; omega)
-  have small (s : Nat) (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (x : BitVec 64) (hx : x ∈ lists s) :
-      x.toNat+8 ≤ (AllocEntry.frameSp R).toNat ∨ (AllocEntry.frameSp R).toNat+48 ≤ x.toNat-8 := by
+  apply AllocOriginal.prepared_representation input.windows input.representation
+  · have := input.stackHeap; have := input.native_bounds.1; omega
+  · intro s lo hi x hx
     have := input.smallNative s lo hi x hx
     have := input.native_bounds.1
     omega
-  apply input.representation.of_reads
-  · intro s lo hi
-    apply static
-    rw [BfShape.slot_toNat s hi]
-    change s ≤ 16 at hi
-    simp only [DlHeap.heapStart,Layout.sym_bf_small_fl]; omega
-  · intro s lo hi x hx
-    apply input.prologue_read
-    have := small s lo hi x hx
-    omega
-  · intro s lo hi x hx
-    rw [input.representation.physical.header_nat lo hi hx]
-    apply input.prologue_read
-    have := small s lo hi x hx
-    have := input.representation.physical.bounds s lo hi x hx
-    omega
-  · exact static _ _ (by decide)
 
 theorem Input.entered_least {R lists c middle} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle) : BestFitLarge.least middle = BestFitLarge.least c := by
@@ -315,20 +281,8 @@ theorem Input.initialized_read {R lists c middle a n} (input : Input R lists c)
       (AllocSuccess.completed (AllocFinish.entryRegs (AllocEntry.frameSp R) (R 10) (header R c))
         (AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle))
       (AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle)) a n =
-      bytesT c.σ.mem a n := by
-  have headerInside := input.header_inside entered
-    (AllocSuccess.completed (AllocFinish.entryRegs (AllocEntry.frameSp R) (R 10) (header R c))
-      (AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle) 11)
-  change bytesT (writeLog (writeLog middle.σ.mem _) _) a n = _
-  have logEq : AllocAccount.headerLog
-      (AllocSuccess.completed (AllocFinish.entryRegs (AllocEntry.frameSp R) (R 10) (header R c))
-        (AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle)) =
-      [((header R c).toNat,8,AllocSuccess.completed
-        (AllocFinish.entryRegs (AllocEntry.frameSp R) (R 10) (header R c))
-        (AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle) 11)] := rfl
-  rw [logEq,bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows headerInside outside)]
-  rw [entered.memory,← writeLog_append]
-  exact bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows (input.prefix_inside entered) outside)
+      bytesT c.σ.mem a n :=
+  AllocOriginal.initialized_read entered (input.prefix_inside entered) (input.header_inside entered) outside
 
 def ready (R : Nat → BitVec 64) (middle : Config) :=
   AllocFinish.snapshot (BestFitFallback.completeEffect (freeRegs R) middle) middle
@@ -338,96 +292,51 @@ def finishRegs (R : Nat → BitVec 64) (c : Config) :=
 theorem Input.ready_read {R lists c middle a n} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle)
     (outside : OutWRange (windows R c) a n) :
-    bytesT (ready R middle).σ.mem a n = bytesT c.σ.mem a n := by
-  change bytesT (writeLog middle.σ.mem _) a n = _
-  rw [entered.memory,← writeLog_append]
-  exact bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows (input.prefix_inside entered) outside)
+    bytesT (ready R middle).σ.mem a n = bytesT c.σ.mem a n :=
+  AllocOriginal.ready_read entered (input.prefix_inside entered) outside
 
 theorem Input.saved_tag {R lists c middle} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle) :
-    AllocSelect.tag (finishRegs R c) (ready R middle) = R 11 := by
-  change bytesT (writeLog middle.σ.mem _) _ 8 = _
-  rw [entered.memory]
-  exact AllocEntry.saved_after _ input.windows _ (11,AllocEntry.tagOffset)
-    (by decide) (input.free_outside entered _ (by decide))
+    AllocSelect.tag (finishRegs R c) (ready R middle) = R 11 :=
+  AllocOriginal.saved (cell := (11,AllocEntry.tagOffset)) entered input.windows (by decide)
+    (input.free_outside entered _ (by decide))
 
 /-- Phase-selected color computed using the original phase and sweep reads. -/
 def isBlack (R : Nat → BitVec 64) (c : Config) := AllocSelect.isBlack (finishRegs R c) c
 
 theorem Input.color {R lists c middle} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle) :
-    AllocSelect.isBlack (finishRegs R c) (ready R middle) = isBlack R c := by
-  have phase : AllocSelect.phase (ready R middle) = AllocSelect.phase c := by
-    simp only [AllocSelect.phase,read4_value]
-    rw [input.ready_read entered (input.static_out (by decide) (by decide))]
-  have sweep : AllocSelect.sweep (ready R middle) = AllocSelect.sweep c :=
-    input.ready_read entered (input.static_out (by decide) (by decide))
-  simp only [AllocSelect.isBlack,phase,sweep,isBlack]
+    AllocSelect.isBlack (finishRegs R c) (ready R middle) = isBlack R c :=
+  AllocOriginal.color entered (input.prefix_inside entered)
+    (input.static_out (by decide) (by decide)) (input.static_out (by decide) (by decide))
 
 /-- Concrete original-read suppliers for the shared successful continuation. -/
 theorem Input.continuation {R lists c middle} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle) :
     AllocSuccess.Conditions (finishRegs R c) (ready R middle) := by
-  let completed := AllocSuccess.completed (finishRegs R c) (ready R middle)
-  have hp : completed 10 = header R c := rfl
-  have sp : completed 2 = AllocEntry.frameSp R := rfl
-  have sz : completed 8 = R 10 := rfl
-  have state : AllocAccount.state completed (ready R middle) = word c Layout.sym_Caml_state :=
-    input.initialized_read entered (input.static_out (by decide) (by decide))
-  have thresholdAddr : AllocAccount.thresholdAddr completed (ready R middle) = threshold c := by
-    unfold AllocAccount.thresholdAddr threshold
-    rw [state]
-  have counter : bytesT (AllocAccount.initialized completed (ready R middle))
-      Layout.sym_caml_allocated_words 8 = word c Layout.sym_caml_allocated_words :=
-    input.initialized_read entered (input.static_out (by decide) (by decide))
-  have thresholdValue : bytesT (AllocAccount.initialized completed (ready R middle))
-      (threshold c).toNat 8 = word c (threshold c).toNat :=
-    input.initialized_read entered input.thresholdApart
-  have room : (AllocAccount.counted completed (ready R middle)).toNat ≤
-      (bytesT (AllocAccount.initialized completed (ready R middle))
-        (AllocAccount.thresholdAddr completed (ready R middle)).toNat 8).toNat := by
-    rw [AllocAccount.counted,counter,sz,thresholdAddr,thresholdValue]
-    have bound := input.allocatedCredit
-    have enough := input.noMajorSlice
-    simp only [BitVec.toNat_add,BitVec.toNat_ofNat]
-    omega
-  refine ⟨⟨input.header_write entered,?_,room⟩,⟨?_,?_,?_⟩⟩
-  · change ReadWindow (AllocAccount.thresholdAddr completed (ready R middle)) 8
-    rw [thresholdAddr]
-    exact input.thresholdRead
-  · intro off member
-    change ReadWindow (AllocEntry.frameSp R + BitVec.ofNat 64 off) 8
-    have saves : ∀ off ∈ AllocReturn.offsets, ∃ cell ∈ AllocEntry.saves, cell.2 = off := by decide
-    obtain ⟨cell,hcell,rfl⟩ := saves off member
-    exact (input.windows.saved cell hcell).read
-  · intro off member
-    change OutLRange (AllocAccount.effect completed (ready R middle))
-      (AllocEntry.frameSp R + BitVec.ofNat 64 off).toNat 8
-    have offBound : off ≤ AllocEntry.maxSave.2 := by
-      have bound : ∀ off ∈ AllocReturn.offsets, off ≤ AllocEntry.maxSave.2 := by decide
-      exact bound off member
-    have addr := stack_address (AllocEntry.frameSp R) off AllocEntry.maxSave.2 input.windows.frame_bound offBound
-    have stack := input.native_bounds.1
-    have heap := input.stackHeap
-    have sep := input.sourceNative
-    have hd := input.header_nat entered
-    have large := input.source.large
-    dsimp [sourceEnd] at sep
-    change ((_+8 ≤ (header R c).toNat ∨ (header R c).toNat+8 ≤ _) ∧
-      (_+8 ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words+8 ≤ _) ∧ True)
-    rw [addr]
-    change off ≤ 40 at offBound
-    constructor
-    · exact (by omega)
-    · exact ⟨Or.inr (by simp only [Layout.sym_caml_allocated_words,DlHeap.heapStart] at heap ⊢; omega),True.intro⟩
-  · change (AllocReturn.returnWord (AllocEntry.frameSp R) (header R c) (ready R middle)).toNat % 4 = 0
-    have saved : AllocReturn.returnWord (AllocEntry.frameSp R) (header R c) (ready R middle) = R 1 := by
-      change bytesT (writeLog middle.σ.mem _) _ 8 = _
-      rw [entered.memory]
-      exact AllocEntry.saved_after _ input.windows _ (1,40) (by decide)
-        (input.free_outside entered _ (by decide))
-    rw [saved]
-    exact input.aligned
+  apply AllocOriginal.continuation entered input.windows (input.header_write entered)
+    (input.initialized_read entered (input.static_out (by decide) (by decide)))
+    (input.initialized_read entered (input.static_out (by decide) (by decide)))
+    input.thresholdRead (input.initialized_read entered input.thresholdApart)
+    input.noMajorSlice input.allocatedCredit (input.free_outside entered) ?_ input.aligned
+  intro off member
+  have offBound : off ≤ AllocEntry.maxSave.2 := by
+    have bound : ∀ off ∈ AllocReturn.offsets, off ≤ AllocEntry.maxSave.2 := by decide
+    exact bound off member
+  have addr := stack_address (AllocEntry.frameSp R) off AllocEntry.maxSave.2 input.windows.frame_bound offBound
+  have stack := input.native_bounds.1
+  have heap := input.stackHeap
+  have sep := input.sourceNative
+  have hd := input.header_nat entered
+  have large := input.source.large
+  dsimp [sourceEnd] at sep
+  change ((_+8 ≤ (header R c).toNat ∨ (header R c).toNat+8 ≤ _) ∧
+    (_+8 ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words+8 ≤ _))
+  rw [addr]
+  change off ≤ 40 at offBound
+  constructor
+  · exact (by omega)
+  · exact Or.inr (by simp only [Layout.sym_caml_allocated_words,DlHeap.heapStart] at heap ⊢; omega)
 
 /-- Whole internal condition bundle supplied from the original caller facts
 and the real prologue. This is a result, never an original-entry premise. -/
@@ -469,9 +378,8 @@ theorem finish_memory {R c lists middle freeState after}
     (finished : AllocFinish.Post (AllocEntry.frameSp R) (R 10) (header R c)
       (BestFitFallback.completeEffect (freeRegs R) middle) middle after) :
     after.σ.mem = writeLog freeState.σ.mem
-      (AllocAccount.effect (AllocSuccess.completed (finishRegs R c) (ready R middle)) (ready R middle)) := by
-  rw [finished.memory,AllocFinish.effect,writeLog_append,← split.memory]
-  rfl
+      (AllocAccount.effect (AllocSuccess.completed (finishRegs R c) (ready R middle)) (ready R middle)) :=
+  AllocOriginal.finish_memory split.memory finished
 
 theorem finish_read {R c lists middle freeState after a n}
     (split : BestFitFallback.EntryLargeReturned (freeRegs R) lists middle freeState)
@@ -479,10 +387,8 @@ theorem finish_read {R c lists middle freeState after a n}
       (BestFitFallback.completeEffect (freeRegs R) middle) middle after)
     (headerApart : a+n ≤ (header R c).toNat ∨ (header R c).toNat+8 ≤ a)
     (counterApart : a+n ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words+8 ≤ a) :
-    bytesT after.σ.mem a n = bytesT freeState.σ.mem a n := by
-  rw [finish_memory split finished]
-  apply bytesT_writeLog_out
-  exact ⟨headerApart,counterApart,True.intro⟩
+    bytesT after.σ.mem a n = bytesT freeState.σ.mem a n :=
+  AllocOriginal.finish_read split.memory finished headerApart counterApart
 
 theorem Input.finished_representation {R lists c middle freeState after} (input : Input R lists c)
     (entered : AllocWrapperCore.Entered R c middle)
@@ -490,37 +396,11 @@ theorem Input.finished_representation {R lists c middle freeState after} (input 
     (finished : AllocFinish.Post (AllocEntry.frameSp R) (R 10) (header R c)
       (BestFitFallback.completeEffect (freeRegs R) middle) middle after) :
     BfShape.BoundedSmallRepresentation after.σ.mem lists := by
+  apply AllocOriginal.finished_representation (R := R) split.representation
+    (by simpa only [input.result_header entered,freeRegs_request] using split.allocated) ?_ split.memory finished
   have hd := input.header_nat entered
   have heap := input.source.heap
-  have large := input.source.large
-  have static (a n : Nat) (high : a+n ≤ DlHeap.heapStart)
-      (counter : a+n ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words+8 ≤ a) :
-      bytesT after.σ.mem a n = bytesT freeState.σ.mem a n := by
-    apply finish_read split finished _ counter
-    exact Or.inl (by omega)
-  have small (s : Nat) (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (x : BitVec 64) (hx : x ∈ lists s) :
-      bytesT after.σ.mem x.toNat 8 = bytesT freeState.σ.mem x.toNat 8 ∧
-      bytesT after.σ.mem (x-8#64).toNat 8 = bytesT freeState.σ.mem (x-8#64).toNat 8 := by
-    have sep := input.source.apart s lo hi x hx
-    have bounds := input.representation.physical.bounds s lo hi x hx
-    have xn := input.representation.physical.header_nat lo hi hx
-    constructor
-    · apply finish_read split finished (by omega)
-      exact Or.inr (by simp only [Layout.sym_caml_allocated_words,DlHeap.heapStart] at bounds ⊢; omega)
-    · rw [xn]
-      apply finish_read split finished (by omega)
-      exact Or.inr (by simp only [Layout.sym_caml_allocated_words,DlHeap.heapStart] at bounds ⊢; omega)
-  apply split.representation.of_reads
-  · intro s lo hi
-    apply static
-    · rw [BfShape.slot_toNat s hi]
-      change s ≤ 16 at hi
-      simp only [DlHeap.heapStart,Layout.sym_bf_small_fl]; omega
-    · rw [BfShape.slot_toNat s hi]
-      exact Or.inr (by simp only [Layout.sym_caml_allocated_words,Layout.sym_bf_small_fl]; omega)
-  · intro s lo hi x hx; exact (small s lo hi x hx).1
-  · intro s lo hi x hx; exact (small s lo hi x hx).2
-  · exact static _ _ (by decide) (by decide)
+  omega
 
 structure Post (R : Nat → BitVec 64) (lists : Nat → List (BitVec 64)) (before after : Config) : Prop
     extends AllocLargeWrapper.Post R before after where
@@ -696,11 +576,7 @@ separation from the composed actual write log. Geometry alone supplies no ledger
 theorem Post.live {R lists before after H} (post : Post R lists before after)
     (bounds : ∀ e ∈ H, DlHeap.heapStart ≤ e.1 ∧ e.1+e.2 ≤ DlHeap.heapEnd)
     (outside : ∀ x, x < DlHeap.heapEnd → ¬ VsaIris.VsaHeap.vsaFoot H x →
-      OutL (AllocLargeWrapper.effect R before) x) : LiveFrame H before after := by
-  apply LiveFrame.of_foot bounds
-  intro x high owned
-  rw [post.memory]
-  change (writeLog before.σ.mem (AllocLargeWrapper.effect R before))[x]?.getD 0 = before.σ.mem[x]?.getD 0
-  rw [writeLog_out _ _ _ (outside x high owned)]
+      OutL (AllocLargeWrapper.effect R before) x) : LiveFrame H before after :=
+  AllocOriginal.live post.memory bounds outside
 
 end OCaml.Vm.Gc.AllocEntryLarge

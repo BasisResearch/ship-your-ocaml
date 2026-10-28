@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.AllocEntrySmallAudit
 import OCaml.Vm.Gc.AllocEntryLargeAudit
 import OCaml.Vm.Gc.CustomPhysical
 import OCaml.Vm.Sim.OutListF1Runtime
