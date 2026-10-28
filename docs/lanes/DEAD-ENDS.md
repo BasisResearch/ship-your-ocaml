@@ -1,5 +1,29 @@
 # Routes not to repeat
 
+- 2026-10-28 counted fresh-id/exit boundaries: stack-window count framing
+  does not cover `counterWindows`, whose actual store is the low static
+  `oo_last_id` word. This is interface inspection, not a reachable-state
+  counterexample. Use the original counted opened-list witness to align the
+  selected `LibHeapAt` channel records, its malloc block bounds and
+  `CustomMemCall.owned` from that same ledger. Static custom bytes are only
+  the existing resource word; dynamic custom bytes belong to selected live
+  blocks. `accounting.frame` then preserves physical counts and
+  `ChannelCountFrame.of_frame` preserves refs/links. Ordinary runtime facts
+  alone still supply no count witness. Return counts use unchanged semantic
+  channels and `ChannelCustomsRepr.at_geometry` at the actual returned cp.
+  `prim_caml_sys_exit_returns` proves only that `.ok` is impossible; using
+  it as a halt execution would omit dispatch, setup and the native exit.
+  Project `CountedLoopAt.toLoopAt` and reuse `ccall1Exit_pinned`; its checked
+  `caml_sys_exit_halts` already handles the integer argument, OS-result
+  split, status and console. There is no counted successor to construct.
+  The checked `counted_c_call1_row_of_next` composes that halt branch using
+  `ArmOutcome.of_cases`; complete success coverage remains a separate input.
+  Fresh-id model `simp_all` alone left the updated-world channel projection
+  unresolved (`/tmp/counted-fresh-exit-rows2.log`): simplification exposes the
+  three actual return equations as a conjunction. Destructure those equations
+  explicitly, then use the unchanged channel projection. This elaboration
+  failure needs neither a new semantic premise nor a larger proof budget.
+
 - 2026-10-28 counted console transport: whole `world.chans` equality is
   not a semantic frame for successful flush/output. The real implementations
   set the selected channel's buffer and/or offset; a whole-record memory

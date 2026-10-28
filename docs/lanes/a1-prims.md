@@ -1,5 +1,90 @@
 # A1 F1 primitive summaries
 
+## Counted fresh OO ID success and native C_CALL1 exit (2026-10-28)
+
+Checked edits remain for lead review/integration in this worktree. Initial
+HEAD `319f74d2` was clean. No other workers, Git metadata/landing-queue writes,
+proof-budget changes, virtual-memory limits or generated-output hand edits
+were used. The abstraction inventory ran before proof work.
+
+`f1_counter_channelCountFrame` uses the original counted opened-list witness
+to identify the selected `LibHeapAt` records. Their selected malloc bounds
+place them above the actual static `oo_last_id` store. `CustomMemCall.owned`
+from that same ledger places dynamic custom bytes in live blocks; the
+existing static apartness confines low custom bytes to the resource word.
+`accounting.frame` retains physical counts with the preserved Caml_state
+word; `ChannelCountFrame.of_frame` retains natural refs, list links and head.
+`counted_counterStable` pairs the count frame with `f1_counterStable`.
+
+`counted_caml_fresh_oo_id_returns` runs `prim_caml_fresh_oo_id_returns` at
+the local counted layout, reusing the adapter's explicit original-entry
+count witness. Only semantic `world.ooId` changes, so the semantic channels
+remain equal. The return adapter recovers counts at the native return's
+actual placement through `ChannelCustomsRepr.at_geometry`.
+`counted_fresh_oo_id_next` concludes the concrete counted successor from the
+original C_CALL1 entry after real dispatch/setup/callee/suffix execution:
+the accumulator is the old identifier and `world.ooId` is incremented.
+
+`CcallExit.c_call1_halt` checks malformed/negative operands, absent primitive
+slots and every real F1 primitive outcome. `counted_c_call1_halt` projects
+`CountedLoopAt.toLoopAt` and consumes `ccall1Exit_pinned`, which runs actual
+dispatch/setup and `caml_sys_exit_halts` through native exit to HTIF. Fits,
+native headroom, saved registers, quiet exit globals and HTIF idleness are
+the existing witnesses. The checked primitive model/native bridge covers
+the unary integer argument, OS-result branches, status and console. Halt
+has no successor count or placement obligation.
+`counted_caml_sys_exit_returns` only excludes successful return; it does not
+supply the halt. `counted_c_call1_row_of_next` composes this halt branch
+with a future complete counted success branch using `ArmOutcome.of_cases`.
+No extra runtime supplier or stronger GoodF1 is added.
+
+The generated census separates `countedPrimSuccessCases` (**20 names**:
+the existing 19 generic adapters plus the specialized unary fresh-id row)
+from `countedPrimHaltCases` (**sys_exit only**). The exact nine names outside
+this adapter are named registration, both descriptor openings, channel
+listing, flush, output-char, output, output-bytes and format-int. The three
+channel and four console summaries remain separately supplied; this census
+does not reopen them. The complete-opcode census remains **132/134**.
+Complete C_CALL1 still needs concrete opening/listing runtime producers and
+composition of every remaining success/operand/outcome case. Complete
+C_CALL2 still needs general format-int and named registration. Full F1
+assembly and concrete physical runtime/startup producers remain open.
+CustomMemCall remains named; six barrier rows retain exactly
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`
+with G2; C4 round 2 waits for F1.
+
+Validation:
+
+- Row build passes **3,291 jobs**, `/tmp/counted-fresh-exit-rows3.log`:
+  `lake build OCaml.Vm.Sim.CountedPrimRows OCaml.Vm.Sim.CountedControlRows`.
+- Affected build passes **3,715 jobs**, `/tmp/counted-fresh-exit-affected.log`:
+  all eight target modules plus CountedEntry, F1Table, WhileMinTable and
+  CountedPrimAudit. The focused audit is emitted by the owning primitive
+  generator, now importing CountedControlRows for the native halt branch.
+- `python3 /tmp/counted-fresh-exit-check-audit.py` passes: exact membership
+  of **77 focused reports**, coverage of **all nine new theorem declarations**,
+  unique full-Audit registrations, and axioms contained in
+  `{propext, Classical.choice, Quot.sound}` (or none). Regression reports
+  include the pinned exit, actual native primitive halt, tagged status and
+  OS-console preservation, existing counted setup/return consumers and the
+  revised primitive remainder/census.
+- Eleven generator drift checks pass: `gen_counted_prim_rows.py`,
+  `gen_counted_control_rows.py`, `gen_counted_ccall2.py`, `gen_ccall_setups.py`,
+  `gen_ccall_returns.py`, `gen_ccall_arms.py`, `gen_ccall_exits.py`,
+  `gen_counted_stack_rows.py`, `gen_counted_alloc_rows.py`,
+  `gen_counted_field_rows.py`, `gen_counted_console_audit.py` (all `--check`).
+  Holes (**4,803 files**), discipline (**27 rules**), abstraction gate and
+  `git diff --check` pass. Contract-route notes and the model simplification
+  failure are recorded in DEAD-ENDS.md.
+- Every Lean invocation first checked `free -g` (available ≥25 GB), then ran
+  alone via `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...` under the inherited MemoryMax=12G and
+  LEAN_NUM_THREADS=2. The guard stopped unsuccessful iterations. No
+  heartbeat/recursion changes, new trusted axioms or full OCaml.Audit run.
+
+The lead owns full Audit and landing via `scripts/integrate.sh`. Git metadata
+and the landing queue are read-only here; checked edits are left for review.
+
 ## Actual counted console returns and complete C_CALL4 (2026-10-28)
 
 Checked edits remain for lead review/integration. Initial worktree at

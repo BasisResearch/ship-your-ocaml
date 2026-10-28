@@ -8125,3 +8125,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_c_call4_local_returns
 #print axioms OCaml.Vm.Sim.counted_c_call4_refs
 #print axioms OCaml.Vm.Sim.counted_c_call4_row
+
+-- Counted fresh OO ID success and actual unary native exit halt.
+#print axioms OCaml.Vm.Sim.CcallExit.c_call1_halt
+#print axioms OCaml.Vm.Sim.counted_c_call1_halt
+#print axioms OCaml.Vm.Sim.counted_c_call1_row_of_next
+#print axioms OCaml.Vm.Sim.counted_caml_fresh_oo_id_model
+#print axioms OCaml.Vm.Sim.counted_caml_fresh_oo_id_returns
+#print axioms OCaml.Vm.Sim.counted_fresh_oo_id_next
+#print axioms OCaml.Vm.Sim.counted_caml_sys_exit_returns
+#print axioms OCaml.Vm.Sim.f1_counter_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_counterStable

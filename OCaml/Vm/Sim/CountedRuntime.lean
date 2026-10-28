@@ -4,6 +4,7 @@ import OCaml.RefinementF1
 import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.HeapRows
+import OCaml.Vm.Sim.PrimFreshOoId
 
 /-! Reuse generic rows under a local runtime invariant. Semantic reference
 transport permits buffer/offset changes while ordinary equality is a
@@ -46,6 +47,64 @@ theorem counted_memoryStable {L : OCaml.Layout} {Customs : Config → Nat → Pr
     MemoryStable (countedLayout L Customs cp w).runtimeOk := by
   intro c d memory before
   exact ⟨stable c d memory before.1, (ChannelCountFrame.sameMemory accounting memory).repr before.2⟩
+
+/-- The actual object-id counter misses the selected channel records and
+custom ownership. The original count witness identifies the opened list;
+the selected malloc ledger supplies its record and dynamic-state bounds. -/
+theorem f1_counter_channelCountFrame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {cp : ChanPlace} {world : World}
+    {c d : Config}
+    (custom : Gc.CustomMemCall Ready state Customs) (runtime : Gc.f1Runtime c)
+    (counts : ChannelCustomsRepr Customs c cp world)
+    (frame : FrameOn counterWindows c.σ.mem d.σ.mem) :
+    ChannelCountFrame Customs cp world c d := by
+  obtain ⟨H, cap, chs, heap⟩ := runtime.freeListShape.libHeap
+  have out {x : Nat} (apart : x < Layout.sym_oo_last_id ∨ Layout.sym_oo_last_id + 8 ≤ x) :
+      OutW counterWindows x := ⟨apart, trivial⟩
+  have arena : Layout.sym_oo_last_id + 8 ≤ Vsa.Sim.DlHeap.heapStart := by decide
+  have scalar (a n : Nat) (apart : a + n ≤ Layout.sym_oo_last_id ∨ Layout.sym_oo_last_id + 8 ≤ a) :
+      bytesT d.σ.mem a n = bytesT c.σ.mem a n := by
+    apply Reloc.bytesT_congr
+    intro j hj
+    have same := frame (a + j) (out (by omega))
+    simp only [bytesT, same]
+  apply ChannelCountFrame.of_frame frame
+  · intro id ch a at_ placed y lo hi
+    have member : a ∈ chs := by
+      rw [← counts.opened.unique heap.channels]
+      exact List.mem_filterMap.mpr ⟨id, List.mem_reverse.mpr (List.mem_range.mpr
+        (List.getElem?_eq_some_iff.mp at_).1), placed⟩
+    obtain ⟨e, he, elo, ehi⟩ := heap.records a member
+    have bound := heap.ready.block_bounds he
+    dsimp only at elo ehi
+    exact out (Or.inr (by omega))
+  · intro y lo hi
+    have bound : Layout.sym_oo_last_id + 8 ≤ Layout.sym_caml_all_opened_channels := by decide
+    exact out (Or.inr (by omega))
+  · constructor
+    intro n physical
+    simpa only [Nat.add_zero] using custom.accounting.frame physical (fun x hx => by
+      have apart : x < Layout.sym_oo_last_id ∨ Layout.sym_oo_last_id + 8 ≤ x := by
+        rcases (custom.owned heap).bytes x hx with low | ⟨e, he, elo, ehi⟩
+        · have stat := (custom.apart c x hx).static low
+          have bound : Layout.sym_oo_last_id + 8 ≤ Layout.sym_caml_extra_heap_resources := by decide
+          simp only [VsaIris.InExt] at stat
+          omega
+        · have bound := heap.ready.block_bounds he
+          dsimp only at elo ehi
+          omega
+      exact congrArg (fun b => b.getD 0) (frame x (out apart)))
+      (scalar Layout.sym_Caml_state 8 (by decide))
+
+/-- Counter stability includes all counted observations at the frozen entry
+world. Only the semantic ooId changes at the later return adapter. -/
+theorem counted_counterStable {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {cp : ChanPlace} {world : World}
+    (custom : Gc.CustomMemCall Ready state Customs) :
+    WindowStable (countedLayout Gc.f1Layout Customs cp world).runtimeOk counterWindows := by
+  intro c d frame before
+  exact ⟨f1_counterStable c d frame before.1,
+    (f1_counter_channelCountFrame custom before.1 before.2 frame).repr before.2⟩
 
 /-- Stack-only caller effects: VM windows and native stack windows above
 newlib's arena. Allocation and barrier windows are deliberately absent. -/

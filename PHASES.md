@@ -27,7 +27,7 @@ ELF pin).
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
 | `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
-| Counted loop placement coherence, shared stack/allocation/raise/field frames, 132 supplied rows and actual channel/console-call success | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedCcall4,CountedChannelRows,CountedConsole,CountedConsoleRows}.lean` | A1 (a1-prims) | **proved helpers and 132/134 supplied rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 18 control/raise/halt/wrong-arity, one console C_CALL4, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. C_CALL3/5 are complete from the checked F1 arity classification (1, 2 or 4) and exact operand/depth rejection; C_CALL4 is complete from both real output returns and all operand/primitive/outcome cases; two whole-row obligations remain **open**: C_CALL1/2. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
+| Counted loop placement coherence, shared stack/allocation/raise/field frames, 132 supplied rows, actual channel/console/fresh-id success and unary native exit | `OCaml/Vm/Sim/{CountedInvariant,CountedRuntime,CountedMemoryRows,CountedControlRows,CountedStackRows,CountedAllocFrame,CountedAllocRows,CountedPrimAllocRows,CountedFieldRows,CountedBarrierFrame,CountedCcall1,CountedCcall4,CountedChannelRows,CountedConsole,CountedConsoleRows,CountedPrimRows,CcallExitF1}.lean` | A1 (a1-prims) | **proved helpers and 132/134 supplied rows relative to named custom and G2 suppliers** (58 stack/load/assignment/trap, 41 memory/control, 18 control/raise/halt/wrong-arity, one console C_CALL4, seven nursery allocation rows and seven write rows). `LibHeapAt.refCustomApart` derives the extra spatial supplier from selected `CustomSpace`; fast insertion and actual unallocated growth retain counts through their native runs. Six barrier rows retain exactly `∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`; that full-growth producer remains **open (G2)**. C_CALL3/5 are complete from the checked F1 arity classification (1, 2 or 4) and exact operand/depth rejection; C_CALL4 is complete from both real output returns and all operand/primitive/outcome cases; counted fresh-OO-ID original-entry success and the actual unary native sys_exit halt are checked without an extra runtime supplier; two whole-row obligations remain **open**: C_CALL1/2. Three local allocating primitive return contracts remain relative to named custom/runtime suppliers; full F1 assembly and outstanding runtime producers remain **open** |
 | Actual custom-table zero occupancy and interpreter-entry transport | `OCaml/Vm/Gc/ChannelCustomCount.lean`, `OCaml/Vm/Sim/{EntryLoop,CountedEntry}.lean`; layout/runtime-read generators | A1 (a1-prims) | **proved count component**, selected custom-ledger startup ownership and actual prologue frame; `table_count_resources_unconstrained` checks that occupancy leaves resource words arbitrary. Full physical custom runtime/startup zero remains **open**; occupancy is not used as a quietness supplier |
 | Conditional global custom-frame obstruction; local selected spatial API and actual opening/listing frames | `OCaml/Vm/Gc/{CustomFrameObstruction,CustomLedger,CustomMem,F1Heap}.lean`, channel/listing consumers | A1 (a1-prims/a6-gc) | **proved helpers**: pinned-domain write-log obstruction, selected spatial startup/frame/fresh/growth producers and same-returned-ledger opening/listing evidence; concrete physical accounting/native `CustomMemCall` and runtime/F1 suppliers remain **open** |
 | F1 loop-head rows for the integer, comparison, constant, branch and push-constant families (`top_read_row`, `input_row`, `push_set_row`; `*_next` for 51 opcodes) | `OCaml/Vm/Sim/{IntRows,ImmediateRows,OperandRows,PushConstRows}.lean` | A1 (a2-sem) | **proved** from `LoopAt` + `DispatchCode` + operand fetches, concluding `LoopAt`; named premises: `MemoryStable`; EQ/NEQ in-range operands, BRANCHIF/NOT non-raw accumulator and BEQ/BNEQ immediates read off BcSem's use-site guards (BEQ/BNEQ on an in-range pointer or atom proved "not equal" natively, `imm_test_pointer`) |
@@ -409,6 +409,50 @@ for that snapshot; it does not assert kernel startup reachability.
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
 
+**Counted fresh OO ID success and actual C_CALL1 exit, 2026-10-28: checked
+for lead review.** `f1_counter_channelCountFrame` aligns the original counted
+opened list with the selected `LibHeapAt`, uses its record bounds and
+`CustomMemCall.owned` on that same ledger, and frames physical counts with
+`accounting.frame`. The actual `oo_last_id` store misses refs, links, the
+list head, selected custom bytes and the Caml_state word.
+`counted_counterStable` combines this with `f1_counterStable`.
+`counted_caml_fresh_oo_id_returns` reuses `prim_caml_fresh_oo_id_returns`
+and the explicit original-entry count witness; unchanged semantic channels
+and `ChannelCustomsRepr.at_geometry` recover the actual returned placement.
+`counted_fresh_oo_id_next` executes original-entry dispatch/setup/callee/suffix,
+returns the old identifier and increments only semantic `world.ooId`.
+
+`CcallExit.c_call1_halt` checks operands, lookup and primitive outcomes;
+`counted_c_call1_halt` projects `CountedLoopAt.toLoopAt` and reuses
+`ccall1Exit_pinned` with Fits and the existing native headroom, saved-register
+and exit-global evidence. Its existing `caml_sys_exit_halts` handles the real
+integer argument, OS-result branches, console and status. No counted
+successor exists on halt. `counted_caml_sys_exit_returns` only excludes `.ok`;
+it is not the halt execution. `counted_c_call1_row_of_next` composes the halt
+with a future complete success branch through `ArmOutcome.of_cases`.
+
+The generated partial primitive census now distinguishes **20 success
+names**, **one halt name**, and **nine names outside this adapter** (the
+three separately supplied channel and four console names, named registration
+and format-int). The whole-opcode census stays **132/134**. Complete C_CALL1
+still needs the concrete opening/listing runtime producers and composition
+of all remaining success/operand/outcome cases; C_CALL2 still needs general
+format-int and named registration. Full counted F1 assembly and physical
+runtime/startup suppliers remain open. No extra runtime supplier or GoodF1
+restriction is introduced. CustomMemCall stays named; counted
+BarrierGrowthFull stays G2; C4 round 2 waits for F1.
+
+Affected modules, CountedEntry, F1Table, WhileMinTable and the focused
+CountedPrimAudit pass **3,715 jobs**. All **77 focused axiom reports** use
+only the allowed axioms, cover **all nine new theorems**, and have unique
+full-Audit registrations for those new declarations. Eleven generator
+checks, holes, discipline, abstraction gate and whitespace checks pass.
+Every Lean launch checks available memory ≥25 GB and runs serially through
+the guarded/capped 12 GiB/two-thread launcher. Exact logs and validation
+commands are at the top of `docs/lanes/a1-prims.md`. Full OCaml.Audit and
+integration stay with the lead; checked edits remain in this worktree.
+
+
 **Counted actual console returns and complete C_CALL4, 2026-10-28: checked
 for lead review.** `ChannelRefsSame` records equal channel-list length and
 per-id refs while buffers/offsets change. Successful `writeFd`, `flushChan`,
@@ -440,7 +484,8 @@ the existing complete native row's operand/lookup/outcome analysis
 (including `CcallExit.of_arity`, raise/callback exclusion and rejection).
 The exact generated census is **132/134**, with all 131 prior row terms
 preserved and only **C_CALL1/2** remaining. Unary obligations: concrete
-opening/listing runtime producers, fresh-oo-id and sys_exit. Binary
+opening/listing runtime producers and remaining composition (fresh-oo-id and
+sys_exit are discharged above). Binary
 obligations: general format-int and named registration. Opening/listing,
 registration, general formatting, physical runtime/startup producers and
 full F1 table assembly remain separate. `CustomMemCall` stays named;

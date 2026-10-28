@@ -97,4 +97,42 @@ theorem ccall1Exit_pinned {P : Prog} (fits : OCaml.Fits Gc.g1Budget P) :
     CcallExit Gc.f1Layout P .C_CALL1 0 :=
   ccall1Exit_f1 fits ccall1_present
 
+/-- The halt branch of the actual unary opcode. Operand rejection, lookup
+and every primitive outcome are checked before consuming the native exit
+contract. This branch can be composed with any relation's success branch. -/
+theorem CcallExit.c_call1_halt {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
+    {i : Instr} {e : Nat} {world : World}
+    (exit : CcallExit L P .C_CALL1 0) (reach : Reach P s)
+    (h : OCaml.LoopAt L P s c) (decoded : decodeAt P.code s.pc = some i)
+    (opcode : i.op = .C_CALL1) (fragment : OCaml.InF1 P i)
+    (halt : stepI P s i = .halt e world) : Halts c (bytesToString world.console) e := by
+  obtain ⟨code, fetches⟩ := decode_fetch decoded
+  obtain ⟨op, args⟩ := i
+  dsimp only at opcode
+  subst opcode
+  rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩
+  · cases halt
+  · obtain ⟨index, fetch, rfl⟩ := fetches 0 a rfl
+    change (if index.toInt < 0 then .unsupported else
+      opt P.prims[index.toInt.toNat]? fun name => cCall P s 2 name [s.accu]) = .halt e world at halt
+    split at halt
+    · cases halt
+    · rename_i nonnegative
+      cases hp : P.prims[index.toInt.toNat]? with
+      | none => simp only [hp, opt] at halt; cases halt
+      | some name =>
+        have member : name ∈ primsF1 := fragment.prim (by change P.prims[index.toInt.toNat]? = some name; exact hp)
+        simp only [hp, opt, cCall, prim, primF1, member, ite_true] at halt
+        cases result : primF1Impl name [s.accu] s.heap s.world with
+        | ok v heap w => rw [result] at halt; cases halt
+        | raise v heap w => exact (primF1Impl_ne_raise result).elim
+        | callback f args heap w => exact (primF1Impl_ne_callback result).elim
+        | unsupported => rw [result] at halt; cases halt
+        | exit status world' =>
+          rw [result] at halt
+          cases halt
+          exact exit.exit s c index name e world reach h code fetch (by omega) hp member
+            (Nat.zero_le _) (by simpa using result)
+  · cases halt
+
 end OCaml.Vm.Sim

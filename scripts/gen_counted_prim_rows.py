@@ -25,6 +25,7 @@ import OCaml.Vm.Sim.PrimStringNotequalReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimIntCompareReturns
 import OCaml.Vm.Sim.PrimInt64FloatReturns
+import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.F1NativeWindow
 
 namespace OCaml.Vm.Sim
@@ -100,20 +101,70 @@ theorem counted_supported_c_call{arity}_next {{P : Prog}} {{s : St}} {{c : Confi
     member sem (counted_supported_prim_returns custom supported)
 '''
     out += '''
+/-- Fresh OO IDs change only ooId in the semantic world. -/
+theorem counted_caml_fresh_oo_id_model {args : List Val} {h h' : Heap} {w w' : World} {v : Val}
+    (ok : primF1Impl "caml_fresh_oo_id" args h w = .ok v h' w') :
+    args.length = 1 ∧ w'.chans = w.chans := by
+  rcases args with _ | ⟨x, _ | ⟨y, rest⟩⟩
+  all_goals simp [primF1Impl] at ok
+  rcases ok with ⟨rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl⟩
+
+/-- The native counter summary uses the explicit original-entry counts and
+recovers counts at the native return's actual channel placement. -/
+theorem counted_caml_fresh_oo_id_returns {P : Prog} {ra : BitVec 64}
+    {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
+    (custom : Gc.CustomMemCall Ready state Customs) :
+    CountedPrimReturnsAtR Gc.f1Layout P Customs .C_CALL1 ra 0 "caml_fresh_oo_id" :=
+  counted_prim_returns_of_local (fun _ _ => prim_caml_fresh_oo_id_returns (counted_counterStable custom))
+    (fun _ _ _ _ _ _ ok => (counted_caml_fresh_oo_id_model ok).2)
+
+/-- Original-entry C_CALL1 execution returns the old identifier and increments
+only the semantic counter, through the actual native setup/callee/suffix. -/
+theorem counted_fresh_oo_id_next {P : Prog} {s : St} {c : Config} {index : BitVec 32}
+    {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
+    (custom : Gc.CustomMemCall Ready state Customs) (fits : OCaml.Fits Gc.g1Budget P)
+    (reach : Reach P s) (h : CountedLoopAt Customs Gc.f1Layout P s c)
+    (decoded : decodeAt P.code s.pc = some ⟨.C_CALL1, [index.toInt]⟩)
+    (nonnegative : 0 ≤ index.toInt)
+    (primitive : P.prims[index.toInt.toNat]? = some "caml_fresh_oo_id") :
+    ∃ after, OCaml.Plus c after ∧ CountedLoopAt Customs Gc.f1Layout P
+      {s with pc := s.pc + 2, accu := Val.ofInt s.world.ooId,
+              world := {s.world with ooId := s.world.ooId + 1}} after :=
+  counted_c_call1_success custom fits reach h decoded nonnegative primitive (by decide) rfl
+    (counted_caml_fresh_oo_id_returns custom)
+
+/-- Exit has no successful return. Its actual halt is supplied separately by
+counted_c_call1_halt; this contract alone executes no machine instructions. -/
+theorem counted_caml_sys_exit_returns {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    {Customs : Config → Nat → Prop} :
+    CountedPrimReturnsAtR Gc.f1Layout P Customs op ra k "caml_sys_exit" :=
+  counted_prim_returns_of_local (fun _ _ => prim_caml_sys_exit_returns)
+    (fun _ _ _ _ _ _ ok => (primF1Impl_sys_exit_ne_ok ok).elim)
+
+/-- Successful cases include the separately specialized unary counter row. -/
+def countedPrimSuccessCases : List (String × Nat) :=
+  countedPrimCases ++ [("caml_fresh_oo_id", 1)]
+
+/-- Halt coverage is separate from the successful-return census. -/
+def countedPrimHaltCases : List String := ["caml_sys_exit"]
+
 /-- Exact remaining F1 primitive names outside this adapter (including the
 three separately supplied channel summaries); no whole-opcode closure. -/
 def countedPrimRemaining : List String :=
-  primsF1.filter fun name => !countedPrimCases.any (fun p => p.1 == name)
+  primsF1.filter fun name =>
+    !countedPrimSuccessCases.any (fun p => p.1 == name) && !countedPrimHaltCases.contains name
 
 theorem counted_prim_remaining_exact : countedPrimRemaining =
     ["caml_register_named_value", "caml_ml_open_descriptor_out", "caml_ml_open_descriptor_in",
      "caml_ml_out_channels_list", "caml_ml_flush", "caml_ml_output_char", "caml_ml_output",
-     "caml_ml_output_bytes", "caml_format_int", "caml_fresh_oo_id", "caml_sys_exit"] := by decide +kernel
+     "caml_ml_output_bytes", "caml_format_int"] := by decide +kernel
 
 theorem counted_prim_census : countedPrimCases.length = 19 ∧
     (countedPrimCases.filter fun p => p.2 == 1).length = 16 ∧
     (countedPrimCases.filter fun p => p.2 == 2).length = 3 ∧
-    countedPrimRemaining.length = 11 := by decide +kernel
+    countedPrimSuccessCases.length = 20 ∧ countedPrimHaltCases.length = 1 ∧
+    countedPrimRemaining.length = 9 := by decide +kernel
 
 end OCaml.Vm.Sim
 '''
@@ -130,8 +181,17 @@ def audits():
         'counted_channel_c_call1_next', 'counted_caml_ml_open_descriptor_out_returns',
         'counted_caml_ml_open_descriptor_in_returns', 'counted_caml_ml_out_channels_list_returns',
         'counted_memoryStable', 'counted_runtimeFrame', 'counted_allocFrame', 'counted_primAllocFrame']]
+    names += ['OCaml.Vm.Sim.' + n for n in [
+        'f1_counter_channelCountFrame', 'counted_counterStable',
+        'CcallExit.c_call1_halt', 'counted_c_call1_halt', 'counted_c_call1_row_of_next']]
+    names += ['OCaml.Vm.Sim.ccall1Exit_pinned',
+              'OCaml.Vm.Primitives.ExitPath.caml_sys_exit_halts',
+              'OCaml.Vm.Primitives.ExitPath.exitCode_low',
+              'OCaml.Vm.Primitives.ExitPath.exitStatus_tag',
+              'OCaml.Vm.Primitives.ExitPath.osCall_exit_streams']
     return ("-- GENERATED by scripts/gen_counted_prim_rows.py; do not edit.\n"
-            "import OCaml.Vm.Sim.CountedPrimRows\nimport OCaml.Vm.Sim.CountedChannelRows\n\n"
+            "import OCaml.Vm.Sim.CountedPrimRows\nimport OCaml.Vm.Sim.CountedChannelRows\n"
+            "import OCaml.Vm.Sim.CountedControlRows\n\n"
             + ''.join('#print axioms ' + n + '\n' for n in names))
 
 if __name__ == '__main__':
@@ -145,4 +205,4 @@ if __name__ == '__main__':
                 raise SystemExit('counted primitive row/audit drift: ' + module)
         else:
             target.write_text(content)
-    print('Counted primitive rows/audit current (19 names, arities 1 and 2)')
+    print('Counted primitive rows/audit current (20 success names, one halt; whole C_CALL1/2 open)')
