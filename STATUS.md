@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:15 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:23 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -95,11 +95,13 @@ The proof rebase was clean. This result is not in the active `004b521c` gate.
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
-| Next runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
+| Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Console is active; G2's exact/next-size task completed and was reviewed.
-The freed slot is being prepared for `sol-outlist-runtime-local.md`. G2's
+Console and listing-runtime Sol workers are active. Listing started at
+16:15 UTC from `a1be6936` in `a1-prims-next`; its log is
+`/tmp/syo-outlist-runtime-local-launch.log`. G2's exact/next-size task is
+reviewed for the following gate. G2's
 large-tree/remaining dispatch, caller production and full collection remain
 in its ledger for the next rotation.
 
